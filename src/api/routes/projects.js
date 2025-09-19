@@ -1027,6 +1027,893 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 `
             }
+        },
+        // BMAD Quick Start Templates
+        'bmad-startup-mvp': {
+            files: {
+                'package.json': {
+                    name: project.name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+                    version: '1.0.0',
+                    description: project.description,
+                    scripts: {
+                        start: 'react-scripts start',
+                        build: 'react-scripts build',
+                        test: 'react-scripts test',
+                        dev: 'concurrently "npm run start" "npm run server"',
+                        server: 'node server/index.js'
+                    },
+                    dependencies: {
+                        react: '^18.2.0',
+                        'react-dom': '^18.2.0',
+                        'react-scripts': '^5.0.1',
+                        axios: '^1.3.0',
+                        'react-router-dom': '^6.8.0'
+                    },
+                    devDependencies: {
+                        concurrently: '^7.6.0'
+                    }
+                },
+                'BMAD_CONFIG.md': `# BMAD Configuration for ${project.name}
+
+## Project Type: Startup MVP
+**Workflow**: Lean Development
+**Timeline**: 2-4 weeks
+
+## Agents Configuration
+- **dev**: Full-stack development
+- **design**: UI/UX design and prototyping
+- **product**: Product management and validation
+
+## BMAD Workflow Phases
+1. **Prototype**: Quick proof of concept
+2. **MVP**: Minimum viable product
+3. **Iterate**: User feedback and improvements
+
+## Key Features
+- React/Vue Frontend
+- Node.js Backend
+- User Authentication
+- Basic Analytics
+
+## Development Strategy
+Focus on rapid prototyping and quick iterations. Prioritize user feedback and market validation.
+`,
+                'src/App.js': `import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+
+function App() {
+    return (
+        <Router>
+            <div className="App">
+                <header>
+                    <h1>${project.name}</h1>
+                    <p>Startup MVP - Built with BMAD</p>
+                </header>
+                <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                </Routes>
+            </div>
+        </Router>
+    );
+}
+
+function Home() {
+    return (
+        <div className="home">
+            <h2>Welcome to ${project.name}</h2>
+            <p>${project.description}</p>
+            <button onClick={() => window.location.href = '/dashboard'}>
+                Get Started
+            </button>
+        </div>
+    );
+}
+
+function Dashboard() {
+    return (
+        <div className="dashboard">
+            <h2>Dashboard</h2>
+            <p>Your MVP dashboard is ready for development!</p>
+        </div>
+    );
+}
+
+export default App;
+`,
+                'server/index.js': `const express = require('express');
+const cors = require('cors');
+const app = express();
+const port = process.env.PORT || 5000;
+
+app.use(cors());
+app.use(express.json());
+
+// MVP API endpoints
+app.get('/api/status', (req, res) => {
+    res.json({
+        status: 'MVP Server Running',
+        project: '${project.name}',
+        version: '1.0.0'
+    });
+});
+
+app.listen(port, () => {
+    console.log(\`MVP Server running on port \${port}\`);
+});
+`
+            }
+        },
+        'bmad-enterprise': {
+            files: {
+                'package.json': {
+                    name: project.name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+                    version: '1.0.0',
+                    description: project.description,
+                    scripts: {
+                        start: 'node dist/index.js',
+                        dev: 'nodemon src/index.ts',
+                        build: 'tsc',
+                        test: 'jest',
+                        'test:coverage': 'jest --coverage',
+                        lint: 'eslint src/**/*.ts'
+                    },
+                    dependencies: {
+                        express: '^4.18.0',
+                        typescript: '^4.9.0',
+                        helmet: '^6.0.0',
+                        cors: '^2.8.5',
+                        jsonwebtoken: '^9.0.0',
+                        bcryptjs: '^2.4.3'
+                    },
+                    devDependencies: {
+                        '@types/node': '^18.0.0',
+                        '@types/express': '^4.17.0',
+                        nodemon: '^2.0.20',
+                        jest: '^29.0.0',
+                        eslint: '^8.0.0'
+                    }
+                },
+                'BMAD_CONFIG.md': `# BMAD Configuration for ${project.name}
+
+## Project Type: Enterprise Application
+**Workflow**: Waterfall with Security Focus
+**Timeline**: 8-12 weeks
+
+## Agents Configuration
+- **dev**: Senior development team
+- **architect**: System architecture and design
+- **security**: Security review and compliance
+- **qa**: Quality assurance and testing
+
+## BMAD Workflow Phases
+1. **Architecture**: System design and planning
+2. **Development**: Implementation with security focus
+3. **Security Review**: Comprehensive security audit
+4. **Testing**: Full QA and performance testing
+5. **Deployment**: Production deployment and monitoring
+
+## Key Features
+- Microservices Architecture
+- Database Design
+- Security Framework
+- Testing Suite
+
+## Development Strategy
+Enterprise-grade development with emphasis on security, scalability, and maintainability.
+`,
+                'src/index.ts': `import express from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Enterprise security middleware
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", "data:", "https:"]
+        }
+    }
+}));
+
+app.use(cors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    credentials: true
+}));
+
+app.use(express.json({ limit: '10mb' }));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'healthy',
+        service: '${project.name}',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// API routes
+app.use('/api/v1', require('./routes'));
+
+app.listen(port, () => {
+    console.log(\`Enterprise server running on port \${port}\`);
+});
+`,
+                'tsconfig.json': {
+                    compilerOptions: {
+                        target: 'ES2020',
+                        module: 'commonjs',
+                        outDir: './dist',
+                        rootDir: './src',
+                        strict: true,
+                        esModuleInterop: true,
+                        skipLibCheck: true,
+                        forceConsistentCasingInFileNames: true
+                    },
+                    include: ['src/**/*'],
+                    exclude: ['node_modules', 'dist']
+                }
+            }
+        },
+        'bmad-agile-team': {
+            files: {
+                'package.json': {
+                    name: project.name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+                    version: '1.0.0',
+                    description: project.description,
+                    scripts: {
+                        start: 'react-scripts start',
+                        build: 'react-scripts build',
+                        test: 'react-scripts test',
+                        lint: 'eslint src/',
+                        'test:ci': 'CI=true npm test -- --coverage --watchAll=false'
+                    },
+                    dependencies: {
+                        react: '^18.2.0',
+                        'react-dom': '^18.2.0',
+                        'react-scripts': '^5.0.1',
+                        '@testing-library/react': '^13.4.0',
+                        '@testing-library/jest-dom': '^5.16.0'
+                    }
+                },
+                'BMAD_CONFIG.md': `# BMAD Configuration for ${project.name}
+
+## Project Type: Agile Development Team
+**Workflow**: Agile/Scrum
+**Timeline**: 6-8 weeks
+
+## Agents Configuration
+- **dev**: Development team
+- **scrum-master**: Sprint management and facilitation
+- **product-owner**: Requirements and prioritization
+- **qa**: Quality assurance and testing
+
+## BMAD Workflow Phases
+1. **Sprint Planning**: Define sprint goals and tasks
+2. **Development**: Implementation with daily standups
+3. **Code Review**: Peer review and collaboration
+4. **Testing**: Continuous testing and QA
+5. **Sprint Review**: Demo and retrospective
+
+## Key Features
+- Sprint Planning
+- Continuous Integration
+- Code Reviews
+- Daily Standups
+
+## Development Strategy
+Agile methodology with 2-week sprints, daily standups, and continuous integration.
+`,
+                'SPRINT_PLAN.md': `# Sprint Planning for ${project.name}
+
+## Sprint 1 (Weeks 1-2)
+- [ ] Project setup and configuration
+- [ ] Basic component structure
+- [ ] Initial UI design
+- [ ] Unit test setup
+
+## Sprint 2 (Weeks 3-4)
+- [ ] Core feature implementation
+- [ ] API integration
+- [ ] Component testing
+- [ ] Code review process
+
+## Sprint 3 (Weeks 5-6)
+- [ ] Feature refinement
+- [ ] Performance optimization
+- [ ] Integration testing
+- [ ] Documentation
+
+## Daily Standup Questions
+1. What did I accomplish yesterday?
+2. What will I work on today?
+3. Are there any impediments in my way?
+
+## Definition of Done
+- [ ] Code is written and tested
+- [ ] Code review is completed
+- [ ] Documentation is updated
+- [ ] Acceptance criteria are met
+`,
+                'src/components/Dashboard.js': `import React, { useState, useEffect } from 'react';
+
+function Dashboard() {
+    const [sprintData, setSprintData] = useState({
+        currentSprint: 1,
+        tasksCompleted: 0,
+        totalTasks: 0,
+        burndownRate: 0
+    });
+
+    useEffect(() => {
+        // Fetch sprint data
+        // This would connect to your project management API
+    }, []);
+
+    return (
+        <div className="agile-dashboard">
+            <h2>Agile Dashboard - ${project.name}</h2>
+            <div className="sprint-info">
+                <h3>Sprint {sprintData.currentSprint}</h3>
+                <p>Tasks: {sprintData.tasksCompleted}/{sprintData.totalTasks}</p>
+                <p>Burndown Rate: {sprintData.burndownRate}%</p>
+            </div>
+            <div className="team-velocity">
+                <h4>Team Velocity</h4>
+                {/* Sprint velocity chart would go here */}
+            </div>
+        </div>
+    );
+}
+
+export default Dashboard;
+`
+            }
+        },
+        'bmad-data-science': {
+            files: {
+                'requirements.txt': `# ${project.name} - Data Science Dependencies
+pandas>=1.5.0
+numpy>=1.24.0
+scikit-learn>=1.2.0
+matplotlib>=3.6.0
+seaborn>=0.12.0
+jupyter>=1.0.0
+jupyterlab>=3.5.0
+flask>=2.2.0
+requests>=2.28.0
+python-dotenv>=0.19.0
+`,
+                'BMAD_CONFIG.md': `# BMAD Configuration for ${project.name}
+
+## Project Type: Data Science Project
+**Workflow**: Experimental with Model Development
+**Timeline**: 4-6 weeks
+
+## Agents Configuration
+- **data-scientist**: Data analysis and model development
+- **ml-engineer**: Model training and optimization
+- **dev**: API development and deployment
+
+## BMAD Workflow Phases
+1. **Data Exploration**: Understanding the dataset
+2. **Feature Engineering**: Data preprocessing and feature creation
+3. **Model Development**: Training and validation
+4. **Model Optimization**: Hyperparameter tuning
+5. **Deployment**: API development and model serving
+
+## Key Features
+- Data Pipeline
+- Model Training
+- API Development
+- Visualization Dashboard
+
+## Development Strategy
+Iterative experimentation with data-driven decisions and model validation.
+`,
+                'src/data_pipeline.py': `"""
+Data Pipeline for ${project.name}
+"""
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+class DataPipeline:
+    def __init__(self, data_path=None):
+        self.data_path = data_path
+        self.data = None
+        self.scaler = StandardScaler()
+
+    def load_data(self, path=None):
+        """Load data from file"""
+        path = path or self.data_path
+        if path:
+            if path.endswith('.csv'):
+                self.data = pd.read_csv(path)
+            elif path.endswith('.json'):
+                self.data = pd.read_json(path)
+        return self.data
+
+    def explore_data(self):
+        """Basic data exploration"""
+        if self.data is not None:
+            print(f"Dataset shape: {self.data.shape}")
+            print(f"\\nData types:\\n{self.data.dtypes}")
+            print(f"\\nMissing values:\\n{self.data.isnull().sum()}")
+            return self.data.describe()
+
+    def preprocess(self, target_column=None):
+        """Preprocess data for modeling"""
+        if self.data is None:
+            raise ValueError("No data loaded")
+
+        # Handle missing values
+        self.data = self.data.fillna(self.data.mean(numeric_only=True))
+
+        # Feature scaling
+        numeric_columns = self.data.select_dtypes(include=[np.number]).columns
+        if target_column and target_column in numeric_columns:
+            numeric_columns = numeric_columns.drop(target_column)
+
+        self.data[numeric_columns] = self.scaler.fit_transform(self.data[numeric_columns])
+
+        return self.data
+
+if __name__ == "__main__":
+    pipeline = DataPipeline()
+    print("Data pipeline for ${project.name} initialized")
+`,
+                'src/model.py': `"""
+ML Model for ${project.name}
+"""
+
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.metrics import classification_report, mean_squared_error, r2_score
+from sklearn.model_selection import cross_val_score
+import joblib
+import numpy as np
+
+class MLModel:
+    def __init__(self, problem_type='classification'):
+        self.problem_type = problem_type
+        self.model = None
+        self.is_trained = False
+
+        if problem_type == 'classification':
+            self.model = RandomForestClassifier(n_estimators=100, random_state=42)
+        else:
+            self.model = RandomForestRegressor(n_estimators=100, random_state=42)
+
+    def train(self, X_train, y_train):
+        """Train the model"""
+        self.model.fit(X_train, y_train)
+        self.is_trained = True
+        return self.model
+
+    def predict(self, X_test):
+        """Make predictions"""
+        if not self.is_trained:
+            raise ValueError("Model must be trained before making predictions")
+        return self.model.predict(X_test)
+
+    def evaluate(self, X_test, y_test):
+        """Evaluate model performance"""
+        predictions = self.predict(X_test)
+
+        if self.problem_type == 'classification':
+            return classification_report(y_test, predictions)
+        else:
+            mse = mean_squared_error(y_test, predictions)
+            r2 = r2_score(y_test, predictions)
+            return {'mse': mse, 'r2': r2}
+
+    def cross_validate(self, X, y, cv=5):
+        """Perform cross validation"""
+        scores = cross_val_score(self.model, X, y, cv=cv)
+        return {'mean': scores.mean(), 'std': scores.std()}
+
+    def save_model(self, filepath):
+        """Save trained model"""
+        if self.is_trained:
+            joblib.dump(self.model, filepath)
+
+    def load_model(self, filepath):
+        """Load trained model"""
+        self.model = joblib.load(filepath)
+        self.is_trained = True
+
+if __name__ == "__main__":
+    model = MLModel()
+    print("ML Model for ${project.name} initialized")
+`,
+                'app.py': `"""
+Flask API for ${project.name}
+"""
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import pandas as pd
+import numpy as np
+from src.model import MLModel
+from src.data_pipeline import DataPipeline
+
+app = Flask(__name__)
+CORS(app)
+
+# Initialize model and pipeline
+model = MLModel()
+pipeline = DataPipeline()
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        'status': 'healthy',
+        'project': '${project.name}',
+        'type': 'Data Science API'
+    })
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    try:
+        data = request.json
+
+        # Convert to DataFrame
+        df = pd.DataFrame([data])
+
+        # Preprocess
+        processed_data = pipeline.preprocess()
+
+        # Make prediction
+        prediction = model.predict(processed_data)
+
+        return jsonify({
+            'prediction': prediction.tolist(),
+            'status': 'success'
+        })
+
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'status': 'error'
+        }), 400
+
+@app.route('/model/info', methods=['GET'])
+def model_info():
+    return jsonify({
+        'model_type': model.problem_type,
+        'is_trained': model.is_trained,
+        'project': '${project.name}'
+    })
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
+`
+            }
+        },
+        'bmad-maintenance': {
+            files: {
+                'package.json': {
+                    name: project.name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+                    version: '1.0.0',
+                    description: project.description,
+                    scripts: {
+                        start: 'node index.js',
+                        dev: 'nodemon index.js',
+                        test: 'jest',
+                        lint: 'eslint .',
+                        'test:watch': 'jest --watch',
+                        monitor: 'pm2 start ecosystem.config.js'
+                    },
+                    dependencies: {
+                        express: '^4.18.0',
+                        winston: '^3.8.0',
+                        helmet: '^6.0.0',
+                        pm2: '^5.2.0'
+                    },
+                    devDependencies: {
+                        nodemon: '^2.0.20',
+                        jest: '^29.0.0',
+                        eslint: '^8.0.0'
+                    }
+                },
+                'BMAD_CONFIG.md': `# BMAD Configuration for ${project.name}
+
+## Project Type: Maintenance & Support
+**Workflow**: Support and Bug Tracking
+**Timeline**: Ongoing
+
+## Agents Configuration
+- **dev**: Development and bug fixes
+- **support**: User support and issue triage
+- **qa**: Quality assurance and regression testing
+
+## BMAD Workflow Phases
+1. **Issue Triage**: Categorize and prioritize issues
+2. **Investigation**: Root cause analysis
+3. **Fix Implementation**: Code changes and patches
+4. **Testing**: Regression and validation testing
+5. **Deployment**: Hotfix deployment and monitoring
+
+## Key Features
+- Bug Tracking
+- Performance Monitoring
+- Code Refactoring
+- Documentation
+
+## Development Strategy
+Proactive maintenance with continuous monitoring and rapid issue resolution.
+`,
+                'MAINTENANCE_LOG.md': `# Maintenance Log for ${project.name}
+
+## Issue Tracking Template
+
+### High Priority Issues
+- [ ] Critical bug fixes
+- [ ] Security vulnerabilities
+- [ ] Performance bottlenecks
+
+### Medium Priority Issues
+- [ ] Feature enhancements
+- [ ] Code refactoring
+- [ ] Documentation updates
+
+### Low Priority Issues
+- [ ] Minor bug fixes
+- [ ] Code cleanup
+- [ ] Optimization improvements
+
+## Monitoring Checklist
+- [ ] Server uptime
+- [ ] Response times
+- [ ] Error rates
+- [ ] Memory usage
+- [ ] Disk space
+- [ ] Database performance
+
+## Maintenance Schedule
+- **Daily**: Health checks and monitoring
+- **Weekly**: Performance review and optimization
+- **Monthly**: Security updates and patches
+- **Quarterly**: Code review and refactoring
+`,
+                'monitoring/health-check.js': `/**
+ * Health Check Module for ${project.name}
+ */
+
+const os = require('os');
+const fs = require('fs');
+
+class HealthMonitor {
+    constructor() {
+        this.checks = {
+            memory: this.checkMemory.bind(this),
+            disk: this.checkDisk.bind(this),
+            uptime: this.checkUptime.bind(this),
+            load: this.checkLoad.bind(this)
+        };
+    }
+
+    async runAllChecks() {
+        const results = {};
+
+        for (const [name, check] of Object.entries(this.checks)) {
+            try {
+                results[name] = await check();
+            } catch (error) {
+                results[name] = {
+                    status: 'error',
+                    error: error.message
+                };
+            }
+        }
+
+        return {
+            timestamp: new Date().toISOString(),
+            project: '${project.name}',
+            overall: this.calculateOverallHealth(results),
+            checks: results
+        };
+    }
+
+    checkMemory() {
+        const free = os.freemem();
+        const total = os.totalmem();
+        const used = total - free;
+        const usagePercent = (used / total) * 100;
+
+        return {
+            status: usagePercent > 90 ? 'critical' : usagePercent > 70 ? 'warning' : 'healthy',
+            usage: Math.round(usagePercent),
+            free: Math.round(free / 1024 / 1024),
+            total: Math.round(total / 1024 / 1024)
+        };
+    }
+
+    checkDisk() {
+        // Simplified disk check
+        return {
+            status: 'healthy',
+            message: 'Disk check requires platform-specific implementation'
+        };
+    }
+
+    checkUptime() {
+        const uptime = process.uptime();
+        const hours = Math.floor(uptime / 3600);
+
+        return {
+            status: 'healthy',
+            uptime: hours,
+            started: new Date(Date.now() - uptime * 1000).toISOString()
+        };
+    }
+
+    checkLoad() {
+        const load = os.loadavg();
+        const cpus = os.cpus().length;
+        const loadPercent = (load[0] / cpus) * 100;
+
+        return {
+            status: loadPercent > 80 ? 'warning' : 'healthy',
+            load: load[0],
+            cpus: cpus,
+            percent: Math.round(loadPercent)
+        };
+    }
+
+    calculateOverallHealth(results) {
+        const statuses = Object.values(results).map(r => r.status);
+
+        if (statuses.includes('critical')) return 'critical';
+        if (statuses.includes('warning')) return 'warning';
+        if (statuses.includes('error')) return 'degraded';
+        return 'healthy';
+    }
+}
+
+module.exports = HealthMonitor;
+`,
+                'ecosystem.config.js': `module.exports = {
+    apps: [{
+        name: '${project.name}',
+        script: './index.js',
+        instances: 'max',
+        exec_mode: 'cluster',
+        env: {
+            NODE_ENV: 'development',
+            PORT: 3000
+        },
+        env_production: {
+            NODE_ENV: 'production',
+            PORT: 3000
+        },
+        error_file: './logs/err.log',
+        out_file: './logs/out.log',
+        log_file: './logs/combined.log',
+        time: true,
+        max_memory_restart: '1G',
+        node_args: '--max_old_space_size=1024'
+    }]
+};
+`
+            }
+        },
+        'bmad-custom': {
+            files: {
+                'package.json': {
+                    name: project.name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+                    version: '1.0.0',
+                    description: project.description,
+                    scripts: {
+                        start: 'node index.js',
+                        dev: 'nodemon index.js',
+                        test: 'jest'
+                    },
+                    dependencies: {
+                        express: '^4.18.0'
+                    },
+                    devDependencies: {
+                        nodemon: '^2.0.20',
+                        jest: '^29.0.0'
+                    }
+                },
+                'BMAD_CONFIG.md': `# BMAD Configuration for ${project.name}
+
+## Project Type: Custom Setup
+**Workflow**: Custom Configuration
+**Timeline**: Variable
+
+## Agents Configuration
+- **dev**: Development (customize as needed)
+
+## BMAD Workflow Phases
+1. **Planning**: Define custom workflow
+2. **Setup**: Configure tools and processes
+3. **Implementation**: Custom development approach
+4. **Review**: Evaluate and adjust
+
+## Key Features
+- Custom Configuration
+- Agent Selection
+- Workflow Design
+
+## Development Strategy
+Flexible approach allowing full customization of BMAD workflow and agent configuration.
+`,
+                'CUSTOM_SETUP.md': `# Custom BMAD Setup for ${project.name}
+
+## Configuration Options
+
+### Available Agents
+- **dev**: Development and coding
+- **design**: UI/UX design
+- **product**: Product management
+- **qa**: Quality assurance
+- **devops**: Operations and deployment
+- **security**: Security review
+- **architect**: System architecture
+- **data-scientist**: Data analysis
+- **ml-engineer**: Machine learning
+- **support**: User support
+
+### Workflow Templates
+- **agile**: Scrum methodology
+- **waterfall**: Traditional waterfall
+- **lean**: Lean startup approach
+- **experimental**: Research and experimentation
+- **support**: Maintenance and support
+
+### Customization Guide
+1. Edit BMAD_CONFIG.md to define your workflow
+2. Add/remove agents based on project needs
+3. Customize phases and milestones
+4. Set up project-specific tools and processes
+
+## Getting Started
+1. Review the configuration options above
+2. Modify the workflow to match your needs
+3. Add custom agents or phases as required
+4. Document your custom process
+`,
+                'index.js': `const express = require('express');
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.use(express.json());
+
+app.get('/', (req, res) => {
+    res.json({
+        message: 'Welcome to ${project.name}',
+        type: 'Custom BMAD Project',
+        description: '${project.description}'
+    });
+});
+
+app.get('/bmad/config', (req, res) => {
+    res.json({
+        project: '${project.name}',
+        workflow: 'custom',
+        agents: ['dev'], // Customize this array
+        phases: ['planning', 'setup', 'implementation', 'review'],
+        customizable: true
+    });
+});
+
+app.listen(port, () => {
+    console.log(\`Custom BMAD project running on port \${port}\`);
+});
+`
+            }
         }
     };
 
@@ -1680,5 +2567,128 @@ router.post('/:id/files/read', async (req, res) => {
         });
     }
 });
+
+// Start BMAD workflow for project
+router.post('/:id/bmad/start', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { workflow, agents, template } = req.body;
+
+        const project = projects.get(id);
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                error: 'Project not found'
+            });
+        }
+
+        // Update project with BMAD configuration if provided
+        if (workflow || agents || template) {
+            project.bmadConfig = {
+                ...project.bmadConfig,
+                workflow: workflow || project.bmadConfig.workflow,
+                agents: agents || project.bmadConfig.agents,
+                template: template || project.bmadConfig.template,
+                enabled: true,
+                startedAt: new Date().toISOString(),
+                status: 'running'
+            };
+
+            // Update project in storage
+            projects.set(id, project);
+            await saveProjects();
+        }
+
+        // Initialize BMAD workflow based on template
+        const bmadResult = await initializeBmadWorkflow(project);
+
+        // Broadcast BMAD event through WebSocket if available
+        if (global.io) {
+            global.io.to('bmad').emit('bmad-workflow-started', {
+                projectId: id,
+                projectName: project.name,
+                workflow: project.bmadConfig.workflow,
+                agents: project.bmadConfig.agents,
+                template: project.bmadConfig.template
+            });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                project: project,
+                bmadResult: bmadResult
+            },
+            message: 'BMAD workflow started successfully'
+        });
+
+    } catch (error) {
+        console.error('BMAD workflow start error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Helper function to initialize BMAD workflow
+async function initializeBmadWorkflow(project) {
+    const { bmadConfig } = project;
+
+    if (!bmadConfig || !bmadConfig.enabled) {
+        throw new Error('BMAD configuration not found or disabled');
+    }
+
+    const workflowResult = {
+        projectId: project.id,
+        workflow: bmadConfig.workflow,
+        agents: bmadConfig.agents,
+        template: bmadConfig.template,
+        status: 'initialized',
+        phases: [],
+        currentPhase: null
+    };
+
+    // Initialize phases based on workflow type
+    switch (bmadConfig.workflow) {
+        case 'lean':
+            workflowResult.phases = ['prototype', 'mvp', 'iterate'];
+            workflowResult.currentPhase = 'prototype';
+            break;
+        case 'waterfall':
+            workflowResult.phases = ['architecture', 'development', 'security-review', 'testing', 'deployment'];
+            workflowResult.currentPhase = 'architecture';
+            break;
+        case 'agile':
+            workflowResult.phases = ['sprint-planning', 'development', 'code-review', 'testing', 'sprint-review'];
+            workflowResult.currentPhase = 'sprint-planning';
+            break;
+        case 'experimental':
+            workflowResult.phases = ['data-exploration', 'feature-engineering', 'model-development', 'optimization', 'deployment'];
+            workflowResult.currentPhase = 'data-exploration';
+            break;
+        case 'support':
+            workflowResult.phases = ['issue-triage', 'investigation', 'fix-implementation', 'testing', 'deployment'];
+            workflowResult.currentPhase = 'issue-triage';
+            break;
+        case 'custom':
+            workflowResult.phases = ['planning', 'setup', 'implementation', 'review'];
+            workflowResult.currentPhase = 'planning';
+            break;
+        default:
+            workflowResult.phases = ['planning', 'development', 'testing', 'deployment'];
+            workflowResult.currentPhase = 'planning';
+    }
+
+    // Initialize agent configurations
+    workflowResult.agentConfigs = bmadConfig.agents.map(agentType => ({
+        type: agentType,
+        status: 'active',
+        tasks: [],
+        startedAt: new Date().toISOString()
+    }));
+
+    return workflowResult;
+}
 
 module.exports = router;

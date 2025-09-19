@@ -172,5 +172,74 @@
     "createdAt": "2025-09-19T15:59:34.417Z",
     "updatedAt": "2025-09-19T15:59:34.417Z",
     "status": "initialized"
+  },
+  {
+    "id": "proj-1758298718040-vr6tgrjgr",
+    "name": "Test BMAD Startup",
+    "description": "Testing BMAD Quick Start with Startup MVP template",
+    "targetFolder": "/Volumes/Extreme SSD/Workspace/test-bmad-startup",
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022",
+      "temperature": 0.7,
+      "maxTokens": 4000,
+      "context": "This is a Startup MVP project. Focus on rapid prototype development with lean approach."
+    },
+    "bmadConfig": {
+      "enabled": true,
+      "workflow": "lean",
+      "agents": [
+        "dev",
+        "design",
+        "product"
+      ],
+      "template": "startup-mvp",
+      "startedAt": "2025-09-19T16:19:51.320Z",
+      "status": "running"
+    },
+    "createdAt": "2025-09-19T16:18:38.040Z",
+    "updatedAt": "2025-09-19T16:18:38.040Z",
+    "status": "initialized"
+  },
+  {
+    "id": "proj-1758298747705-sr025ukci",
+    "name": "Test Simple",
+    "description": "Simple test",
+    "targetFolder": "/tmp/test-simple",
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022",
+      "maxTokens": 4000,
+      "temperature": 0.7
+    },
+    "bmadConfig": {
+      "enabled": true,
+      "workflow": "agile",
+      "agents": [
+        "pm",
+        "dev",
+        "qa",
+        "scrum-master"
+      ],
+      "phases": [
+        "planning",
+        "development",
+        "testing",
+        "review",
+        "deployment"
+      ],
+      "currentPhase": "planning",
+      "roleAssignments": {},
+      "settings": {
+        "maxAgents": 10,
+        "allowCustomRoles": true,
+        "autoAdvancePhases": false
+      }
+    },
+    "createdAt": "2025-09-19T16:19:07.705Z",
+    "updatedAt": "2025-09-19T16:19:07.705Z",
+    "status": "initialized"
   }
 ]

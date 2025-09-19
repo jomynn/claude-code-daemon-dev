@@ -27,7 +27,10 @@
                 <select id="project-selector">
                     <option value="">Select Project...</option>
                 </select>
+                <button id="reload-projects-btn" class="btn btn-small" style="background: #ff9800; margin-left: 10px;" title="Reload projects if dropdown is not showing all projects">🔄 Reload Projects</button>
                 <button id="new-project-btn" class="btn">New Project</button>
+                <button id="bmad-quick-start-btn" class="btn btn-bmad">🚀 BMAD Quick Start</button>
+                <button id="brainstorm-btn" class="btn btn-brainstorm">💡 Brainstorm Project</button>
                 <div class="status-indicator">
                     <span id="connection-status" class="status-dot"></span>
                     <span>Live</span>
@@ -481,6 +484,372 @@
                 <button type="button" class="btn" id="next-step-btn">Next</button>
                 <button type="button" class="btn btn-primary" id="create-project-btn" style="display: none;">Create Project</button>
                 <button type="button" class="btn btn-secondary" onclick="workspaceManager.closeNewProjectModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BMAD Quick Start Modal -->
+    <div id="bmad-quick-start-modal" class="modal bmad-quick-start-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🚀 BMAD Quick Start</h3>
+                <button class="modal-close" onclick="workspaceManager.closeBmadQuickStartModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Choose a BMAD project template to get started quickly with multi-agent development:</p>
+
+                <div class="bmad-templates-grid">
+                    <div class="bmad-template-card" data-template="startup-mvp">
+                        <div class="template-icon">🚀</div>
+                        <h4>Startup MVP</h4>
+                        <p>Rapid prototyping with lean development team</p>
+                        <div class="template-details">
+                            <div class="agents-preview">
+                                <span class="agent-badge">Product Manager</span>
+                                <span class="agent-badge">Fullstack Dev</span>
+                                <span class="agent-badge">UX Designer</span>
+                            </div>
+                            <div class="workflow-info">3-week MVP cycle</div>
+                        </div>
+                    </div>
+
+                    <div class="bmad-template-card" data-template="enterprise-app">
+                        <div class="template-icon">🏢</div>
+                        <h4>Enterprise Application</h4>
+                        <p>Large-scale development with full team structure</p>
+                        <div class="template-details">
+                            <div class="agents-preview">
+                                <span class="agent-badge">Tech Lead</span>
+                                <span class="agent-badge">Senior Dev</span>
+                                <span class="agent-badge">DevOps</span>
+                                <span class="agent-badge">Security</span>
+                                <span class="agent-badge">QA Lead</span>
+                            </div>
+                            <div class="workflow-info">Enterprise waterfall</div>
+                        </div>
+                    </div>
+
+                    <div class="bmad-template-card" data-template="agile-team">
+                        <div class="template-icon">⚡</div>
+                        <h4>Agile Development Team</h4>
+                        <p>Balanced team for iterative development</p>
+                        <div class="template-details">
+                            <div class="agents-preview">
+                                <span class="agent-badge">Scrum Master</span>
+                                <span class="agent-badge">Developer</span>
+                                <span class="agent-badge">QA Engineer</span>
+                                <span class="agent-badge">DevOps</span>
+                            </div>
+                            <div class="workflow-info">2-week sprints</div>
+                        </div>
+                    </div>
+
+                    <div class="bmad-template-card" data-template="data-science">
+                        <div class="template-icon">📊</div>
+                        <h4>Data Science Project</h4>
+                        <p>ML/AI project with specialized data team</p>
+                        <div class="template-details">
+                            <div class="agents-preview">
+                                <span class="agent-badge">Data Scientist</span>
+                                <span class="agent-badge">ML Engineer</span>
+                                <span class="agent-badge">Data Engineer</span>
+                            </div>
+                            <div class="workflow-info">Research & development</div>
+                        </div>
+                    </div>
+
+                    <div class="bmad-template-card" data-template="maintenance-team">
+                        <div class="template-icon">🔧</div>
+                        <h4>Maintenance & Support</h4>
+                        <p>Ongoing support and incremental improvements</p>
+                        <div class="template-details">
+                            <div class="agents-preview">
+                                <span class="agent-badge">Developer</span>
+                                <span class="agent-badge">Support Engineer</span>
+                                <span class="agent-badge">QA</span>
+                            </div>
+                            <div class="workflow-info">Issue-driven workflow</div>
+                        </div>
+                    </div>
+
+                    <div class="bmad-template-card" data-template="custom">
+                        <div class="template-icon">⚙️</div>
+                        <h4>Custom Setup</h4>
+                        <p>Configure your own team and workflow</p>
+                        <div class="template-details">
+                            <div class="agents-preview">
+                                <span class="agent-badge custom">Choose agents...</span>
+                            </div>
+                            <div class="workflow-info">Custom workflow</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="template-preview" id="template-preview" style="display: none;">
+                    <h4>Project Preview</h4>
+                    <div class="preview-content">
+                        <div class="project-info">
+                            <div class="form-group">
+                                <label for="bmad-project-name">Project Name</label>
+                                <input type="text" id="bmad-project-name" placeholder="My BMAD Project">
+                            </div>
+                            <div class="form-group">
+                                <label for="bmad-project-path">Project Directory</label>
+                                <input type="text" id="bmad-project-path" placeholder="/path/to/project">
+                            </div>
+                        </div>
+                        <div class="workflow-preview">
+                            <h5>Workflow Configuration</h5>
+                            <div id="workflow-details"></div>
+                        </div>
+                        <div class="agents-preview-detail">
+                            <h5>Team Members</h5>
+                            <div id="agents-details"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="workspaceManager.closeBmadQuickStartModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" id="create-bmad-project-btn" style="display: none;">Create BMAD Project</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Brainstorming Modal -->
+    <div id="brainstorm-modal" class="modal" style="display: none;">
+        <div class="modal-content brainstorm-modal-content">
+            <div class="modal-header">
+                <h3>💡 Project Brainstorming</h3>
+                <span class="close-modal" onclick="workspaceManager.closeBrainstormModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="brainstorm-progress">
+                    <div class="progress-steps">
+                        <div class="step active" data-step="ideation">
+                            <span class="step-number">1</span>
+                            <span class="step-label">Ideation</span>
+                        </div>
+                        <div class="step" data-step="analysis">
+                            <span class="step-number">2</span>
+                            <span class="step-label">Analysis</span>
+                        </div>
+                        <div class="step" data-step="brief">
+                            <span class="step-number">3</span>
+                            <span class="step-label">Project Brief</span>
+                        </div>
+                        <div class="step" data-step="setup">
+                            <span class="step-number">4</span>
+                            <span class="step-label">Setup</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 1: Ideation -->
+                <div id="step-ideation" class="step-section active">
+                    <h4>💭 What's your project idea?</h4>
+                    <div class="ideation-section">
+                        <div class="idea-input-group">
+                            <label for="project-idea">Describe your project idea:</label>
+                            <textarea id="project-idea" placeholder="I want to build a web application that helps users track their fitness goals..." rows="4"></textarea>
+                        </div>
+
+                        <div class="idea-categories">
+                            <h5>Project Category (optional):</h5>
+                            <div class="category-tags">
+                                <div class="tag" data-category="web-app">🌐 Web App</div>
+                                <div class="tag" data-category="mobile-app">📱 Mobile App</div>
+                                <div class="tag" data-category="api">🔌 API Service</div>
+                                <div class="tag" data-category="data-science">📊 Data Science</div>
+                                <div class="tag" data-category="automation">🤖 Automation</div>
+                                <div class="tag" data-category="game">🎮 Game</div>
+                                <div class="tag" data-category="tool">🛠️ Tool/Utility</div>
+                                <div class="tag" data-category="other">❓ Other</div>
+                            </div>
+                        </div>
+
+                        <div class="idea-inspiration">
+                            <h5>Need inspiration? Try these prompts:</h5>
+                            <div class="inspiration-prompts">
+                                <button class="prompt-btn" onclick="workspaceManager.fillIdeaPrompt('A social platform for local communities to share resources')">🏘️ Community Platform</button>
+                                <button class="prompt-btn" onclick="workspaceManager.fillIdeaPrompt('An AI-powered productivity assistant for remote workers')">🤖 AI Assistant</button>
+                                <button class="prompt-btn" onclick="workspaceManager.fillIdeaPrompt('A marketplace for freelance services with integrated project management')">💼 Freelance Marketplace</button>
+                                <button class="prompt-btn" onclick="workspaceManager.fillIdeaPrompt('A fitness tracking app with social challenges and rewards')">💪 Fitness Tracker</button>
+                                <button class="prompt-btn" onclick="workspaceManager.fillIdeaPrompt('A sustainable living app that tracks carbon footprint and suggests eco-friendly alternatives')">🌱 Sustainability App</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Analysis -->
+                <div id="step-analysis" class="step-section">
+                    <h4>🔍 Project Analysis</h4>
+                    <div class="analysis-section">
+                        <div class="analysis-results">
+                            <div class="analysis-card">
+                                <h5>💡 Enhanced Project Concept</h5>
+                                <div id="enhanced-concept" class="analysis-content">
+                                    <p>AI-generated enhanced description will appear here...</p>
+                                </div>
+                            </div>
+
+                            <div class="analysis-card">
+                                <h5>🎯 Target Audience</h5>
+                                <div id="target-audience" class="analysis-content">
+                                    <p>AI-identified target users and personas...</p>
+                                </div>
+                            </div>
+
+                            <div class="analysis-card">
+                                <h5>⚡ Key Features</h5>
+                                <div id="key-features" class="analysis-content">
+                                    <ul id="features-list">
+                                        <li>Feature suggestions will appear here...</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="analysis-card">
+                                <h5>🛠️ Technology Stack</h5>
+                                <div id="tech-stack" class="analysis-content">
+                                    <div class="tech-recommendations">
+                                        <div class="tech-category">
+                                            <strong>Frontend:</strong> <span id="frontend-tech">React, Vue.js</span>
+                                        </div>
+                                        <div class="tech-category">
+                                            <strong>Backend:</strong> <span id="backend-tech">Node.js, Python</span>
+                                        </div>
+                                        <div class="tech-category">
+                                            <strong>Database:</strong> <span id="database-tech">PostgreSQL, MongoDB</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="analysis-actions">
+                            <button class="btn btn-secondary" onclick="workspaceManager.regenerateAnalysis()">🔄 Regenerate Analysis</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Project Brief -->
+                <div id="step-brief" class="step-section">
+                    <h4>📋 Generated Project Brief</h4>
+                    <div class="brief-section">
+                        <div class="brief-content">
+                            <div class="brief-document" id="project-brief-document">
+                                <h5>Project Overview</h5>
+                                <p id="brief-overview">Generated project overview...</p>
+
+                                <h5>Objectives</h5>
+                                <ul id="brief-objectives">
+                                    <li>Primary objective 1</li>
+                                    <li>Primary objective 2</li>
+                                </ul>
+
+                                <h5>Scope & Features</h5>
+                                <div id="brief-features">Feature list...</div>
+
+                                <h5>Technical Requirements</h5>
+                                <div id="brief-tech-requirements">Technical specifications...</div>
+
+                                <h5>Timeline Estimate</h5>
+                                <div id="brief-timeline">
+                                    <div class="timeline-phases">
+                                        <div class="timeline-phase">
+                                            <strong>Phase 1: Planning & Setup</strong> - 1 week
+                                        </div>
+                                        <div class="timeline-phase">
+                                            <strong>Phase 2: Core Development</strong> - 4-6 weeks
+                                        </div>
+                                        <div class="timeline-phase">
+                                            <strong>Phase 3: Testing & Deployment</strong> - 2 weeks
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="brief-actions">
+                            <button class="btn btn-secondary" onclick="workspaceManager.editBrief()">✏️ Edit Brief</button>
+                            <button class="btn btn-secondary" onclick="workspaceManager.exportBrief()">📄 Export Brief</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Project Setup -->
+                <div id="step-setup" class="step-section">
+                    <h4>🚀 Ready to Start Development</h4>
+                    <div class="setup-section">
+                        <div class="setup-summary">
+                            <h5>Project Summary</h5>
+                            <div class="summary-card">
+                                <div class="summary-item">
+                                    <strong>Project Name:</strong> <span id="setup-project-name">Generated from idea</span>
+                                </div>
+                                <div class="summary-item">
+                                    <strong>Type:</strong> <span id="setup-project-type">Web Application</span>
+                                </div>
+                                <div class="summary-item">
+                                    <strong>Tech Stack:</strong> <span id="setup-tech-stack">React + Node.js</span>
+                                </div>
+                                <div class="summary-item">
+                                    <strong>Estimated Duration:</strong> <span id="setup-duration">6-8 weeks</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setup-options">
+                            <h5>Development Approach</h5>
+                            <div class="approach-cards">
+                                <div class="approach-card" data-approach="bmad">
+                                    <h6>🚀 BMAD Quick Start</h6>
+                                    <p>Multi-agent development with automated workflows</p>
+                                    <ul>
+                                        <li>AI-powered development team</li>
+                                        <li>Automated code generation</li>
+                                        <li>Built-in project management</li>
+                                    </ul>
+                                    <button class="btn btn-primary">Start with BMAD</button>
+                                </div>
+
+                                <div class="approach-card" data-approach="standard">
+                                    <h6>⚙️ Standard Setup</h6>
+                                    <p>Traditional project setup with your preferred tools</p>
+                                    <ul>
+                                        <li>Custom configuration</li>
+                                        <li>Choose your own tools</li>
+                                        <li>Manual development process</li>
+                                    </ul>
+                                    <button class="btn btn-secondary">Standard Setup</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="development-workflow">
+                            <!-- Development workflow will be populated by JavaScript -->
+                        </div>
+
+                        <div class="final-settings">
+                            <div class="setting-group">
+                                <label for="final-project-name">Project Name:</label>
+                                <input type="text" id="final-project-name" placeholder="Enter project name">
+                            </div>
+                            <div class="setting-group">
+                                <label for="final-project-path">Project Location:</label>
+                                <input type="text" id="final-project-path" placeholder="/Volumes/Extreme SSD/Workspace/my-project">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="workspaceManager.closeBrainstormModal()">Cancel</button>
+                <button type="button" class="btn btn-secondary" id="prev-brainstorm-step" onclick="workspaceManager.prevBrainstormStep()">Previous</button>
+                <button type="button" class="btn btn-primary" id="next-brainstorm-step" onclick="workspaceManager.nextBrainstormStep()">Analyze Idea</button>
+                <button type="button" class="btn btn-primary" id="create-from-brainstorm" onclick="workspaceManager.createProjectFromBrainstorm()" style="display: none;">Create Project</button>
             </div>
         </div>
     </div>

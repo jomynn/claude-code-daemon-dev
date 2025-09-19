@@ -1,0 +1,271 @@
+{
+  "database": {
+    "path": "/data/claude-daemon.db",
+    "backup": true,
+    "backupInterval": "6h",
+    "maxBackups": 14,
+    "enableWAL": true,
+    "timeout": 60000,
+    "maxConnections": 10,
+    "idleTimeout": 300000
+  },
+  "monitoring": {
+    "interval": 300,
+    "warningThreshold": 80,
+    "criticalThreshold": 95,
+    "enablePredictions": true,
+    "predictionWindow": "24h",
+    "collectSystemMetrics": true,
+    "metricsRetention": "30d",
+    "exportMetrics": true
+  },
+  "logging": {
+    "level": "info",
+    "file": "/app/logs/production.log",
+    "maxSize": "50mb",
+    "maxFiles": 10,
+    "enableConsole": false,
+    "colorize": false,
+    "timestamp": true,
+    "prettyPrint": false,
+    "compress": true
+  },
+  "server": {
+    "port": 5000,
+    "host": "0.0.0.0",
+    "cors": {
+      "origin": false,
+      "credentials": true,
+      "methods": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+      "allowedHeaders": ["Content-Type", "Authorization", "X-Requested-With", "Accept", "X-API-Key"]
+    },
+    "rateLimit": {
+      "enabled": true,
+      "windowMs": 900000,
+      "max": 100,
+      "skipSuccessfulRequests": false,
+      "standardHeaders": true,
+      "legacyHeaders": false
+    },
+    "compression": true,
+    "trustProxy": true,
+    "behindProxy": true
+  },
+  "websocket": {
+    "enabled": true,
+    "port": 5001,
+    "pingInterval": 25000,
+    "pingTimeout": 5000,
+    "cors": {
+      "origin": false,
+      "credentials": true
+    },
+    "transports": ["websocket"],
+    "maxConnections": 1000
+  },
+  "cleanup": {
+    "retentionDays": 90,
+    "autoCleanup": true,
+    "cleanupInterval": "12h",
+    "cleanupTypes": ["logs", "temp", "backups", "cache"],
+    "maxLogSize": "500mb",
+    "maxTempFiles": 500,
+    "compressOldLogs": true
+  },
+  "notifications": {
+    "enabled": true,
+    "channels": ["email", "webhook", "file"],
+    "cooldown": 600,
+    "levels": {
+      "info": ["file"],
+      "warning": ["email", "file", "webhook"],
+      "error": ["email", "file", "webhook"],
+      "critical": ["email", "file", "webhook", "sms"]
+    },
+    "batchSize": 10,
+    "batchTimeout": 300
+  },
+  "features": {
+    "bmadIntegration": true,
+    "usagePredictions": true,
+    "realTimeUpdates": true,
+    "apiKeyAuth": true,
+    "webhooks": true,
+    "emailNotifications": true,
+    "slackIntegration": true,
+    "exportData": true,
+    "analytics": true,
+    "reporting": true
+  },
+  "security": {
+    "requireAuth": true,
+    "jwt": {
+      "expiresIn": "1h",
+      "refreshTokenExpiry": "7d"
+    },
+    "bcrypt": {
+      "rounds": 12
+    },
+    "helmet": {
+      "contentSecurityPolicy": {
+        "directives": {
+          "defaultSrc": ["'self'"],
+          "styleSrc": ["'self'", "https:"],
+          "scriptSrc": ["'self'"],
+          "imgSrc": ["'self'", "data:", "https:"],
+          "connectSrc": ["'self'", "wss:"]
+        }
+      },
+      "hsts": {
+        "maxAge": 31536000,
+        "includeSubDomains": true,
+        "preload": true
+      }
+    },
+    "ipWhitelist": [],
+    "maxFailedAttempts": 5,
+    "lockoutDuration": 900
+  },
+  "performance": {
+    "enableCaching": true,
+    "cacheTimeout": 600,
+    "maxRequestSize": "5mb",
+    "requestTimeout": 60000,
+    "enableGzip": true,
+    "staticCaching": true,
+    "redis": {
+      "enabled": true,
+      "host": "redis",
+      "port": 6379,
+      "db": 0,
+      "keyPrefix": "claude-daemon:",
+      "ttl": 3600
+    }
+  },
+  "claudeCode": {
+    "configPath": "/app/.config/claude-code",
+    "usageFile": "usage.json",
+    "limitsFile": "limits.json",
+    "pollInterval": 60,
+    "enableFileWatcher": true,
+    "backupConfig": true
+  },
+  "bmad": {
+    "enabled": true,
+    "configPath": "/app/.bmad",
+    "agents": {
+      "dev": {
+        "enabled": true,
+        "maxConcurrentTasks": 2,
+        "timeout": 300,
+        "priority": "high"
+      },
+      "qa": {
+        "enabled": true,
+        "maxConcurrentTasks": 1,
+        "timeout": 600,
+        "priority": "medium"
+      },
+      "pm": {
+        "enabled": true,
+        "maxConcurrentTasks": 3,
+        "timeout": 180,
+        "priority": "high"
+      },
+      "po": {
+        "enabled": true,
+        "maxConcurrentTasks": 2,
+        "timeout": 240,
+        "priority": "medium"
+      }
+    },
+    "workflows": {
+      "autoStart": false,
+      "maxConcurrent": 5,
+      "defaultTimeout": 3600,
+      "retryAttempts": 2,
+      "enableMetrics": true
+    }
+  },
+  "api": {
+    "version": "1.0.0",
+    "prefix": "/api",
+    "documentation": {
+      "enabled": false,
+      "path": "/docs"
+    },
+    "validation": {
+      "enabled": true,
+      "strictMode": true
+    },
+    "pagination": {
+      "defaultLimit": 25,
+      "maxLimit": 100
+    },
+    "versioning": {
+      "enabled": true,
+      "defaultVersion": "1.0"
+    }
+  },
+  "monitoring": {
+    "healthCheck": {
+      "enabled": true,
+      "interval": 30,
+      "timeout": 10,
+      "endpoints": [
+        "/health",
+        "/api/system/status"
+      ]
+    },
+    "metrics": {
+      "enabled": true,
+      "endpoint": "/metrics",
+      "format": "prometheus"
+    },
+    "alerts": {
+      "enabled": true,
+      "thresholds": {
+        "responseTime": 1000,
+        "errorRate": 5,
+        "memoryUsage": 85,
+        "cpuUsage": 80
+      }
+    }
+  },
+  "external": {
+    "webhook": {
+      "timeout": 10000,
+      "retries": 3,
+      "backoff": "exponential"
+    },
+    "email": {
+      "timeout": 30000,
+      "retries": 2,
+      "rateLimit": {
+        "maxPerHour": 100,
+        "maxPerDay": 1000
+      }
+    },
+    "slack": {
+      "timeout": 10000,
+      "retries": 2,
+      "rateLimit": {
+        "maxPerMinute": 1
+      }
+    }
+  },
+  "backup": {
+    "enabled": true,
+    "schedule": "0 2 * * *",
+    "retention": 30,
+    "compress": true,
+    "encrypt": false,
+    "destination": "/backups"
+  },
+  "scaling": {
+    "workers": "auto",
+    "maxWorkers": 4,
+    "gracefulShutdown": 30000,
+    "healthCheckGracePeriod": 10000
+  }
+}

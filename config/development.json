@@ -1,0 +1,180 @@
+{
+  "database": {
+    "path": "./data/claude-daemon.db",
+    "backup": true,
+    "backupInterval": "1h",
+    "maxBackups": 24,
+    "enableWAL": true,
+    "timeout": 30000
+  },
+  "monitoring": {
+    "interval": 300,
+    "warningThreshold": 80,
+    "criticalThreshold": 95,
+    "enablePredictions": true,
+    "predictionWindow": "24h",
+    "collectSystemMetrics": true,
+    "metricsRetention": "7d"
+  },
+  "logging": {
+    "level": "debug",
+    "file": "./logs/development.log",
+    "maxSize": "10mb",
+    "maxFiles": 5,
+    "enableConsole": true,
+    "colorize": true,
+    "timestamp": true,
+    "prettyPrint": true
+  },
+  "server": {
+    "port": 5000,
+    "host": "localhost",
+    "cors": {
+      "origin": "*",
+      "credentials": true,
+      "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+      "allowedHeaders": ["Content-Type", "Authorization", "X-Requested-With", "Accept", "X-API-Key"]
+    },
+    "rateLimit": {
+      "enabled": false,
+      "windowMs": 900000,
+      "max": 1000,
+      "skipSuccessfulRequests": true
+    },
+    "compression": true,
+    "trustProxy": false
+  },
+  "websocket": {
+    "enabled": true,
+    "port": 5001,
+    "pingInterval": 25000,
+    "pingTimeout": 5000,
+    "cors": {
+      "origin": "*",
+      "credentials": true
+    },
+    "transports": ["websocket", "polling"]
+  },
+  "cleanup": {
+    "retentionDays": 30,
+    "autoCleanup": true,
+    "cleanupInterval": "24h",
+    "cleanupTypes": ["logs", "temp", "backups"],
+    "maxLogSize": "100mb",
+    "maxTempFiles": 1000
+  },
+  "notifications": {
+    "enabled": true,
+    "channels": ["console", "file", "websocket"],
+    "cooldown": 300,
+    "levels": {
+      "info": ["console", "websocket"],
+      "warning": ["console", "file", "websocket"],
+      "error": ["console", "file", "websocket"],
+      "critical": ["console", "file", "websocket"]
+    }
+  },
+  "features": {
+    "bmadIntegration": true,
+    "usagePredictions": true,
+    "realTimeUpdates": true,
+    "apiKeyAuth": true,
+    "webhooks": true,
+    "emailNotifications": false,
+    "slackIntegration": false,
+    "exportData": true
+  },
+  "security": {
+    "requireAuth": false,
+    "jwt": {
+      "expiresIn": "24h",
+      "refreshTokenExpiry": "7d"
+    },
+    "bcrypt": {
+      "rounds": 10
+    },
+    "helmet": {
+      "contentSecurityPolicy": {
+        "directives": {
+          "defaultSrc": ["'self'"],
+          "styleSrc": ["'self'", "'unsafe-inline'", "https:"],
+          "scriptSrc": ["'self'", "https://cdn.jsdelivr.net"],
+          "imgSrc": ["'self'", "data:", "https:"],
+          "connectSrc": ["'self'", "ws:", "wss:"]
+        }
+      }
+    }
+  },
+  "performance": {
+    "enableCaching": true,
+    "cacheTimeout": 300,
+    "maxRequestSize": "10mb",
+    "requestTimeout": 30000,
+    "enableGzip": true,
+    "staticCaching": true
+  },
+  "claudeCode": {
+    "configPath": "~/.config/claude-code",
+    "usageFile": "usage.json",
+    "limitsFile": "limits.json",
+    "pollInterval": 60,
+    "enableFileWatcher": true
+  },
+  "bmad": {
+    "enabled": true,
+    "configPath": "./.bmad",
+    "agents": {
+      "dev": {
+        "enabled": true,
+        "maxConcurrentTasks": 3,
+        "timeout": 300
+      },
+      "qa": {
+        "enabled": true,
+        "maxConcurrentTasks": 2,
+        "timeout": 600
+      },
+      "pm": {
+        "enabled": true,
+        "maxConcurrentTasks": 5,
+        "timeout": 180
+      },
+      "po": {
+        "enabled": true,
+        "maxConcurrentTasks": 3,
+        "timeout": 240
+      }
+    },
+    "workflows": {
+      "autoStart": false,
+      "maxConcurrent": 10,
+      "defaultTimeout": 3600,
+      "retryAttempts": 3
+    }
+  },
+  "api": {
+    "version": "1.0.0",
+    "prefix": "/api",
+    "documentation": {
+      "enabled": true,
+      "path": "/docs"
+    },
+    "validation": {
+      "enabled": true,
+      "strictMode": false
+    },
+    "pagination": {
+      "defaultLimit": 50,
+      "maxLimit": 1000
+    }
+  },
+  "development": {
+    "hotReload": true,
+    "debugMode": true,
+    "verboseLogging": true,
+    "enableProfiler": true,
+    "mockExternalServices": true,
+    "skipMigrations": false,
+    "seedDatabase": true
+  }
+}

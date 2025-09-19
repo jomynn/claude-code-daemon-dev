@@ -1,0 +1,43 @@
+{
+  "database": {
+    "path": ":memory:",
+    "backup": false
+  },
+  "monitoring": {
+    "interval": 60,
+    "warningThreshold": 80,
+    "criticalThreshold": 95
+  },
+  "logging": {
+    "level": "error",
+    "file": "./logs/test.log"
+  },
+  "server": {
+    "port": 5000,
+    "cors": {
+      "origin": "*"
+    }
+  },
+  "cleanup": {
+    "retentionDays": 1
+  },
+  "notifications": {
+    "channels": ["console"],
+    "throttle": {
+      "enabled": false,
+      "windowMs": 60000,
+      "maxAlerts": 100
+    }
+  },
+  "predictions": {
+    "enabled": false,
+    "modelVersion": "1.0.0",
+    "minDataPoints": 5,
+    "updateInterval": 300
+  },
+  "bmad": {
+    "enabled": false,
+    "apiEndpoint": null,
+    "apiKey": null
+  }
+}

@@ -1,0 +1,79 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Logs
+logs/
+*.log
+
+# Runtime data (exclude database files but keep sample data)
+data/*.log
+data/temp/
+*.db-journal
+*.db-wal
+*.db-shm
+# Uncomment the following lines if you want to exclude all database files:
+# *.db
+# *.sqlite
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output/
+
+# Jest cache
+.jest/
+
+# ESLint cache
+.eslintcache
+
+# Build outputs
+dist/
+build/
+
+# Temporary files
+temp/
+tmp/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Backup files
+backup/
+*.backup
+
+# SSL certificates
+ssl/
+*.pem
+*.crt
+*.key

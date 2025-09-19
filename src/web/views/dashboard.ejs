@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Claude Code Daemon Dashboard</h1>
+            <nav>
+                <a href="/" class="active">Dashboard</a>
+                <a href="/usage">Usage Analytics</a>
+                <a href="/alerts">Alerts</a>
+            </nav>
+            <div class="status-indicator">
+                <span id="connection-status" class="status-dot"></span>
+                <span>Live</span>
+            </div>
+        </header>
+
+        <main>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Current Usage</h3>
+                    <div class="stat-value" id="current-tokens">0</div>
+                    <div class="stat-label">Tokens</div>
+                    <div class="stat-change" id="tokens-change">+0%</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Requests/Hour</h3>
+                    <div class="stat-value" id="requests-hour">0</div>
+                    <div class="stat-label">Requests</div>
+                    <div class="stat-change" id="requests-change">+0%</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Usage Limit</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="usage-progress" style="width: 0%"></div>
+                    </div>
+                    <div class="stat-label"><span id="usage-percent">0</span>% Used</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Time Remaining</h3>
+                    <div class="stat-value" id="time-remaining">--</div>
+                    <div class="stat-label">Hours</div>
+                    <div class="stat-subtitle" id="limit-prediction">At current rate</div>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>Usage Trend (24 Hours)</h3>
+                    <canvas id="usage-chart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Request Rate</h3>
+                    <canvas id="request-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="alerts-section">
+                <h3>Recent Alerts</h3>
+                <div id="alerts-list" class="alerts-list">
+                    <!-- Alerts will be populated here -->
+                </div>
+            </div>
+
+            <div class="system-info">
+                <h3>System Status</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Daemon Status:</span>
+                        <span class="info-value" id="daemon-status">Running</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Uptime:</span>
+                        <span class="info-value" id="uptime">0h 0m</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Memory Usage:</span>
+                        <span class="info-value" id="memory-usage">0 MB</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Version:</span>
+                        <span class="info-value">1.0.0</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Claude Code Daemon &copy; 2024 | Environment: <%= env %></p>
+        </footer>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

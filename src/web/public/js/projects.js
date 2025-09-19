@@ -16,7 +16,11 @@ class ProjectManager {
     async init() {
         this.setupEventListeners();
         this.setupSocketConnection();
-        await this.loadProjects();
+        await Promise.all([
+            this.loadProjects(),
+            this.loadBmadRoles(),
+            this.loadBmadWorkflows()
+        ]);
         this.updateStats();
     }
 
@@ -679,6 +683,254 @@ class ProjectManager {
         console.log('BMAD update:', data);
         // Update the BMAD interface with new data
     }
+
+    // Enhanced BMAD functionality
+    async loadBmadRoles() {
+        try {
+            const response = await fetch('/api/projects/bmad/roles');
+            const result = await response.json();
+            if (result.success) {
+                this.bmadRoles = result.data.roles;
+                this.bmadCategories = result.data.categories;
+                return result.data;
+            }
+        } catch (error) {
+            console.error('Error loading BMAD roles:', error);
+        }
+    }
+
+    async loadBmadWorkflows() {
+        try {
+            const response = await fetch('/api/projects/bmad/workflows');
+            const result = await response.json();
+            if (result.success) {
+                this.bmadWorkflows = result.data;
+                return result.data;
+            }
+        } catch (error) {
+            console.error('Error loading BMAD workflows:', error);
+        }
+    }
+
+    renderBmadRoleSelector(selectedRoles = []) {
+        if (!this.bmadRoles || !this.bmadCategories) {
+            return '<p>Loading BMAD roles...</p>';
+        }
+
+        let html = '<div class="bmad-role-selector">';
+
+        for (const [category, roles] of Object.entries(this.bmadCategories)) {
+            html += `
+                <div class="role-category">
+                    <h4 class="category-title">${category.charAt(0).toUpperCase() + category.slice(1)}</h4>
+                    <div class="roles-grid">
+            `;
+
+            for (const roleKey of roles) {
+                const role = this.bmadRoles[roleKey];
+                const isSelected = selectedRoles.includes(roleKey);
+                html += `
+                    <div class="role-item ${isSelected ? 'selected' : ''}" data-role="${roleKey}">
+                        <div class="role-header">
+                            <input type="checkbox"
+                                   id="role-${roleKey}"
+                                   name="bmadRoles"
+                                   value="${roleKey}"
+                                   ${isSelected ? 'checked' : ''}
+                            >
+                            <label for="role-${roleKey}" class="role-name">${role.name}</label>
+                        </div>
+                        <div class="role-description">${role.description}</div>
+                        <div class="role-skills">
+                            ${role.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    renderWorkflowSelector(selectedWorkflow = 'agile') {
+        if (!this.bmadWorkflows) {
+            return '<p>Loading workflows...</p>';
+        }
+
+        let html = '<div class="workflow-selector">';
+
+        for (const [workflowKey, workflow] of Object.entries(this.bmadWorkflows)) {
+            const isSelected = selectedWorkflow === workflowKey;
+            html += `
+                <div class="workflow-item ${isSelected ? 'selected' : ''}" data-workflow="${workflowKey}">
+                    <input type="radio"
+                           id="workflow-${workflowKey}"
+                           name="bmadWorkflow"
+                           value="${workflowKey}"
+                           ${isSelected ? 'checked' : ''}
+                    >
+                    <label for="workflow-${workflowKey}">
+                        <div class="workflow-name">${workflow.name}</div>
+                        <div class="workflow-phases">
+                            Phases: ${workflow.phases.join(' → ')}
+                        </div>
+                        <div class="workflow-roles">
+                            Recommended: ${workflow.recommendedRoles.map(role =>
+                                this.bmadRoles?.[role]?.name || role
+                            ).join(', ')}
+                        </div>
+                    </label>
+                </div>
+            `;
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    // Terminal Interface functionality
+    async createTerminal(projectId) {
+        try {
+            const response = await fetch(`/api/projects/${projectId}/terminal/create`, {
+                method: 'POST'
+            });
+            const result = await response.json();
+            if (result.success) {
+                this.showSuccess('Terminal session created successfully!');
+                return result.data;
+            } else {
+                this.showError(result.error);
+            }
+        } catch (error) {
+            console.error('Error creating terminal:', error);
+            this.showError('Failed to create terminal session');
+        }
+    }
+
+    async sendTerminalCommand(projectId, terminalId, command) {
+        try {
+            const response = await fetch(`/api/projects/${projectId}/terminal/${terminalId}/command`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ command })
+            });
+            const result = await response.json();
+            if (result.success) {
+                return true;
+            } else {
+                this.showError(result.error);
+                return false;
+            }
+        } catch (error) {
+            console.error('Error sending terminal command:', error);
+            this.showError('Failed to send command');
+            return false;
+        }
+    }
+
+    async getTerminalSessions(projectId) {
+        try {
+            const response = await fetch(`/api/projects/${projectId}/terminal/sessions`);
+            const result = await response.json();
+            if (result.success) {
+                return result.data;
+            }
+        } catch (error) {
+            console.error('Error getting terminal sessions:', error);
+        }
+        return [];
+    }
+
+    async terminateTerminal(projectId, terminalId) {
+        try {
+            const response = await fetch(`/api/projects/${projectId}/terminal/${terminalId}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            if (result.success) {
+                this.showSuccess('Terminal session terminated');
+                return true;
+            }
+        } catch (error) {
+            console.error('Error terminating terminal:', error);
+            this.showError('Failed to terminate terminal');
+        }
+        return false;
+    }
+
+    renderTerminalInterface(project) {
+        return `
+            <div class="terminal-interface">
+                <div class="terminal-header">
+                    <h4>Terminal Sessions</h4>
+                    <button class="btn" onclick="projectManager.createTerminal('${project.id}')">
+                        New Terminal
+                    </button>
+                </div>
+                <div class="terminal-sessions" id="terminal-sessions-${project.id}">
+                    <!-- Terminal sessions will be loaded here -->
+                </div>
+                <div class="terminal-console">
+                    <div class="console-header">
+                        <span>Console Output</span>
+                        <button class="btn-small" onclick="this.nextElementSibling.innerHTML = ''">Clear</button>
+                    </div>
+                    <div class="console-output" id="console-output-${project.id}"></div>
+                    <div class="console-input">
+                        <input type="text"
+                               placeholder="Enter command..."
+                               onkeypress="if(event.key==='Enter') projectManager.executeTerminalCommand('${project.id}', this.value, this)"
+                        >
+                        <button class="btn" onclick="projectManager.executeTerminalCommand('${project.id}', this.previousElementSibling.value, this.previousElementSibling)">
+                            Execute
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    async executeTerminalCommand(projectId, command, inputElement) {
+        if (!command.trim()) return;
+
+        // Get the first available terminal session or create one
+        let sessions = await this.getTerminalSessions(projectId);
+        let terminalId;
+
+        if (sessions.length === 0) {
+            const newTerminal = await this.createTerminal(projectId);
+            if (newTerminal) {
+                terminalId = newTerminal.terminalId;
+            }
+        } else {
+            terminalId = sessions.find(s => s.status === 'running')?.terminalId || sessions[0].terminalId;
+        }
+
+        if (terminalId) {
+            const success = await this.sendTerminalCommand(projectId, terminalId, command);
+            if (success) {
+                // Add command to console output
+                const consoleOutput = document.getElementById(`console-output-${projectId}`);
+                if (consoleOutput) {
+                    consoleOutput.innerHTML += `<div class="console-line">$ ${command}</div>`;
+                    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                }
+
+                // Clear input
+                if (inputElement) {
+                    inputElement.value = '';
+                }
+            }
+        }
+    }
 }
 
 // Initialize the project manager when the page loads
@@ -813,6 +1065,218 @@ style.textContent = `
 .step-status.running {
     background: rgba(33, 150, 243, 0.2);
     color: var(--primary-color);
+}
+
+/* Enhanced BMAD Styles */
+.bmad-role-selector {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.role-category {
+    margin-bottom: 25px;
+}
+
+.category-title {
+    color: var(--primary-color);
+    font-size: 16px;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.roles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 10px;
+}
+
+.role-item {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    transition: all 0.3s;
+}
+
+.role-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--primary-color);
+}
+
+.role-item.selected {
+    border-color: var(--primary-color);
+    background: rgba(33, 150, 243, 0.1);
+}
+
+.role-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.role-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.role-description {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.role-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.skill-tag {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+}
+
+.workflow-selector {
+    display: grid;
+    gap: 15px;
+}
+
+.workflow-item {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.02);
+    transition: all 0.3s;
+}
+
+.workflow-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--primary-color);
+}
+
+.workflow-item.selected {
+    border-color: var(--primary-color);
+    background: rgba(33, 150, 243, 0.1);
+}
+
+.workflow-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+
+.workflow-phases,
+.workflow-roles {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 3px;
+}
+
+/* Terminal Interface Styles */
+.terminal-interface {
+    background: var(--dark-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.terminal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.terminal-header h4 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.terminal-sessions {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.terminal-console {
+    height: 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+.console-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.console-output {
+    flex: 1;
+    background: #000;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 10px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}
+
+.console-line {
+    margin-bottom: 2px;
+}
+
+.console-input {
+    display: flex;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-top: 1px solid var(--border-color);
+}
+
+.console-input input {
+    flex: 1;
+    background: var(--dark-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+}
+
+.console-input button {
+    margin-left: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.btn-small {
+    padding: 4px 8px;
+    font-size: 11px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.btn-small:hover {
+    background: #1976D2;
 }
 `;
 document.head.appendChild(style);

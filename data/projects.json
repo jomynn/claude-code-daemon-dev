@@ -71,5 +71,106 @@
     "createdAt": "2025-09-19T15:15:13.612Z",
     "updatedAt": "2025-09-19T15:15:13.612Z",
     "status": "initialized"
+  },
+  {
+    "id": "proj-1758295450499-a9kfkrd6g",
+    "name": "Enhanced BMAD Test",
+    "description": "Testing enhanced BMAD features",
+    "targetFolder": "/tmp/bmad-test",
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022",
+      "maxTokens": 4000,
+      "temperature": 0.7
+    },
+    "bmadConfig": {
+      "workflow": "enterprise"
+    },
+    "createdAt": "2025-09-19T15:24:10.499Z",
+    "updatedAt": "2025-09-19T15:24:10.499Z",
+    "status": "initialized"
+  },
+  {
+    "id": "proj-1758295467904-ax3f0gzfs",
+    "name": "Default BMAD Test",
+    "description": "Testing default BMAD",
+    "targetFolder": "/tmp/default-bmad",
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022",
+      "maxTokens": 4000,
+      "temperature": 0.7
+    },
+    "bmadConfig": {
+      "enabled": true,
+      "workflow": "agile",
+      "agents": [
+        "pm",
+        "dev",
+        "qa",
+        "scrum-master"
+      ],
+      "phases": [
+        "planning",
+        "development",
+        "testing",
+        "review",
+        "deployment"
+      ],
+      "currentPhase": "planning",
+      "roleAssignments": {},
+      "settings": {
+        "maxAgents": 10,
+        "allowCustomRoles": true,
+        "autoAdvancePhases": false
+      }
+    },
+    "createdAt": "2025-09-19T15:24:27.904Z",
+    "updatedAt": "2025-09-19T15:24:27.904Z",
+    "status": "initialized"
+  },
+  {
+    "id": "proj-1758297527882-madhnpaom",
+    "name": "Test Workspace Project",
+    "description": "Testing the enhanced project creation from workspace",
+    "targetFolder": "/tmp/test-workspace-project",
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022",
+      "temperature": 0.7,
+      "maxTokens": 4000,
+      "context": "This is a test project"
+    },
+    "bmadConfig": {
+      "enabled": true,
+      "workflow": "agile",
+      "agents": [
+        "dev",
+        "qa"
+      ]
+    },
+    "createdAt": "2025-09-19T15:58:47.882Z",
+    "updatedAt": "2025-09-19T15:58:47.882Z",
+    "status": "initialized"
+  },
+  {
+    "id": "proj-1758297574417-ieot1y44j",
+    "name": "React Web App",
+    "description": "Testing React template",
+    "targetFolder": "/tmp/react-test-app",
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022"
+    },
+    "bmadConfig": {
+      "enabled": false
+    },
+    "createdAt": "2025-09-19T15:59:34.417Z",
+    "updatedAt": "2025-09-19T15:59:34.417Z",
+    "status": "initialized"
   }
 ]

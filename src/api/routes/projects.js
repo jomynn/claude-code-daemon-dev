@@ -18,6 +18,220 @@ let projects = new Map();
 const claudeIntegration = new ClaudeCodeIntegration();
 const githubIntegration = new GitHubIntegration();
 
+// Comprehensive BMAD-Method Roles
+const BMAD_ROLES = {
+    // Core Development Roles
+    'senior-dev': {
+        name: 'Senior Developer',
+        description: 'Architecture and complex feature development',
+        skills: ['system-design', 'advanced-programming', 'mentoring'],
+        category: 'development'
+    },
+    'dev': {
+        name: 'Developer',
+        description: 'Feature implementation and bug fixes',
+        skills: ['programming', 'debugging', 'code-review'],
+        category: 'development'
+    },
+    'junior-dev': {
+        name: 'Junior Developer',
+        description: 'Simple features and learning tasks',
+        skills: ['basic-programming', 'testing', 'documentation'],
+        category: 'development'
+    },
+    'frontend-dev': {
+        name: 'Frontend Developer',
+        description: 'UI/UX implementation and client-side development',
+        skills: ['html', 'css', 'javascript', 'react', 'vue', 'angular'],
+        category: 'development'
+    },
+    'backend-dev': {
+        name: 'Backend Developer',
+        description: 'Server-side logic and API development',
+        skills: ['api-design', 'databases', 'server-architecture'],
+        category: 'development'
+    },
+    'fullstack-dev': {
+        name: 'Fullstack Developer',
+        description: 'Both frontend and backend development',
+        skills: ['frontend', 'backend', 'integration'],
+        category: 'development'
+    },
+
+    // Quality Assurance Roles
+    'qa-lead': {
+        name: 'QA Lead',
+        description: 'Testing strategy and quality oversight',
+        skills: ['test-strategy', 'automation', 'team-leadership'],
+        category: 'quality'
+    },
+    'qa': {
+        name: 'QA Engineer',
+        description: 'Testing and quality assurance',
+        skills: ['manual-testing', 'automation', 'bug-reporting'],
+        category: 'quality'
+    },
+    'automation-qa': {
+        name: 'Automation QA',
+        description: 'Automated testing and CI/CD',
+        skills: ['test-automation', 'selenium', 'cypress', 'jest'],
+        category: 'quality'
+    },
+    'performance-qa': {
+        name: 'Performance QA',
+        description: 'Performance and load testing',
+        skills: ['load-testing', 'performance-analysis', 'optimization'],
+        category: 'quality'
+    },
+
+    // Management Roles
+    'tech-lead': {
+        name: 'Technical Lead',
+        description: 'Technical direction and team guidance',
+        skills: ['architecture', 'team-leadership', 'technical-decisions'],
+        category: 'management'
+    },
+    'pm': {
+        name: 'Project Manager',
+        description: 'Project coordination and delivery',
+        skills: ['project-planning', 'coordination', 'stakeholder-management'],
+        category: 'management'
+    },
+    'product-manager': {
+        name: 'Product Manager',
+        description: 'Product strategy and requirements',
+        skills: ['product-strategy', 'requirements', 'user-research'],
+        category: 'management'
+    },
+    'scrum-master': {
+        name: 'Scrum Master',
+        description: 'Agile process facilitation',
+        skills: ['agile', 'facilitation', 'team-coaching'],
+        category: 'management'
+    },
+
+    // Specialized Roles
+    'devops': {
+        name: 'DevOps Engineer',
+        description: 'Infrastructure and deployment automation',
+        skills: ['ci-cd', 'infrastructure', 'monitoring', 'docker', 'kubernetes'],
+        category: 'operations'
+    },
+    'security': {
+        name: 'Security Engineer',
+        description: 'Security assessment and implementation',
+        skills: ['security-audit', 'penetration-testing', 'compliance'],
+        category: 'security'
+    },
+    'data-engineer': {
+        name: 'Data Engineer',
+        description: 'Data pipeline and analytics',
+        skills: ['data-processing', 'etl', 'analytics', 'databases'],
+        category: 'data'
+    },
+    'ml-engineer': {
+        name: 'ML Engineer',
+        description: 'Machine learning implementation',
+        skills: ['machine-learning', 'data-science', 'model-deployment'],
+        category: 'data'
+    },
+    'mobile-dev': {
+        name: 'Mobile Developer',
+        description: 'Mobile application development',
+        skills: ['ios', 'android', 'react-native', 'flutter'],
+        category: 'development'
+    },
+
+    // Design and UX Roles
+    'ux-designer': {
+        name: 'UX Designer',
+        description: 'User experience design and research',
+        skills: ['user-research', 'wireframing', 'prototyping'],
+        category: 'design'
+    },
+    'ui-designer': {
+        name: 'UI Designer',
+        description: 'User interface design and visual design',
+        skills: ['visual-design', 'typography', 'color-theory'],
+        category: 'design'
+    },
+
+    // Documentation and Support
+    'tech-writer': {
+        name: 'Technical Writer',
+        description: 'Documentation and technical communication',
+        skills: ['technical-writing', 'documentation', 'api-docs'],
+        category: 'documentation'
+    },
+    'support': {
+        name: 'Support Engineer',
+        description: 'Customer support and issue resolution',
+        skills: ['troubleshooting', 'customer-service', 'issue-tracking'],
+        category: 'support'
+    },
+
+    // Business and Analysis
+    'business-analyst': {
+        name: 'Business Analyst',
+        description: 'Requirements analysis and business logic',
+        skills: ['requirements-analysis', 'business-process', 'stakeholder-communication'],
+        category: 'analysis'
+    },
+    'data-analyst': {
+        name: 'Data Analyst',
+        description: 'Data analysis and reporting',
+        skills: ['data-analysis', 'reporting', 'visualization'],
+        category: 'analysis'
+    }
+};
+
+// BMAD Workflow Templates
+const BMAD_WORKFLOWS = {
+    'agile': {
+        name: 'Agile Development',
+        phases: ['planning', 'development', 'testing', 'review', 'deployment'],
+        recommendedRoles: ['pm', 'dev', 'qa', 'scrum-master']
+    },
+    'waterfall': {
+        name: 'Waterfall',
+        phases: ['requirements', 'design', 'implementation', 'testing', 'deployment'],
+        recommendedRoles: ['pm', 'business-analyst', 'senior-dev', 'qa']
+    },
+    'startup': {
+        name: 'Startup MVP',
+        phases: ['prototype', 'mvp', 'iterate'],
+        recommendedRoles: ['fullstack-dev', 'product-manager', 'ux-designer']
+    },
+    'enterprise': {
+        name: 'Enterprise Development',
+        phases: ['architecture', 'development', 'security-review', 'testing', 'deployment'],
+        recommendedRoles: ['tech-lead', 'senior-dev', 'security', 'devops', 'qa-lead']
+    },
+    'maintenance': {
+        name: 'Maintenance Mode',
+        phases: ['support', 'bug-fixes', 'minor-updates'],
+        recommendedRoles: ['dev', 'support', 'qa']
+    }
+};
+
+// Helper function to get default BMAD config
+function getDefaultBmadConfig(workflow = 'agile') {
+    const workflowConfig = BMAD_WORKFLOWS[workflow] || BMAD_WORKFLOWS.agile;
+    return {
+        enabled: true,
+        workflow: workflow,
+        agents: workflowConfig.recommendedRoles,
+        phases: workflowConfig.phases,
+        currentPhase: workflowConfig.phases[0],
+        roleAssignments: {},
+        settings: {
+            maxAgents: 10,
+            allowCustomRoles: true,
+            autoAdvancePhases: false
+        }
+    };
+}
+
 // Load projects from file on startup
 const PROJECTS_FILE = path.join(process.cwd(), 'data', 'projects.json');
 
@@ -73,7 +287,18 @@ router.get('/', async (req, res) => {
 // Create new project
 router.post('/', async (req, res) => {
     try {
-        const { name, description, targetFolder, githubRepo, claudeConfig, bmadConfig } = req.body;
+        const {
+            name,
+            description,
+            targetFolder,
+            template,
+            githubRepo,
+            claudeConfig,
+            bmadConfig,
+            initGit,
+            createReadme,
+            createGitignore
+        } = req.body;
 
         if (!name || !targetFolder) {
             return res.status(400).json({
@@ -88,6 +313,7 @@ router.post('/', async (req, res) => {
             name,
             description: description || '',
             targetFolder: path.resolve(targetFolder),
+            template: template || null,
             githubRepo: githubRepo || null,
             claudeConfig: claudeConfig || {
                 enabled: true,
@@ -95,29 +321,41 @@ router.post('/', async (req, res) => {
                 maxTokens: 4000,
                 temperature: 0.7
             },
-            bmadConfig: bmadConfig || {
-                enabled: true,
-                agents: ['dev', 'qa', 'pm'],
-                workflow: 'standard'
+            bmadConfig: bmadConfig || getDefaultBmadConfig(bmadConfig?.workflow || 'agile'),
+            settings: {
+                initGit: initGit !== false, // Default true
+                createReadme: createReadme !== false, // Default true
+                createGitignore: createGitignore !== false // Default true
             },
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            status: 'initialized'
+            status: 'creating'
         };
 
         // Create project directory if it doesn't exist
         await fs.mkdir(project.targetFolder, { recursive: true });
 
-        // Initialize git repository if GitHub repo is specified
-        if (githubRepo) {
+        // Initialize project template if specified
+        if (template) {
+            await initializeProjectTemplate(project, template);
+        }
+
+        // Initialize git repository
+        if (project.settings.initGit || githubRepo) {
             const gitResult = await initializeGitRepo(project);
             if (!gitResult) {
                 console.warn('Failed to initialize git repository');
             }
         }
 
+        // Create standard project files
+        await createProjectFiles(project);
+
         // Create project configuration files
         await createProjectConfig(project);
+
+        // Update project status
+        project.status = 'initialized';
 
         projects.set(projectId, project);
         await saveProjects();
@@ -128,6 +366,7 @@ router.post('/', async (req, res) => {
             message: 'Project created successfully'
         });
     } catch (error) {
+        console.error('Project creation error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -612,6 +851,299 @@ async function initializeGitRepo(project) {
     }
 }
 
+async function initializeProjectTemplate(project, template) {
+    const templates = {
+        'node-express': {
+            files: {
+                'package.json': {
+                    name: project.name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+                    version: '1.0.0',
+                    description: project.description,
+                    main: 'index.js',
+                    scripts: {
+                        start: 'node index.js',
+                        dev: 'nodemon index.js',
+                        test: 'jest'
+                    },
+                    dependencies: {
+                        express: '^4.18.0',
+                        cors: '^2.8.5',
+                        helmet: '^6.0.0'
+                    },
+                    devDependencies: {
+                        nodemon: '^2.0.20',
+                        jest: '^29.0.0'
+                    }
+                },
+                'index.js': `const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Middleware
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
+
+// Routes
+app.get('/', (req, res) => {
+    res.json({ message: 'Welcome to ${project.name}!' });
+});
+
+app.listen(port, () => {
+    console.log(\`Server running on port \${port}\`);
+});
+`
+            }
+        },
+        'react-app': {
+            files: {
+                'package.json': {
+                    name: project.name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+                    version: '1.0.0',
+                    description: project.description,
+                    scripts: {
+                        start: 'react-scripts start',
+                        build: 'react-scripts build',
+                        test: 'react-scripts test',
+                        eject: 'react-scripts eject'
+                    },
+                    dependencies: {
+                        react: '^18.2.0',
+                        'react-dom': '^18.2.0',
+                        'react-scripts': '^5.0.1'
+                    }
+                },
+                'public/index.html': `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${project.name}</title>
+</head>
+<body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+</body>
+</html>`,
+                'src/index.js': `import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+`,
+                'src/App.js': `import React from 'react';
+
+function App() {
+    return (
+        <div>
+            <h1>Welcome to ${project.name}</h1>
+            <p>${project.description}</p>
+        </div>
+    );
+}
+
+export default App;
+`
+            }
+        },
+        'python-flask': {
+            files: {
+                'requirements.txt': `Flask==2.3.0
+Flask-CORS==4.0.0
+python-dotenv==1.0.0
+`,
+                'app.py': `from flask import Flask, jsonify
+from flask_cors import CORS
+import os
+
+app = Flask(__name__)
+CORS(app)
+
+@app.route('/')
+def hello():
+    return jsonify({'message': 'Welcome to ${project.name}!'})
+
+if __name__ == '__main__':
+    app.run(debug=True, port=int(os.environ.get('PORT', 5000)))
+`,
+                '.env': 'FLASK_ENV=development\nPORT=5000\n'
+            }
+        },
+        'static-html': {
+            files: {
+                'index.html': `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${project.name}</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>${project.name}</h1>
+    </header>
+    <main>
+        <p>${project.description}</p>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>`,
+                'styles.css': `/* ${project.name} Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+
+header {
+    background: #007acc;
+    color: white;
+    text-align: center;
+    padding: 1rem;
+}
+
+main {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+`,
+                'script.js': `// ${project.name} JavaScript
+console.log('Welcome to ${project.name}!');
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded successfully');
+});
+`
+            }
+        }
+    };
+
+    const templateConfig = templates[template];
+    if (!templateConfig) {
+        throw new Error(`Unknown template: ${template}`);
+    }
+
+    // Create template files
+    for (const [filePath, content] of Object.entries(templateConfig.files)) {
+        const fullPath = path.join(project.targetFolder, filePath);
+        const dir = path.dirname(fullPath);
+
+        // Create directory if it doesn't exist
+        await fs.mkdir(dir, { recursive: true });
+
+        // Write file content
+        if (typeof content === 'object') {
+            await fs.writeFile(fullPath, JSON.stringify(content, null, 2));
+        } else {
+            await fs.writeFile(fullPath, content);
+        }
+    }
+}
+
+async function createProjectFiles(project) {
+    try {
+        // Create README.md if requested
+        if (project.settings.createReadme) {
+            const readmeContent = `# ${project.name}
+
+${project.description}
+
+## Getting Started
+
+This project was created with Claude Code Daemon.
+
+### Prerequisites
+
+- Node.js (if using Node.js template)
+- Python (if using Python template)
+
+### Installation
+
+1. Clone the repository
+2. Install dependencies
+3. Start the development server
+
+## Configuration
+
+This project includes:
+- ${project.claudeConfig.enabled ? '✅ Claude Code Assistant' : '❌ Claude Code Assistant'}
+- ${project.bmadConfig.enabled ? '✅ BMAD Multi-Agent Development' : '❌ BMAD Multi-Agent Development'}
+
+## Contributing
+
+Please read our contributing guidelines before submitting pull requests.
+
+## License
+
+This project is licensed under the MIT License.
+`;
+            await fs.writeFile(path.join(project.targetFolder, 'README.md'), readmeContent);
+        }
+
+        // Create .gitignore if requested
+        if (project.settings.createGitignore) {
+            const gitignoreContent = `# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+env/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code Daemon
+.claude-daemon/
+*.claude-session
+`;
+            await fs.writeFile(path.join(project.targetFolder, '.gitignore'), gitignoreContent);
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Failed to create project files:', error);
+        return false;
+    }
+}
+
 async function createProjectConfig(project) {
     try {
         const configDir = path.join(project.targetFolder, '.claude-daemon');
@@ -752,5 +1284,401 @@ async function executeProjectCommand(project, command, args) {
         };
     }
 }
+
+// Get BMAD roles and workflows
+router.get('/bmad/roles', (req, res) => {
+    res.json({
+        success: true,
+        data: {
+            roles: BMAD_ROLES,
+            categories: Object.keys(BMAD_ROLES).reduce((acc, key) => {
+                const category = BMAD_ROLES[key].category;
+                if (!acc[category]) acc[category] = [];
+                acc[category].push(key);
+                return acc;
+            }, {})
+        }
+    });
+});
+
+router.get('/bmad/workflows', (req, res) => {
+    res.json({
+        success: true,
+        data: BMAD_WORKFLOWS
+    });
+});
+
+// Get specific project's BMAD configuration
+router.get('/:id/bmad', async (req, res) => {
+    try {
+        const project = projects.get(req.params.id);
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                error: 'Project not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                config: project.bmadConfig,
+                availableRoles: BMAD_ROLES,
+                availableWorkflows: BMAD_WORKFLOWS,
+                roleDetails: project.bmadConfig.agents.map(agentKey => ({
+                    key: agentKey,
+                    ...BMAD_ROLES[agentKey]
+                }))
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Update project's BMAD configuration
+router.put('/:id/bmad', async (req, res) => {
+    try {
+        const project = projects.get(req.params.id);
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                error: 'Project not found'
+            });
+        }
+
+        const { workflow, agents, phases, currentPhase, settings } = req.body;
+
+        // Update BMAD configuration
+        project.bmadConfig = {
+            ...project.bmadConfig,
+            ...(workflow && { workflow }),
+            ...(agents && { agents }),
+            ...(phases && { phases }),
+            ...(currentPhase && { currentPhase }),
+            ...(settings && { settings: { ...project.bmadConfig.settings, ...settings } })
+        };
+
+        project.updatedAt = new Date().toISOString();
+        await saveProjects();
+
+        res.json({
+            success: true,
+            data: project.bmadConfig,
+            message: 'BMAD configuration updated successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Terminal Interface for Claude Code
+router.post('/:id/terminal/create', async (req, res) => {
+    try {
+        const project = projects.get(req.params.id);
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                error: 'Project not found'
+            });
+        }
+
+        // Create a new terminal session
+        const terminalId = `terminal-${project.id}-${Date.now()}`;
+        const terminalProcess = spawn('bash', ['-l'], {
+            cwd: project.targetFolder,
+            stdio: ['pipe', 'pipe', 'pipe'],
+            env: {
+                ...process.env,
+                TERM: 'xterm-256color',
+                PS1: '\\u@\\h:\\w$ ',
+                CLAUDE_PROJECT_ID: project.id,
+                CLAUDE_PROJECT_NAME: project.name
+            }
+        });
+
+        // Set up real-time output streaming
+        terminalProcess.stdout.on('data', (data) => {
+            const output = data.toString();
+            // Emit to all connected clients
+            if (global.io) {
+                global.io.emit('terminal-output', {
+                    terminalId,
+                    projectId: project.id,
+                    output,
+                    type: 'stdout',
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
+
+        terminalProcess.stderr.on('data', (data) => {
+            const output = data.toString();
+            if (global.io) {
+                global.io.emit('terminal-output', {
+                    terminalId,
+                    projectId: project.id,
+                    output,
+                    type: 'stderr',
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
+
+        terminalProcess.on('close', (code) => {
+            if (global.io) {
+                global.io.emit('terminal-closed', {
+                    terminalId,
+                    projectId: project.id,
+                    exitCode: code,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
+
+        // Store terminal session
+        if (!project.terminalSessions) {
+            project.terminalSessions = new Map();
+        }
+        project.terminalSessions.set(terminalId, {
+            process: terminalProcess,
+            createdAt: new Date().toISOString(),
+            lastActivity: new Date().toISOString()
+        });
+
+        res.json({
+            success: true,
+            data: {
+                terminalId,
+                pid: terminalProcess.pid,
+                cwd: project.targetFolder,
+                createdAt: new Date().toISOString()
+            },
+            message: 'Terminal session created successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Send command to terminal
+router.post('/:id/terminal/:terminalId/command', async (req, res) => {
+    try {
+        const project = projects.get(req.params.id);
+        if (!project || !project.terminalSessions) {
+            return res.status(404).json({
+                success: false,
+                error: 'Project or terminal session not found'
+            });
+        }
+
+        const terminalSession = project.terminalSessions.get(req.params.terminalId);
+        if (!terminalSession) {
+            return res.status(404).json({
+                success: false,
+                error: 'Terminal session not found'
+            });
+        }
+
+        const { command } = req.body;
+        if (!command) {
+            return res.status(400).json({
+                success: false,
+                error: 'Command is required'
+            });
+        }
+
+        // Send command to terminal
+        terminalSession.process.stdin.write(command + '\n');
+        terminalSession.lastActivity = new Date().toISOString();
+
+        res.json({
+            success: true,
+            message: 'Command sent to terminal'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get terminal output
+router.get('/:id/terminal/:terminalId/output', async (req, res) => {
+    try {
+        const project = projects.get(req.params.id);
+        if (!project || !project.terminalSessions) {
+            return res.status(404).json({
+                success: false,
+                error: 'Project or terminal session not found'
+            });
+        }
+
+        const terminalSession = project.terminalSessions.get(req.params.terminalId);
+        if (!terminalSession) {
+            return res.status(404).json({
+                success: false,
+                error: 'Terminal session not found'
+            });
+        }
+
+        // For real-time output, you would typically use WebSockets
+        // This is a simplified version that returns session info
+        res.json({
+            success: true,
+            data: {
+                terminalId: req.params.terminalId,
+                pid: terminalSession.process.pid,
+                createdAt: terminalSession.createdAt,
+                lastActivity: terminalSession.lastActivity,
+                status: terminalSession.process.killed ? 'terminated' : 'running'
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// List terminal sessions
+router.get('/:id/terminal/sessions', async (req, res) => {
+    try {
+        const project = projects.get(req.params.id);
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                error: 'Project not found'
+            });
+        }
+
+        const sessions = [];
+        if (project.terminalSessions) {
+            for (const [terminalId, session] of project.terminalSessions) {
+                sessions.push({
+                    terminalId,
+                    pid: session.process.pid,
+                    createdAt: session.createdAt,
+                    lastActivity: session.lastActivity,
+                    status: session.process.killed ? 'terminated' : 'running'
+                });
+            }
+        }
+
+        res.json({
+            success: true,
+            data: sessions,
+            count: sessions.length
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Terminate terminal session
+router.delete('/:id/terminal/:terminalId', async (req, res) => {
+    try {
+        const project = projects.get(req.params.id);
+        if (!project || !project.terminalSessions) {
+            return res.status(404).json({
+                success: false,
+                error: 'Project or terminal session not found'
+            });
+        }
+
+        const terminalSession = project.terminalSessions.get(req.params.terminalId);
+        if (!terminalSession) {
+            return res.status(404).json({
+                success: false,
+                error: 'Terminal session not found'
+            });
+        }
+
+        // Terminate the process
+        terminalSession.process.kill('SIGTERM');
+
+        // Remove from sessions
+        project.terminalSessions.delete(req.params.terminalId);
+
+        res.json({
+            success: true,
+            message: 'Terminal session terminated successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Read file content
+router.post('/:id/files/read', async (req, res) => {
+    try {
+        const project = projects.get(req.params.id);
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                error: 'Project not found'
+            });
+        }
+
+        const { filePath } = req.body;
+        if (!filePath) {
+            return res.status(400).json({
+                success: false,
+                error: 'File path is required'
+            });
+        }
+
+        // Security check - ensure file is within project directory
+        const absoluteFilePath = path.resolve(project.targetFolder, filePath.replace(project.targetFolder, ''));
+        if (!absoluteFilePath.startsWith(path.resolve(project.targetFolder))) {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied - file outside project directory'
+            });
+        }
+
+        try {
+            const content = await fs.readFile(absoluteFilePath, 'utf8');
+            res.json({
+                success: true,
+                data: {
+                    content,
+                    path: filePath,
+                    size: content.length
+                }
+            });
+        } catch (fileError) {
+            if (fileError.code === 'ENOENT') {
+                return res.status(404).json({
+                    success: false,
+                    error: 'File not found'
+                });
+            }
+            throw fileError;
+        }
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
 
 module.exports = router;

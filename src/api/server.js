@@ -137,6 +137,13 @@ class ApiServer {
             });
         });
 
+        this.app.get('/workspace', (req, res) => {
+            res.render('workspace', {
+                title: 'Claude Code Workspace',
+                env: process.env.NODE_ENV
+            });
+        });
+
         // Health check endpoint
         this.app.get('/health', (req, res) => {
             res.json({
@@ -157,6 +164,9 @@ class ApiServer {
     }
 
     setupWebSocket() {
+        // Make IO instance globally available for terminal streaming
+        global.io = this.io;
+
         this.io.on('connection', (socket) => {
             this.logger.info(`Client connected: ${socket.id}`);
 
@@ -168,6 +178,18 @@ class ApiServer {
             socket.on('unsubscribe', (room) => {
                 socket.leave(room);
                 this.logger.debug(`Client ${socket.id} unsubscribed from ${room}`);
+            });
+
+            // Terminal input handling
+            socket.on('terminal-input', (data) => {
+                this.logger.debug(`Terminal input from ${socket.id}:`, data);
+                // This will be handled by the projects routes
+            });
+
+            // Claude Code communication
+            socket.on('claude-input', (data) => {
+                this.logger.debug(`Claude input from ${socket.id}:`, data);
+                // This will be handled by the projects routes
             });
 
             socket.on('disconnect', () => {

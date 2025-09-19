@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/workspace.css">
+    <script src="https://cdn.jsdelivr.net/npm/xterm@4.19.0/lib/xterm.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@4.19.0/css/xterm.css" />
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="workspace-container">
+        <header class="workspace-header">
+            <div class="workspace-nav">
+                <h1>Claude Code Workspace</h1>
+                <nav>
+                    <a href="/">Dashboard</a>
+                    <a href="/projects">Projects</a>
+                    <a href="/workspace" class="active">Workspace</a>
+                    <a href="/usage">Usage</a>
+                    <a href="/alerts">Alerts</a>
+                </nav>
+            </div>
+            <div class="workspace-controls">
+                <select id="project-selector">
+                    <option value="">Select Project...</option>
+                </select>
+                <button id="new-project-btn" class="btn">New Project</button>
+                <div class="status-indicator">
+                    <span id="connection-status" class="status-dot"></span>
+                    <span>Live</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="workspace-main">
+            <!-- Project Info Bar -->
+            <div class="project-info-bar" id="project-info-bar" style="display: none;">
+                <div class="project-details">
+                    <h3 id="current-project-name">No Project Selected</h3>
+                    <span id="current-project-path"></span>
+                </div>
+                <div class="project-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Claude Status:</span>
+                        <span id="claude-status" class="status-badge">Stopped</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Terminals:</span>
+                        <span id="terminal-count">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">BMAD Agents:</span>
+                        <span id="bmad-agent-count">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workspace Tabs -->
+            <div class="workspace-tabs">
+                <div class="tab-list">
+                    <button class="tab-btn active" data-tab="overview">Overview</button>
+                    <button class="tab-btn" data-tab="terminal">Terminal</button>
+                    <button class="tab-btn" data-tab="claude">Claude Code</button>
+                    <button class="tab-btn" data-tab="bmad">BMAD Method</button>
+                    <button class="tab-btn" data-tab="files">File Explorer</button>
+                </div>
+                <div class="tab-actions">
+                    <button id="split-view-btn" class="btn-small">Split View</button>
+                    <button id="fullscreen-btn" class="btn-small">Fullscreen</button>
+                </div>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="workspace-content">
+                <!-- Overview Tab -->
+                <div class="tab-content active" id="overview-tab">
+                    <div class="overview-grid">
+                        <div class="overview-card">
+                            <h4>Quick Actions</h4>
+                            <div class="quick-actions">
+                                <button class="action-btn" onclick="workspaceManager.startClaude()">
+                                    <span class="icon">🤖</span>
+                                    Start Claude Code
+                                </button>
+                                <button class="action-btn" onclick="workspaceManager.openTerminal()">
+                                    <span class="icon">💻</span>
+                                    New Terminal
+                                </button>
+                                <button class="action-btn" onclick="workspaceManager.startBmad()">
+                                    <span class="icon">👥</span>
+                                    Start BMAD
+                                </button>
+                                <button class="action-btn" onclick="workspaceManager.openFiles()">
+                                    <span class="icon">📁</span>
+                                    Browse Files
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="overview-card">
+                            <h4>Recent Activity</h4>
+                            <div class="activity-feed" id="activity-feed">
+                                <div class="activity-item">
+                                    <span class="activity-time">Just now</span>
+                                    <span class="activity-text">Workspace loaded</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="overview-card">
+                            <h4>System Resources</h4>
+                            <div class="resource-monitor" id="resource-monitor">
+                                <div class="resource-item">
+                                    <span>CPU Usage:</span>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: 25%"></div>
+                                    </div>
+                                    <span>25%</span>
+                                </div>
+                                <div class="resource-item">
+                                    <span>Memory:</span>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: 60%"></div>
+                                    </div>
+                                    <span>60%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="overview-card">
+                            <h4>BMAD Workflow Status</h4>
+                            <div class="workflow-status" id="workflow-status">
+                                <div class="phase-indicator">
+                                    <span class="phase active">Planning</span>
+                                    <span class="phase">Development</span>
+                                    <span class="phase">Testing</span>
+                                    <span class="phase">Review</span>
+                                    <span class="phase">Deployment</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terminal Tab -->
+                <div class="tab-content" id="terminal-tab">
+                    <div class="terminal-workspace">
+                        <div class="terminal-sidebar">
+                            <h4>Terminal Sessions</h4>
+                            <button class="btn" onclick="workspaceManager.createNewTerminal()">+ New Terminal</button>
+                            <div class="terminal-list" id="terminal-list">
+                                <!-- Terminal sessions will be listed here -->
+                            </div>
+                        </div>
+                        <div class="terminal-main">
+                            <div class="terminal-tabs" id="terminal-tabs">
+                                <!-- Terminal tabs will be created here -->
+                            </div>
+                            <div class="terminal-container" id="terminal-container">
+                                <div class="no-terminal">
+                                    <h3>No Terminal Selected</h3>
+                                    <p>Create a new terminal or select an existing one</p>
+                                    <button class="btn" onclick="workspaceManager.createNewTerminal()">Create Terminal</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Claude Code Tab -->
+                <div class="tab-content" id="claude-tab">
+                    <div class="claude-workspace">
+                        <div class="claude-sidebar">
+                            <h4>Claude Code Control</h4>
+                            <div class="claude-status" id="claude-status-panel">
+                                <div class="status-item">
+                                    <span>Status:</span>
+                                    <span id="claude-running-status">Stopped</span>
+                                </div>
+                                <div class="status-item">
+                                    <span>Model:</span>
+                                    <span id="claude-model">claude-3-5-sonnet-20241022</span>
+                                </div>
+                                <div class="status-item">
+                                    <span>Uptime:</span>
+                                    <span id="claude-uptime">0:00:00</span>
+                                </div>
+                            </div>
+                            <div class="claude-controls">
+                                <button id="start-claude-btn" class="btn">Start Claude</button>
+                                <button id="stop-claude-btn" class="btn danger" disabled>Stop Claude</button>
+                                <button id="restart-claude-btn" class="btn" disabled>Restart</button>
+                            </div>
+                        </div>
+                        <div class="claude-main">
+                            <div class="claude-chat" id="claude-chat">
+                                <div class="chat-messages" id="claude-messages">
+                                    <div class="welcome-message">
+                                        <h3>Welcome to Claude Code</h3>
+                                        <p>Start Claude Code to begin interactive development assistance</p>
+                                    </div>
+                                </div>
+                                <div class="chat-input">
+                                    <input type="text" id="claude-input" placeholder="Ask Claude anything..." disabled>
+                                    <button id="send-claude-btn" class="btn" disabled>Send</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BMAD Method Tab -->
+                <div class="tab-content" id="bmad-tab">
+                    <div class="bmad-workspace">
+                        <div class="bmad-sidebar">
+                            <h4>BMAD Agents</h4>
+                            <button class="btn" onclick="workspaceManager.addBmadAgent()">+ Add Agent</button>
+                            <div class="agent-list" id="agent-list">
+                                <!-- BMAD agents will be listed here -->
+                            </div>
+                        </div>
+                        <div class="bmad-main">
+                            <div class="bmad-header">
+                                <h4>Multi-Agent Development</h4>
+                                <div class="workflow-controls">
+                                    <select id="bmad-workflow-select">
+                                        <option value="agile">Agile Development</option>
+                                        <option value="waterfall">Waterfall</option>
+                                        <option value="startup">Startup MVP</option>
+                                        <option value="enterprise">Enterprise</option>
+                                        <option value="maintenance">Maintenance</option>
+                                    </select>
+                                    <button class="btn" onclick="workspaceManager.startBmadWorkflow()">Start Workflow</button>
+                                </div>
+                            </div>
+                            <div class="bmad-content">
+                                <div class="agent-terminals" id="agent-terminals">
+                                    <!-- Agent-specific terminals will be created here -->
+                                </div>
+                                <div class="collaboration-panel">
+                                    <h5>Agent Collaboration</h5>
+                                    <div class="collaboration-feed" id="collaboration-feed">
+                                        <div class="collab-message">
+                                            <span class="agent-name">System</span>
+                                            <span class="message">BMAD workspace ready</span>
+                                            <span class="timestamp">Now</span>
+                                        </div>
+                                    </div>
+                                    <div class="collaboration-input">
+                                        <input type="text" placeholder="Coordinate with agents..." id="collab-input">
+                                        <button class="btn" onclick="workspaceManager.sendCollabMessage()">Send</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Explorer Tab -->
+                <div class="tab-content" id="files-tab">
+                    <div class="file-workspace">
+                        <div class="file-sidebar">
+                            <h4>File Explorer</h4>
+                            <div class="file-tree" id="file-tree">
+                                <!-- File tree will be populated here -->
+                            </div>
+                        </div>
+                        <div class="file-main">
+                            <div class="file-editor" id="file-editor">
+                                <div class="no-file-selected">
+                                    <h3>No File Selected</h3>
+                                    <p>Select a file from the explorer to view its contents</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- New Project Creation Modal -->
+    <div id="new-project-modal" class="modal project-creation-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Project</h3>
+                <button class="modal-close" onclick="workspaceManager.closeNewProjectModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="new-project-form">
+                    <!-- Step 1: Basic Information -->
+                    <div class="step-section active" id="step-basic">
+                        <h4>Project Information</h4>
+                        <div class="form-group">
+                            <label for="project-name">Project Name *</label>
+                            <input type="text" id="project-name" name="name" required placeholder="My Awesome Project">
+                        </div>
+                        <div class="form-group">
+                            <label for="project-description">Description</label>
+                            <textarea id="project-description" name="description" placeholder="Brief description of your project"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="project-path">Project Directory *</label>
+                            <div class="path-input-group">
+                                <input type="text" id="project-path" name="targetFolder" required placeholder="/path/to/your/project">
+                                <button type="button" class="btn btn-small" onclick="workspaceManager.browseDirectory()">Browse</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="project-template">Project Template</label>
+                            <select id="project-template" name="template">
+                                <option value="">None (Empty Project)</option>
+                                <option value="node-express">Node.js + Express</option>
+                                <option value="react-app">React Application</option>
+                                <option value="vue-app">Vue.js Application</option>
+                                <option value="python-flask">Python + Flask</option>
+                                <option value="python-django">Python + Django</option>
+                                <option value="static-html">Static HTML/CSS/JS</option>
+                                <option value="typescript-node">TypeScript + Node.js</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Claude Code Configuration -->
+                    <div class="step-section" id="step-claude">
+                        <h4>Claude Code Configuration</h4>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="enable-claude" name="claudeEnabled" checked>
+                                Enable Claude Code Assistant
+                            </label>
+                        </div>
+                        <div id="claude-config" class="config-panel">
+                            <div class="form-group">
+                                <label for="claude-model">Claude Model</label>
+                                <select id="claude-model" name="claudeModel">
+                                    <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Recommended)</option>
+                                    <option value="claude-3-opus-20240229">Claude 3 Opus</option>
+                                    <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="claude-temperature">Temperature</label>
+                                <input type="range" id="claude-temperature" name="claudeTemperature" min="0" max="1" step="0.1" value="0.7">
+                                <span class="range-value">0.7</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="claude-max-tokens">Max Tokens</label>
+                                <input type="number" id="claude-max-tokens" name="claudeMaxTokens" value="4000" min="1000" max="8000">
+                            </div>
+                            <div class="form-group">
+                                <label for="claude-context">Initial Context</label>
+                                <textarea id="claude-context" name="claudeContext" placeholder="Provide initial context about your project..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: BMAD Method Configuration -->
+                    <div class="step-section" id="step-bmad">
+                        <h4>BMAD Multi-Agent Development</h4>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="enable-bmad" name="bmadEnabled">
+                                Enable BMAD Method
+                            </label>
+                        </div>
+                        <div id="bmad-config" class="config-panel" style="display: none;">
+                            <div class="form-group">
+                                <label for="bmad-workflow">Development Workflow</label>
+                                <select id="bmad-workflow" name="bmadWorkflow">
+                                    <option value="agile">Agile Development</option>
+                                    <option value="waterfall">Waterfall</option>
+                                    <option value="startup">Startup MVP</option>
+                                    <option value="enterprise">Enterprise</option>
+                                    <option value="maintenance">Maintenance</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Select Agents</label>
+                                <div class="agent-selection-grid">
+                                    <label class="checkbox-label agent-checkbox">
+                                        <input type="checkbox" name="bmadAgents" value="dev" checked>
+                                        <div class="agent-card">
+                                            <h5>Developer Agent</h5>
+                                            <p>Code writing, debugging, optimization</p>
+                                        </div>
+                                    </label>
+                                    <label class="checkbox-label agent-checkbox">
+                                        <input type="checkbox" name="bmadAgents" value="qa">
+                                        <div class="agent-card">
+                                            <h5>QA Agent</h5>
+                                            <p>Testing, validation, bug reporting</p>
+                                        </div>
+                                    </label>
+                                    <label class="checkbox-label agent-checkbox">
+                                        <input type="checkbox" name="bmadAgents" value="pm">
+                                        <div class="agent-card">
+                                            <h5>Project Manager</h5>
+                                            <p>Task coordination, timeline management</p>
+                                        </div>
+                                    </label>
+                                    <label class="checkbox-label agent-checkbox">
+                                        <input type="checkbox" name="bmadAgents" value="devops">
+                                        <div class="agent-card">
+                                            <h5>DevOps Agent</h5>
+                                            <p>Infrastructure, CI/CD, deployment</p>
+                                        </div>
+                                    </label>
+                                    <label class="checkbox-label agent-checkbox">
+                                        <input type="checkbox" name="bmadAgents" value="architect">
+                                        <div class="agent-card">
+                                            <h5>System Architect</h5>
+                                            <p>System design, technical decisions</p>
+                                        </div>
+                                    </label>
+                                    <label class="checkbox-label agent-checkbox">
+                                        <input type="checkbox" name="bmadAgents" value="security">
+                                        <div class="agent-card">
+                                            <h5>Security Agent</h5>
+                                            <p>Security assessment, compliance</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Additional Settings -->
+                    <div class="step-section" id="step-settings">
+                        <h4>Additional Settings</h4>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="init-git" name="initGit" checked>
+                                Initialize Git Repository
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="create-readme" name="createReadme" checked>
+                                Create README.md
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="create-gitignore" name="createGitignore" checked>
+                                Create .gitignore
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label for="github-repo">GitHub Repository (Optional)</label>
+                            <input type="url" id="github-repo" name="githubRepo" placeholder="https://github.com/username/repo">
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Progress Steps -->
+                <div class="progress-steps">
+                    <div class="step active" data-step="basic">
+                        <span class="step-number">1</span>
+                        <span class="step-label">Basic Info</span>
+                    </div>
+                    <div class="step" data-step="claude">
+                        <span class="step-number">2</span>
+                        <span class="step-label">Claude Code</span>
+                    </div>
+                    <div class="step" data-step="bmad">
+                        <span class="step-number">3</span>
+                        <span class="step-label">BMAD Method</span>
+                    </div>
+                    <div class="step" data-step="settings">
+                        <span class="step-number">4</span>
+                        <span class="step-label">Settings</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="prev-step-btn" style="display: none;">Previous</button>
+                <button type="button" class="btn" id="next-step-btn">Next</button>
+                <button type="button" class="btn btn-primary" id="create-project-btn" style="display: none;">Create Project</button>
+                <button type="button" class="btn btn-secondary" onclick="workspaceManager.closeNewProjectModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/workspace.js"></script>
+</body>
+</html>

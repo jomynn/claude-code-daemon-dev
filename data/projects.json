@@ -1,0 +1,75 @@
+[
+  {
+    "id": "proj-1758293773325-szhh6avlu",
+    "name": "Test Project",
+    "description": "A test project for Claude Code integration",
+    "targetFolder": "/tmp/test-project",
+    "githubRepo": null,
+    "claudeConfig": {
+      "model": "claude-3-5-sonnet-20241022",
+      "maxTokens": 4000,
+      "temperature": 0.7
+    },
+    "bmadConfig": {
+      "enabled": true,
+      "agents": [
+        "dev",
+        "qa",
+        "pm"
+      ],
+      "workflow": "standard"
+    },
+    "createdAt": "2025-09-19T14:56:13.325Z",
+    "updatedAt": "2025-09-19T14:56:13.325Z",
+    "status": "initialized"
+  },
+  {
+    "id": "proj-1758293816759-amrmzsefh",
+    "name": "Hello-World",
+    "description": "Cloned from https://github.com/octocat/Hello-World",
+    "targetFolder": "/tmp/hello-world-test",
+    "githubRepo": "https://github.com/octocat/Hello-World",
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022",
+      "maxTokens": 4000,
+      "temperature": 0.7
+    },
+    "bmadConfig": {
+      "enabled": true,
+      "agents": [
+        "dev",
+        "qa"
+      ],
+      "workflow": "standard"
+    },
+    "createdAt": "2025-09-19T14:56:56.759Z",
+    "updatedAt": "2025-09-19T14:56:56.759Z",
+    "status": "cloned"
+  },
+  {
+    "id": "proj-1758294913612-r3g8x7q3u",
+    "name": "Simple Todo",
+    "description": "easy todo list",
+    "targetFolder": "/Volumes/Extreme SSD/Workspace/claude-code-daemon/claude-code-daemon-dev/Volumes/Extreme SSD/Workspace/simple-todo",
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022",
+      "maxTokens": 4000,
+      "temperature": 0.7
+    },
+    "bmadConfig": {
+      "enabled": true,
+      "agents": [
+        "dev",
+        "qa",
+        "pm"
+      ],
+      "workflow": "standard"
+    },
+    "createdAt": "2025-09-19T15:15:13.612Z",
+    "updatedAt": "2025-09-19T15:15:13.612Z",
+    "status": "initialized"
+  }
+]

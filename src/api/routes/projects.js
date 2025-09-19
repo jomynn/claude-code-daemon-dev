@@ -8,9 +8,15 @@ const router = express.Router();
 const fs = require('fs').promises;
 const path = require('path');
 const { execSync, spawn } = require('child_process');
+const ClaudeCodeIntegration = require('../../utils/claude-code-integration');
+const GitHubIntegration = require('../../utils/github-integration');
 
 // Project storage - in production this would be in a database
 let projects = new Map();
+
+// Initialize integrations
+const claudeIntegration = new ClaudeCodeIntegration();
+const githubIntegration = new GitHubIntegration();
 
 // Load projects from file on startup
 const PROJECTS_FILE = path.join(process.cwd(), 'data', 'projects.json');
@@ -42,11 +48,14 @@ loadProjects();
 // Get all projects
 router.get('/', async (req, res) => {
     try {
-        const projectList = Array.from(projects.values()).map(project => ({
-            ...project,
-            // Add runtime status
-            status: await getProjectStatus(project)
-        }));
+        const projectsArray = Array.from(projects.values());
+        const projectList = await Promise.all(
+            projectsArray.map(async (project) => ({
+                ...project,
+                // Add runtime status
+                status: await getProjectStatus(project)
+            }))
+        );
 
         res.json({
             success: true,
@@ -101,7 +110,10 @@ router.post('/', async (req, res) => {
 
         // Initialize git repository if GitHub repo is specified
         if (githubRepo) {
-            await initializeGitRepo(project);
+            const gitResult = await initializeGitRepo(project);
+            if (!gitResult) {
+                console.warn('Failed to initialize git repository');
+            }
         }
 
         // Create project configuration files
@@ -339,6 +351,173 @@ router.post('/:id/execute', async (req, res) => {
     }
 });
 
+// Clone GitHub repository
+router.post('/clone-github', async (req, res) => {
+    try {
+        const { repoUrl, targetFolder, projectName, projectDescription } = req.body;
+
+        if (!repoUrl || !targetFolder) {
+            return res.status(400).json({
+                success: false,
+                error: 'Repository URL and target folder are required'
+            });
+        }
+
+        // Clone the repository
+        const cloneResult = await githubIntegration.cloneRepository(repoUrl, targetFolder);
+
+        if (!cloneResult.success) {
+            return res.status(400).json({
+                success: false,
+                error: cloneResult.error
+            });
+        }
+
+        // Create project from cloned repository
+        const projectId = generateProjectId();
+        const project = {
+            id: projectId,
+            name: projectName || cloneResult.repository.repo,
+            description: projectDescription || `Cloned from ${repoUrl}`,
+            targetFolder: path.resolve(targetFolder),
+            githubRepo: repoUrl,
+            claudeConfig: {
+                enabled: true,
+                model: 'claude-3-5-sonnet-20241022',
+                maxTokens: 4000,
+                temperature: 0.7
+            },
+            bmadConfig: {
+                enabled: true,
+                agents: ['dev', 'qa'],
+                workflow: 'standard'
+            },
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            status: 'cloned'
+        };
+
+        projects.set(projectId, project);
+        await saveProjects();
+
+        res.status(201).json({
+            success: true,
+            data: project,
+            cloneResult,
+            message: 'Repository cloned and project created successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Create GitHub repository
+router.post('/create-github-repo', async (req, res) => {
+    try {
+        const { repoName, description, isPrivate = false, projectId } = req.body;
+
+        if (!repoName) {
+            return res.status(400).json({
+                success: false,
+                error: 'Repository name is required'
+            });
+        }
+
+        const result = await githubIntegration.createRepository(repoName, {
+            description,
+            private: isPrivate
+        });
+
+        if (!result.success) {
+            return res.status(400).json({
+                success: false,
+                error: result.error
+            });
+        }
+
+        // Update project with GitHub repository if projectId is provided
+        if (projectId) {
+            const project = projects.get(projectId);
+            if (project) {
+                project.githubRepo = result.repository.cloneUrl;
+                project.updatedAt = new Date().toISOString();
+                projects.set(projectId, project);
+                await saveProjects();
+            }
+        }
+
+        res.json({
+            success: true,
+            data: result.repository,
+            message: 'GitHub repository created successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Send command to Claude Code
+router.post('/:id/claude/command', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { command } = req.body;
+
+        if (!command) {
+            return res.status(400).json({
+                success: false,
+                error: 'Command is required'
+            });
+        }
+
+        const result = await claudeIntegration.sendCommand(id, command);
+
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Stop Claude Code for project
+router.post('/:id/claude/stop', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await claudeIntegration.stopClaudeCode(id);
+
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get Claude Code processes status
+router.get('/claude/status', async (req, res) => {
+    try {
+        const status = claudeIntegration.getProcessStatus();
+
+        res.json({
+            success: true,
+            data: status
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Helper functions
 function generateProjectId() {
     return `proj-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -459,26 +638,14 @@ async function createProjectConfig(project) {
 
 async function startClaudeCode(project) {
     try {
-        // This would integrate with actual Claude Code CLI
-        // For now, we'll simulate the process
+        // Use the Claude Code integration
+        const result = await claudeIntegration.startClaudeCode(project);
 
-        const command = 'claude-code';
-        const args = [
-            '--project-dir', project.targetFolder,
-            '--model', project.claudeConfig.model,
-            '--max-tokens', project.claudeConfig.maxTokens.toString(),
-            '--temperature', project.claudeConfig.temperature.toString()
-        ];
+        if (!result.success) {
+            throw new Error(result.error);
+        }
 
-        // In a real implementation, this would spawn the Claude Code process
-        // const claudeProcess = spawn(command, args, { cwd: project.targetFolder });
-
-        return {
-            status: 'started',
-            command: `${command} ${args.join(' ')}`,
-            pid: Math.floor(Math.random() * 10000) + 1000, // Simulated PID
-            startedAt: new Date().toISOString()
-        };
+        return result;
     } catch (error) {
         throw new Error(`Failed to start Claude Code: ${error.message}`);
     }

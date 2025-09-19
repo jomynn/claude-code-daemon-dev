@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/projects.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Project Management</h1>
+            <nav>
+                <a href="/">Dashboard</a>
+                <a href="/usage">Usage Analytics</a>
+                <a href="/alerts">Alerts</a>
+                <a href="/projects" class="active">Projects</a>
+            </nav>
+            <div class="status-indicator">
+                <span id="connection-status" class="status-dot"></span>
+                <span>Live</span>
+            </div>
+        </header>
+
+        <main>
+            <!-- Project Actions Bar -->
+            <div class="actions-bar">
+                <button id="create-project-btn" class="btn btn-primary">
+                    <span class="icon">+</span>
+                    Create New Project
+                </button>
+                <div class="search-controls">
+                    <input type="text" id="search-projects" placeholder="Search projects..." class="search-input">
+                    <select id="filter-status" class="filter-select">
+                        <option value="">All Projects</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="error">Error</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Project Stats Overview -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Projects</h3>
+                    <div class="stat-value" id="total-projects">0</div>
+                    <div class="stat-label">Projects</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Active Sessions</h3>
+                    <div class="stat-value" id="active-sessions">0</div>
+                    <div class="stat-label">Claude Code + BMAD</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3>GitHub Repos</h3>
+                    <div class="stat-value" id="github-repos">0</div>
+                    <div class="stat-label">Connected</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Success Rate</h3>
+                    <div class="stat-value" id="success-rate">0%</div>
+                    <div class="stat-label">Workflow Success</div>
+                </div>
+            </div>
+
+            <!-- Projects Grid -->
+            <div class="projects-section">
+                <h3>Your Projects</h3>
+                <div id="projects-grid" class="projects-grid">
+                    <!-- Projects will be populated here -->
+                </div>
+            </div>
+
+            <!-- Quick Actions Panel -->
+            <div class="quick-actions">
+                <h3>Quick Actions</h3>
+                <div class="actions-grid">
+                    <button class="action-card" id="batch-claude-start">
+                        <div class="action-icon">🤖</div>
+                        <div class="action-title">Start Claude Code</div>
+                        <div class="action-desc">On selected projects</div>
+                    </button>
+                    <button class="action-card" id="batch-bmad-start">
+                        <div class="action-icon">⚡</div>
+                        <div class="action-title">Start BMAD Workflow</div>
+                        <div class="action-desc">Multi-agent development</div>
+                    </button>
+                    <button class="action-card" id="clone-github-repo">
+                        <div class="action-icon">📁</div>
+                        <div class="action-title">Clone GitHub Repo</div>
+                        <div class="action-desc">Import existing project</div>
+                    </button>
+                    <button class="action-card" id="export-projects">
+                        <div class="action-icon">📊</div>
+                        <div class="action-title">Export Projects</div>
+                        <div class="action-desc">Backup configurations</div>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Claude Code Daemon &copy; 2024 | Environment: <%= env %></p>
+        </footer>
+    </div>
+
+    <!-- Create Project Modal -->
+    <div id="create-project-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Project</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="create-project-form" class="modal-body">
+                <div class="form-group">
+                    <label for="project-name">Project Name *</label>
+                    <input type="text" id="project-name" name="name" required placeholder="My Awesome Project">
+                </div>
+
+                <div class="form-group">
+                    <label for="project-description">Description</label>
+                    <textarea id="project-description" name="description" placeholder="Brief description of your project"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="target-folder">Target Folder *</label>
+                    <input type="text" id="target-folder" name="targetFolder" required placeholder="/path/to/project/folder">
+                    <button type="button" class="btn-secondary" id="browse-folder">Browse</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="github-repo">GitHub Repository (Optional)</label>
+                    <input type="url" id="github-repo" name="githubRepo" placeholder="https://github.com/username/repo.git">
+                </div>
+
+                <div class="form-section">
+                    <h3>Claude Configuration</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="claude-model">Model</label>
+                            <select id="claude-model" name="claudeModel">
+                                <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                                <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
+                                <option value="claude-3-opus-20240229">Claude 3 Opus</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="max-tokens">Max Tokens</label>
+                            <input type="number" id="max-tokens" name="maxTokens" value="4000" min="1000" max="8192">
+                        </div>
+                        <div class="form-group">
+                            <label for="temperature">Temperature</label>
+                            <input type="number" id="temperature" name="temperature" value="0.7" min="0" max="1" step="0.1">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>BMAD Configuration</h3>
+                    <div class="form-group">
+                        <label>Available Agents</label>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" name="bmadAgents" value="dev" checked> Development Agent</label>
+                            <label><input type="checkbox" name="bmadAgents" value="qa" checked> QA Agent</label>
+                            <label><input type="checkbox" name="bmadAgents" value="pm" checked> Project Manager</label>
+                            <label><input type="checkbox" name="bmadAgents" value="po"> Product Owner</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="workflow-type">Default Workflow</label>
+                        <select id="workflow-type" name="workflowType">
+                            <option value="standard">Standard Development</option>
+                            <option value="review">Code Review</option>
+                            <option value="testing">Testing & QA</option>
+                            <option value="deployment">Deployment</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel-create">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Project Details Modal -->
+    <div id="project-details-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="project-title">Project Details</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="project-tabs">
+                    <button class="tab-btn active" data-tab="overview">Overview</button>
+                    <button class="tab-btn" data-tab="files">Files</button>
+                    <button class="tab-btn" data-tab="claude">Claude Code</button>
+                    <button class="tab-btn" data-tab="bmad">BMAD Workflows</button>
+                    <button class="tab-btn" data-tab="terminal">Terminal</button>
+                </div>
+
+                <div id="overview-tab" class="tab-content active">
+                    <div class="project-overview">
+                        <!-- Project overview content -->
+                    </div>
+                </div>
+
+                <div id="files-tab" class="tab-content">
+                    <div class="file-explorer">
+                        <!-- File explorer content -->
+                    </div>
+                </div>
+
+                <div id="claude-tab" class="tab-content">
+                    <div class="claude-interface">
+                        <!-- Claude Code interface -->
+                    </div>
+                </div>
+
+                <div id="bmad-tab" class="tab-content">
+                    <div class="bmad-interface">
+                        <!-- BMAD workflow interface -->
+                    </div>
+                </div>
+
+                <div id="terminal-tab" class="tab-content">
+                    <div class="terminal-interface">
+                        <!-- Terminal interface -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/projects.js"></script>
+</body>
+</html>

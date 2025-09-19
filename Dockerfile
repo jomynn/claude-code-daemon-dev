@@ -5,7 +5,8 @@ RUN apk add --no-cache \
     python3 \
     make \
     g++ \
-    sqlite
+    sqlite \
+    wget
 
 # Create app directory
 WORKDIR /app
@@ -18,17 +19,17 @@ RUN npm ci --only=production
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
-RUN adduser -S daemon -u 1001
+RUN adduser -S claudeuser -u 1001 -G nodejs
 
 # Copy application code
-COPY --chown=daemon:nodejs . .
+COPY --chown=claudeuser:nodejs . .
 
 # Create directories
 RUN mkdir -p /data /app/logs && \
-    chown -R daemon:nodejs /data /app/logs
+    chown -R claudeuser:nodejs /data /app/logs
 
 # Switch to non-root user
-USER daemon
+USER claudeuser
 
 # Expose ports
 EXPOSE 5000 8080

@@ -17,6 +17,7 @@ const usageRoutes = require('./routes/usage');
 const alertsRoutes = require('./routes/alerts');
 const systemRoutes = require('./routes/system');
 const bmadRoutes = require('./routes/bmad');
+const projectsRoutes = require('./routes/projects');
 const { apiCorsMiddleware } = require('./middleware/cors');
 const { requestLogger } = require('./middleware/logging');
 
@@ -105,6 +106,7 @@ class ApiServer {
         this.app.use('/api/alerts', alertsRoutes);
         this.app.use('/api/system', systemRoutes);
         this.app.use('/api/bmad', bmadRoutes);
+        this.app.use('/api/projects', projectsRoutes);
 
         // Dashboard routes
         this.app.get('/', (req, res) => {
@@ -124,6 +126,13 @@ class ApiServer {
         this.app.get('/alerts', (req, res) => {
             res.render('alerts', {
                 title: 'Alerts & Notifications',
+                env: process.env.NODE_ENV
+            });
+        });
+
+        this.app.get('/projects', (req, res) => {
+            res.render('projects', {
+                title: 'Project Management',
                 env: process.env.NODE_ENV
             });
         });

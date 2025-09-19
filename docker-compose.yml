@@ -5,7 +5,6 @@ services:
     build: .
     ports:
       - "5000:5000"
-      - "8080:8080"
     environment:
       - NODE_ENV=development
       - DATABASE_PATH=/data/claude-daemon.db
@@ -16,7 +15,7 @@ services:
       - ./config:/app/config
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "tools/health-check.js"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/health", "||", "exit", "1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -27,18 +26,6 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl
-    depends_on:
-      - claude-daemon
     restart: unless-stopped
 
 volumes:

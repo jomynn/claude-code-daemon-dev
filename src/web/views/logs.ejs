@@ -141,23 +141,18 @@
 </head>
 <body>
     <div class="logs-container">
-        <header class="logs-header">
-            <div>
-                <h1>Container Logs</h1>
-                <nav style="margin-top: 10px;">
-                    <a href="/">Dashboard</a>
-                    <a href="/projects">Projects</a>
-                    <a href="/workspace">Workspace</a>
-                    <a href="/usage">Usage</a>
-                    <a href="/alerts">Alerts</a>
-                    <a href="/logs" style="font-weight: bold;">Logs</a>
-                </nav>
-            </div>
+        <header>
+            <h1>Container Logs</h1>
+            <%- include('partials/navigation') %>
             <div class="logs-controls">
                 <span id="stream-status" class="status-stopped">●</span>
                 <button id="toggle-stream" class="btn btn-primary">Start Live Stream</button>
                 <button id="refresh-logs" class="btn btn-secondary">Refresh</button>
                 <button id="clear-logs" class="btn btn-secondary btn-small">Clear</button>
+            </div>
+            <div class="status-indicator">
+                <span id="connection-status" class="status-dot"></span>
+                <span>Live</span>
             </div>
         </header>
 

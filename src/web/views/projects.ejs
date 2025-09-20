@@ -13,14 +13,7 @@
     <div class="container">
         <header>
             <h1>Project Management</h1>
-            <nav>
-                <a href="/">Dashboard</a>
-                <a href="/usage">Usage Analytics</a>
-                <a href="/alerts">Alerts</a>
-                <a href="/projects" class="active">Projects</a>
-                <a href="/workspace">Workspace</a>
-                <a href="/logs">Logs</a>
-            </nav>
+            <%- include('partials/navigation') %>
             <div class="status-indicator">
                 <span id="connection-status" class="status-dot"></span>
                 <span>Live</span>

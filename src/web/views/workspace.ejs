@@ -12,18 +12,9 @@
 </head>
 <body>
     <div class="workspace-container">
-        <header class="workspace-header">
-            <div class="workspace-nav">
-                <h1>Claude Code Workspace</h1>
-                <nav>
-                    <a href="/">Dashboard</a>
-                    <a href="/projects">Projects</a>
-                    <a href="/workspace" class="active">Workspace</a>
-                    <a href="/usage">Usage</a>
-                    <a href="/alerts">Alerts</a>
-                    <a href="/logs">Logs</a>
-                </nav>
-            </div>
+        <header>
+            <h1>Claude Code Workspace</h1>
+            <%- include('partials/navigation') %>
             <div class="workspace-controls">
                 <div class="project-selector-container">
                     <select id="project-selector">
@@ -36,6 +27,10 @@
                 <button id="new-project-btn" class="btn">New Project</button>
                 <button id="bmad-quick-start-btn" class="btn btn-bmad">🚀 BMAD Quick Start</button>
                 <button id="brainstorm-btn" class="btn btn-brainstorm">💡 Brainstorm Project</button>
+                <div class="status-indicator">
+                    <span id="connection-status" class="status-dot"></span>
+                    <span>Live</span>
+                </div>
                 <div class="status-indicator">
                     <span id="connection-status" class="status-dot"></span>
                     <span>Live</span>

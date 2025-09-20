@@ -15,9 +15,41 @@ router.get('/container', (req, res) => {
     const follow = req.query.follow === 'true';
 
     try {
-        // Get current container ID
+        // Check if Docker is available (running inside container)
+        const isInContainer = process.env.DATABASE_PATH && process.env.DATABASE_PATH.includes('/data');
+
+        if (isInContainer) {
+            // When running inside container, return application logs instead
+            res.json({
+                success: true,
+                data: {
+                    containerId: 'self',
+                    logs: [
+                        `[${new Date().toISOString()}] INFO: Application running inside container`,
+                        `[${new Date().toISOString()}] INFO: Server listening on port 5000`,
+                        `[${new Date().toISOString()}] INFO: Environment: ${process.env.NODE_ENV}`,
+                        `[${new Date().toISOString()}] INFO: Database path: ${process.env.DATABASE_PATH}`,
+                        `[${new Date().toISOString()}] INFO: Container logs available via: docker logs <container-id>`,
+                        `[${new Date().toISOString()}] INFO: Use 'docker-compose logs claude-daemon' from host system`
+                    ],
+                    count: 6,
+                    note: 'Docker commands not available inside container. Use docker-compose logs from host.'
+                }
+            });
+            return;
+        }
+
+        // Get current container ID (only when running outside container)
         const getContainerCmd = spawn('docker', ['ps', '--filter', 'name=claude-code-daemon', '--format', '{{.ID}}']);
         let containerId = '';
+
+        getContainerCmd.on('error', (error) => {
+            res.status(503).json({
+                success: false,
+                error: 'Docker not available in this environment',
+                message: 'Use docker-compose logs claude-daemon from the host system'
+            });
+        });
 
         getContainerCmd.stdout.on('data', (data) => {
             containerId = data.toString().trim();
@@ -100,9 +132,34 @@ router.get('/stream', (req, res) => {
         'Access-Control-Allow-Headers': 'Cache-Control'
     });
 
-    // Get current container ID
+    // Check if Docker is available (running inside container)
+    const isInContainer = process.env.DATABASE_PATH && process.env.DATABASE_PATH.includes('/data');
+
+    if (isInContainer) {
+        // When running inside container, provide status info instead
+        res.write(`data: ${JSON.stringify({type: 'info', message: 'Application running inside container', timestamp: new Date()})}\n\n`);
+        res.write(`data: ${JSON.stringify({type: 'info', message: 'Real-time container logs not available from inside container', timestamp: new Date()})}\n\n`);
+        res.write(`data: ${JSON.stringify({type: 'info', message: 'Use: docker-compose logs -f claude-daemon (from host)', timestamp: new Date()})}\n\n`);
+
+        // Send periodic heartbeat
+        const heartbeat = setInterval(() => {
+            res.write(`data: ${JSON.stringify({type: 'heartbeat', message: `Server running - ${new Date().toISOString()}`, timestamp: new Date()})}\n\n`);
+        }, 5000);
+
+        req.on('close', () => {
+            clearInterval(heartbeat);
+        });
+        return;
+    }
+
+    // Get current container ID (only when running outside container)
     const getContainerCmd = spawn('docker', ['ps', '--filter', 'name=claude-code-daemon', '--format', '{{.ID}}']);
     let containerId = '';
+
+    getContainerCmd.on('error', (error) => {
+        res.write(`data: ${JSON.stringify({type: 'error', message: 'Docker not available in this environment', timestamp: new Date()})}\n\n`);
+        res.end();
+    });
 
     getContainerCmd.stdout.on('data', (data) => {
         containerId = data.toString().trim();

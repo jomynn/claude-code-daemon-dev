@@ -1,0 +1,9 @@
+<nav>
+    <a href="/" <%= currentPage === 'dashboard' ? 'class="active"' : '' %>>Dashboard</a>
+    <a href="/usage" <%= currentPage === 'usage' ? 'class="active"' : '' %>>Usage Analytics</a>
+    <a href="/alerts" <%= currentPage === 'alerts' ? 'class="active"' : '' %>>Alerts</a>
+    <a href="/projects" <%= currentPage === 'projects' ? 'class="active"' : '' %>>Projects</a>
+    <a href="/workspace" <%= currentPage === 'workspace' ? 'class="active"' : '' %>>Workspace</a>
+    <a href="/logs" <%= currentPage === 'logs' ? 'class="active"' : '' %>>Logs</a>
+    <a href="/slack-config" <%= currentPage === 'slack-config' ? 'class="active"' : '' %>>Slack Config</a>
+</nav>

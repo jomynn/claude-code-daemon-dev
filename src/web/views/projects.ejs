@@ -38,9 +38,17 @@
                     <input type="text" id="search-projects" placeholder="Search projects..." class="search-input">
                     <select id="filter-status" class="filter-select">
                         <option value="">All Projects</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="error">Error</option>
+                        <option value="active">🟢 Active</option>
+                        <option value="hold">⏸️ On Hold</option>
+                        <option value="completed">✅ Completed</option>
+                        <option value="archived">📦 Archived</option>
+                    </select>
+                    <select id="filter-priority" class="filter-select">
+                        <option value="">All Priorities</option>
+                        <option value="critical">🔴 Critical</option>
+                        <option value="high">🟠 High</option>
+                        <option value="normal">⚪ Normal</option>
+                        <option value="low">🔵 Low</option>
                     </select>
                 </div>
             </div>

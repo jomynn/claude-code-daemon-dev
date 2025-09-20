@@ -20,8 +20,10 @@
       "workflow": "standard"
     },
     "createdAt": "2025-09-19T14:56:13.325Z",
-    "updatedAt": "2025-09-19T14:56:13.325Z",
-    "status": "initialized"
+    "updatedAt": "2025-09-20T07:16:47.250Z",
+    "status": "initialized",
+    "priority": "low",
+    "projectStatus": "archived"
   },
   {
     "id": "proj-1758293816759-amrmzsefh",
@@ -44,8 +46,9 @@
       "workflow": "standard"
     },
     "createdAt": "2025-09-19T14:56:56.759Z",
-    "updatedAt": "2025-09-19T14:56:56.759Z",
-    "status": "cloned"
+    "updatedAt": "2025-09-20T07:16:56.067Z",
+    "status": "cloned",
+    "projectStatus": "archived"
   },
   {
     "id": "proj-1758294913612-r3g8x7q3u",
@@ -69,8 +72,10 @@
       "workflow": "standard"
     },
     "createdAt": "2025-09-19T15:15:13.612Z",
-    "updatedAt": "2025-09-19T15:15:13.612Z",
-    "status": "initialized"
+    "updatedAt": "2025-09-20T07:17:05.157Z",
+    "status": "initialized",
+    "terminalSessions": {},
+    "priority": "high"
   },
   {
     "id": "proj-1758295450499-a9kfkrd6g",

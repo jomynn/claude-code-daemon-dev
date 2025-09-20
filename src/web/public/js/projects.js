@@ -39,6 +39,13 @@ class ProjectManager {
             this.filterProjectsByStatus(e.target.value);
         });
 
+        const priorityFilter = document.getElementById('filter-priority');
+        if (priorityFilter) {
+            priorityFilter.addEventListener('change', (e) => {
+                this.filterProjectsByPriority(e.target.value);
+            });
+        }
+
         // Modal handlers
         document.querySelectorAll('.modal-close').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -160,12 +167,28 @@ class ProjectManager {
         const statusClass = this.getProjectStatusClass(project.status);
         const hasGitHub = project.githubRepo ? '🔗' : '';
         const fileCount = project.stats?.fileCount || 0;
+        const currentStatus = project.projectStatus || 'active';
+        const priority = project.priority || 'normal';
 
         return `
             <div class="project-card" data-project-id="${project.id}">
                 <div class="project-header">
                     <h3 class="project-title">${this.escapeHtml(project.name)}</h3>
-                    <span class="project-status ${statusClass}">${project.status?.exists ? 'Active' : 'Inactive'}</span>
+                    <div class="project-controls">
+                        <select class="status-selector" onchange="projectManager.changeProjectStatus('${project.id}', this.value)" title="Change Status">
+                            <option value="active" ${currentStatus === 'active' ? 'selected' : ''}>🟢 Active</option>
+                            <option value="hold" ${currentStatus === 'hold' ? 'selected' : ''}>⏸️ On Hold</option>
+                            <option value="completed" ${currentStatus === 'completed' ? 'selected' : ''}>✅ Completed</option>
+                            <option value="archived" ${currentStatus === 'archived' ? 'selected' : ''}>📦 Archived</option>
+                            <option value="delete" ${currentStatus === 'delete' ? 'selected' : ''}>🗑️ Delete</option>
+                        </select>
+                        <select class="priority-selector" onchange="projectManager.changeProjectPriority('${project.id}', this.value)" title="Change Priority">
+                            <option value="low" ${priority === 'low' ? 'selected' : ''}>🔵 Low</option>
+                            <option value="normal" ${priority === 'normal' ? 'selected' : ''}>⚪ Normal</option>
+                            <option value="high" ${priority === 'high' ? 'selected' : ''}>🟠 High</option>
+                            <option value="critical" ${priority === 'critical' ? 'selected' : ''}>🔴 Critical</option>
+                        </select>
+                    </div>
                 </div>
 
                 <p class="project-description">${this.escapeHtml(project.description || 'No description provided')}</p>
@@ -546,8 +569,19 @@ class ProjectManager {
         }
 
         const filtered = this.projects.filter(project => {
-            const projectStatus = this.getProjectStatusClass(project.status);
-            return projectStatus === status;
+            return (project.projectStatus || 'active') === status;
+        });
+        this.renderProjects(filtered);
+    }
+
+    filterProjectsByPriority(priority) {
+        if (!priority) {
+            this.renderProjects(this.projects);
+            return;
+        }
+
+        const filtered = this.projects.filter(project => {
+            return (project.priority || 'normal') === priority;
         });
         this.renderProjects(filtered);
     }
@@ -604,6 +638,110 @@ class ProjectManager {
 
         URL.revokeObjectURL(url);
         this.showSuccess('Projects exported successfully!');
+    }
+
+    // Project status and priority management
+    async changeProjectStatus(projectId, newStatus) {
+        // Handle delete status separately
+        if (newStatus === 'delete') {
+            if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+                // Reset the select to the previous value
+                this.renderProjects();
+                return;
+            }
+            await this.deleteProject(projectId);
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/projects/${projectId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    projectStatus: newStatus
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Update local project data
+                const project = this.projects.find(p => p.id === projectId);
+                if (project) {
+                    project.projectStatus = newStatus;
+                }
+                this.showInfo(`Project status updated to ${newStatus}`);
+
+                // Re-render to update UI
+                this.renderProjects();
+            } else {
+                this.showError('Failed to update project status: ' + result.error);
+                this.renderProjects(); // Re-render to reset the select
+            }
+        } catch (error) {
+            this.showError('Failed to update project status: ' + error.message);
+            this.renderProjects(); // Re-render to reset the select
+        }
+    }
+
+    async changeProjectPriority(projectId, newPriority) {
+        try {
+            const response = await fetch(`/api/projects/${projectId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    priority: newPriority
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Update local project data
+                const project = this.projects.find(p => p.id === projectId);
+                if (project) {
+                    project.priority = newPriority;
+                }
+                this.showInfo(`Project priority updated to ${newPriority}`);
+
+                // Re-render to update UI
+                this.renderProjects();
+            } else {
+                this.showError('Failed to update project priority: ' + result.error);
+                this.renderProjects(); // Re-render to reset the select
+            }
+        } catch (error) {
+            this.showError('Failed to update project priority: ' + error.message);
+            this.renderProjects(); // Re-render to reset the select
+        }
+    }
+
+    async deleteProject(projectId) {
+        try {
+            const response = await fetch(`/api/projects/${projectId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Remove from local projects array
+                this.projects = this.projects.filter(p => p.id !== projectId);
+                this.showInfo('Project deleted successfully');
+
+                // Re-render and update stats
+                this.renderProjects();
+                this.updateStats();
+            } else {
+                this.showError('Failed to delete project: ' + result.error);
+            }
+        } catch (error) {
+            this.showError('Failed to delete project: ' + error.message);
+        }
     }
 
     // Utility methods

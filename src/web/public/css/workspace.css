@@ -650,13 +650,20 @@
 .claude-workspace {
     display: flex;
     height: 100%;
+    position: relative;
+    overflow: hidden;
 }
 
 .claude-sidebar {
     width: 250px;
+    min-width: 250px;
     background: var(--card-bg);
     border-right: 1px solid var(--border-color);
     padding: 20px;
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+    overflow-y: auto;
 }
 
 .claude-sidebar h4 {
@@ -670,6 +677,14 @@
     border-radius: 4px;
     padding: 15px;
     margin-bottom: 20px;
+    position: relative;
+    z-index: 15;
+}
+
+.claude-status-bar {
+    position: relative;
+    z-index: 15;
+    margin-bottom: 15px;
 }
 
 .status-item {
@@ -683,12 +698,27 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+    position: relative;
+    z-index: 20;
+    margin-bottom: 15px;
+}
+
+.claude-controls .btn {
+    position: relative;
+    z-index: 21;
+    pointer-events: auto;
+    min-height: 40px;
+    width: 100%;
 }
 
 .claude-main {
     flex: 1;
     display: flex;
     flex-direction: column;
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .claude-chat {
@@ -696,6 +726,8 @@
     display: flex;
     flex-direction: column;
     padding: 20px;
+    height: 100%;
+    min-height: 0;
 }
 
 .chat-messages {
@@ -706,16 +738,26 @@
     padding: 15px;
     margin-bottom: 15px;
     background: var(--dark-bg);
+    position: relative;
+    z-index: 1;
+    max-width: 100%;
 }
 
 .welcome-message {
     text-align: center;
     color: var(--text-secondary);
+    position: relative;
+    z-index: 1;
+    padding: 20px;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .welcome-message h3 {
     color: var(--text-primary);
     margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
 }
 
 .chat-input {
@@ -1100,6 +1142,7 @@
     .bmad-workspace,
     .file-workspace {
         flex-direction: column;
+        overflow: visible;
     }
 
     .terminal-sidebar,
@@ -1107,7 +1150,18 @@
     .bmad-sidebar,
     .file-sidebar {
         width: 100%;
-        max-height: 200px;
+        min-width: 100%;
+        max-height: 300px;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        z-index: 20;
+        overflow-y: auto;
+    }
+
+    .claude-main,
+    .bmad-main,
+    .file-main {
+        z-index: 1;
     }
 
     .overview-grid {

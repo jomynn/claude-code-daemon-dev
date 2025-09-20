@@ -59,50 +59,91 @@ class WorkspaceManager {
             });
         }
 
-        // Claude Code controls
-        document.getElementById('start-claude-btn').addEventListener('click', () => {
-            this.startClaude();
-        });
+        // Claude Code controls - with error handling
+        const startClaudeBtn = document.getElementById('start-claude-btn');
+        if (startClaudeBtn) {
+            startClaudeBtn.addEventListener('click', () => {
+                this.startClaude();
+            });
+        }
 
-        document.getElementById('stop-claude-btn').addEventListener('click', () => {
-            this.stopClaude();
-        });
+        const stopClaudeBtn = document.getElementById('stop-claude-btn');
+        if (stopClaudeBtn) {
+            stopClaudeBtn.addEventListener('click', () => {
+                this.stopClaude();
+            });
+        }
 
-        document.getElementById('restart-claude-btn').addEventListener('click', () => {
-            this.restartClaude();
-        });
+        const restartClaudeBtn = document.getElementById('restart-claude-btn');
+        if (restartClaudeBtn) {
+            restartClaudeBtn.addEventListener('click', () => {
+                this.restartClaude();
+            });
+        }
 
-        // Claude input
-        document.getElementById('claude-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
+        const holdClaudeBtn = document.getElementById('hold-claude-btn');
+        if (holdClaudeBtn) {
+            holdClaudeBtn.addEventListener('click', () => {
+                this.holdClaude();
+            });
+        }
+
+        const resumeClaudeBtn = document.getElementById('resume-claude-btn');
+        if (resumeClaudeBtn) {
+            resumeClaudeBtn.addEventListener('click', () => {
+                this.resumeClaude();
+            });
+        }
+
+        // Claude input - with error handling
+        const claudeInput = document.getElementById('claude-input');
+        if (claudeInput) {
+            claudeInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.sendClaudeMessage();
+                }
+            });
+        }
+
+        const sendClaudeBtn = document.getElementById('send-claude-btn');
+        if (sendClaudeBtn) {
+            sendClaudeBtn.addEventListener('click', () => {
                 this.sendClaudeMessage();
-            }
-        });
+            });
+        }
 
-        document.getElementById('send-claude-btn').addEventListener('click', () => {
-            this.sendClaudeMessage();
-        });
+        // Collaboration input - with error handling
+        const collabInput = document.getElementById('collab-input');
+        if (collabInput) {
+            collabInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.sendCollabMessage();
+                }
+            });
+        }
 
-        // Collaboration input
-        document.getElementById('collab-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.sendCollabMessage();
-            }
-        });
+        // New workspace button - with error handling
+        const newWorkspaceBtn = document.getElementById('new-workspace-btn');
+        if (newWorkspaceBtn) {
+            newWorkspaceBtn.addEventListener('click', () => {
+                this.createNewWorkspace();
+            });
+        }
 
-        // New workspace button
-        document.getElementById('new-workspace-btn').addEventListener('click', () => {
-            this.createNewWorkspace();
-        });
+        // Split view and fullscreen - with error handling
+        const splitViewBtn = document.getElementById('split-view-btn');
+        if (splitViewBtn) {
+            splitViewBtn.addEventListener('click', () => {
+                this.toggleSplitView();
+            });
+        }
 
-        // Split view and fullscreen
-        document.getElementById('split-view-btn').addEventListener('click', () => {
-            this.toggleSplitView();
-        });
-
-        document.getElementById('fullscreen-btn').addEventListener('click', () => {
-            this.toggleFullscreen();
-        });
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', () => {
+                this.toggleFullscreen();
+            });
+        }
 
         // Reload projects button
         document.getElementById('reload-projects-btn').addEventListener('click', () => {
@@ -191,16 +232,23 @@ class WorkspaceManager {
                 selector.disabled = false;
                 console.log('✅ Reset selector to default state');
 
-                if (result.data.length === 0) {
+                // Filter to only show active projects in workspace
+                const activeProjects = result.data.filter(project => {
+                    const status = project.projectStatus || 'active';
+                    return status === 'active';
+                });
+                console.log(`🔍 Filtered to ${activeProjects.length} active projects (from ${result.data.length} total)`);
+
+                if (activeProjects.length === 0) {
                     const noProjectsOption = document.createElement('option');
                     noProjectsOption.value = '';
-                    noProjectsOption.textContent = 'No projects found';
+                    noProjectsOption.textContent = 'No active projects found';
                     noProjectsOption.disabled = true;
                     selector.appendChild(noProjectsOption);
-                    console.log('📝 Added "No projects found" option');
+                    console.log('📝 Added "No active projects found" option');
                 } else {
-                    // Add all projects directly without complex grouping that wasn't working
-                    result.data.forEach((project, index) => {
+                    // Add only active projects
+                    activeProjects.forEach((project, index) => {
                         const option = document.createElement('option');
                         option.value = project.id;
 
@@ -215,7 +263,7 @@ class WorkspaceManager {
                         option.textContent = `${projectName} — ${folderName}`;
                         option.title = `${project.name} - ${project.targetFolder}`;
                         selector.appendChild(option);
-                        console.log(`✨ Added project ${index + 1}/${result.data.length}: ${project.name} (ID: ${project.id})`);
+                        console.log(`✨ Added active project ${index + 1}/${activeProjects.length}: ${project.name} (ID: ${project.id})`);
                     });
 
                     // Verify all options were added
@@ -223,13 +271,13 @@ class WorkspaceManager {
                     console.log(`🔍 Selector now has ${optionCount} options/groups`);
                 }
 
-                console.log(`🎉 Successfully loaded ${result.data.length} projects`);
+                console.log(`🎉 Successfully loaded ${activeProjects.length} active projects (${result.data.length} total)`);
 
-                // Update project count badge
+                // Update project count badge to show only active projects
                 if (countBadge) {
-                    countBadge.textContent = result.data.length.toString();
+                    countBadge.textContent = activeProjects.length.toString();
                     countBadge.style.display = 'inline-block';
-                    countBadge.title = `${result.data.length} project${result.data.length !== 1 ? 's' : ''} available`;
+                    countBadge.title = `${activeProjects.length} active project${activeProjects.length !== 1 ? 's' : ''} available (${result.data.length} total)`;
                 }
 
                 // Add a visual indicator that projects have been loaded
@@ -590,33 +638,148 @@ class WorkspaceManager {
         setTimeout(() => this.startClaude(), 1000);
     }
 
-    updateClaudeUI(running) {
-        const status = document.getElementById('claude-running-status');
+    async holdClaude() {
+        if (!this.currentProject || !this.claudeSession) {
+            this.showNotification('No active Claude session to hold', 'warning');
+            return;
+        }
+
+        try {
+            // For now, we'll simulate a hold by marking the session as held
+            // In a real implementation, this would pause the Claude process
+            this.claudeSession.status = 'held';
+            this.claudeSession.heldAt = new Date().toISOString();
+
+            this.updateClaudeUI('held');
+            this.addActivity('Claude Code session held');
+            this.showNotification('Claude Code session held', 'info');
+
+            // Disable input during hold
+            const input = document.getElementById('claude-input');
+            const sendBtn = document.getElementById('send-claude-btn');
+            if (input) input.disabled = true;
+            if (sendBtn) sendBtn.disabled = true;
+
+        } catch (error) {
+            console.error('Error holding Claude:', error);
+            this.showNotification('Error holding Claude session: ' + error.message, 'error');
+        }
+    }
+
+    async resumeClaude() {
+        if (!this.currentProject || !this.claudeSession) {
+            this.showNotification('No held Claude session to resume', 'warning');
+            return;
+        }
+
+        try {
+            // Resume the session
+            this.claudeSession.status = 'running';
+            this.claudeSession.resumedAt = new Date().toISOString();
+            delete this.claudeSession.heldAt;
+
+            this.updateClaudeUI('running');
+            this.addActivity('Claude Code session resumed');
+            this.showNotification('Claude Code session resumed', 'success');
+
+            // Re-enable input
+            const input = document.getElementById('claude-input');
+            const sendBtn = document.getElementById('send-claude-btn');
+            if (input) input.disabled = false;
+            if (sendBtn) sendBtn.disabled = false;
+
+        } catch (error) {
+            console.error('Error resuming Claude:', error);
+            this.showNotification('Error resuming Claude session: ' + error.message, 'error');
+        }
+    }
+
+    updateClaudeUI(status) {
+        const statusDisplay = document.getElementById('claude-running-status');
         const statusBadge = document.getElementById('claude-status');
+        const newStatusBadge = document.getElementById('claude-status-badge');
         const input = document.getElementById('claude-input');
         const sendBtn = document.getElementById('send-claude-btn');
         const startBtn = document.getElementById('start-claude-btn');
         const stopBtn = document.getElementById('stop-claude-btn');
         const restartBtn = document.getElementById('restart-claude-btn');
+        const holdBtn = document.getElementById('hold-claude-btn');
+        const resumeBtn = document.getElementById('resume-claude-btn');
 
-        if (running) {
-            status.textContent = 'Running';
-            statusBadge.textContent = 'Running';
-            statusBadge.className = 'status-badge running';
-            input.disabled = false;
-            sendBtn.disabled = false;
-            startBtn.disabled = true;
-            stopBtn.disabled = false;
-            restartBtn.disabled = false;
-        } else {
-            status.textContent = 'Stopped';
-            statusBadge.textContent = 'Stopped';
-            statusBadge.className = 'status-badge stopped';
-            input.disabled = true;
-            sendBtn.disabled = true;
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            restartBtn.disabled = true;
+        // Handle legacy boolean parameter for backward compatibility
+        if (typeof status === 'boolean') {
+            status = status ? 'running' : 'stopped';
+        }
+
+        // Reset all buttons first
+        if (startBtn) startBtn.disabled = false;
+        if (stopBtn) stopBtn.disabled = true;
+        if (restartBtn) restartBtn.disabled = true;
+        if (holdBtn) holdBtn.disabled = true;
+        if (resumeBtn) {
+            resumeBtn.disabled = true;
+            resumeBtn.style.display = 'none';
+        }
+
+        switch (status) {
+            case 'running':
+                if (statusDisplay) statusDisplay.textContent = 'Running';
+                if (statusBadge) {
+                    statusBadge.textContent = 'Running';
+                    statusBadge.className = 'status-badge running';
+                }
+                if (newStatusBadge) {
+                    newStatusBadge.textContent = '🟢 Running';
+                    newStatusBadge.className = 'status-badge running';
+                }
+                if (input) input.disabled = false;
+                if (sendBtn) sendBtn.disabled = false;
+                if (startBtn) startBtn.disabled = true;
+                if (stopBtn) stopBtn.disabled = false;
+                if (restartBtn) restartBtn.disabled = false;
+                if (holdBtn) holdBtn.disabled = false;
+                break;
+
+            case 'held':
+                if (statusDisplay) statusDisplay.textContent = 'Held';
+                if (statusBadge) {
+                    statusBadge.textContent = 'Held';
+                    statusBadge.className = 'status-badge held';
+                }
+                if (newStatusBadge) {
+                    newStatusBadge.textContent = '⏸️ Held';
+                    newStatusBadge.className = 'status-badge held';
+                }
+                if (input) input.disabled = true;
+                if (sendBtn) sendBtn.disabled = true;
+                if (startBtn) startBtn.disabled = true;
+                if (stopBtn) stopBtn.disabled = false;
+                if (restartBtn) restartBtn.disabled = false;
+                if (holdBtn) holdBtn.style.display = 'none';
+                if (resumeBtn) {
+                    resumeBtn.disabled = false;
+                    resumeBtn.style.display = 'inline-block';
+                }
+                break;
+
+            case 'stopped':
+            default:
+                if (statusDisplay) statusDisplay.textContent = 'Stopped';
+                if (statusBadge) {
+                    statusBadge.textContent = 'Stopped';
+                    statusBadge.className = 'status-badge stopped';
+                }
+                if (newStatusBadge) {
+                    newStatusBadge.textContent = '🔴 Stopped';
+                    newStatusBadge.className = 'status-badge stopped';
+                }
+                if (input) input.disabled = true;
+                if (sendBtn) sendBtn.disabled = true;
+                if (startBtn) startBtn.disabled = false;
+                if (stopBtn) stopBtn.disabled = true;
+                if (restartBtn) restartBtn.disabled = true;
+                if (holdBtn) holdBtn.style.display = 'inline-block';
+                break;
         }
     }
 
@@ -1225,37 +1388,77 @@ class WorkspaceManager {
         this.steps = ['basic', 'claude', 'bmad', 'settings'];
         this.selectedTemplate = null;
 
-        // New Project button
-        document.getElementById('new-project-btn').addEventListener('click', () => {
-            this.openNewProjectModal();
-        });
+        // New Project button - with error handling
+        const newProjectBtn = document.getElementById('new-project-btn');
+        if (newProjectBtn) {
+            newProjectBtn.addEventListener('click', () => {
+                this.openNewProjectModal();
+            });
+            console.log('✅ New Project button listener added');
+        }
 
-        // BMAD Quick Start button
-        document.getElementById('bmad-quickstart-btn').addEventListener('click', () => {
-            this.openBmadQuickStartModal();
-        });
+        // BMAD Quick Start button - with error handling and correct ID
+        const bmadQuickStartBtn = document.getElementById('bmad-quick-start-btn');
+        if (bmadQuickStartBtn) {
+            bmadQuickStartBtn.addEventListener('click', () => {
+                this.openBmadQuickStartModal();
+            });
+            console.log('✅ BMAD Quick Start button listener added');
+        }
 
-        // Step navigation
-        document.getElementById('next-step-btn').addEventListener('click', () => {
-            this.nextStep();
-        });
+        // Brainstorm button - with error handling
+        const brainstormBtn = document.getElementById('brainstorm-btn');
+        if (brainstormBtn) {
+            brainstormBtn.addEventListener('click', () => {
+                this.openBrainstormModal();
+            });
+            console.log('✅ Brainstorm button listener added');
+        }
 
-        document.getElementById('prev-step-btn').addEventListener('click', () => {
-            this.prevStep();
-        });
+        // Step navigation - with error handling
+        const nextStepBtn = document.getElementById('next-step-btn');
+        if (nextStepBtn) {
+            nextStepBtn.addEventListener('click', () => {
+                this.nextStep();
+            });
+        }
 
-        document.getElementById('create-project-btn').addEventListener('click', () => {
-            this.createProject();
-        });
+        const prevStepBtn = document.getElementById('prev-step-btn');
+        if (prevStepBtn) {
+            prevStepBtn.addEventListener('click', () => {
+                this.prevStep();
+            });
+        }
 
-        // Toggle configurations
-        document.getElementById('enable-claude').addEventListener('change', (e) => {
-            document.getElementById('claude-config').style.display = e.target.checked ? 'block' : 'none';
-        });
+        // Create Project button (final step)
+        const createProjectBtn = document.getElementById('create-project-btn');
+        if (createProjectBtn) {
+            createProjectBtn.addEventListener('click', () => {
+                this.createProject();
+            });
+            console.log('✅ Create Project button listener added');
+        }
 
-        document.getElementById('enable-bmad').addEventListener('change', (e) => {
-            document.getElementById('bmad-config').style.display = e.target.checked ? 'block' : 'none';
-        });
+        // Toggle configurations - with error handling
+        const enableClaude = document.getElementById('enable-claude');
+        if (enableClaude) {
+            enableClaude.addEventListener('change', (e) => {
+                const claudeConfig = document.getElementById('claude-config');
+                if (claudeConfig) {
+                    claudeConfig.style.display = e.target.checked ? 'block' : 'none';
+                }
+            });
+        }
+
+        const enableBmad = document.getElementById('enable-bmad');
+        if (enableBmad) {
+            enableBmad.addEventListener('change', (e) => {
+                const bmadConfig = document.getElementById('bmad-config');
+                if (bmadConfig) {
+                    bmadConfig.style.display = e.target.checked ? 'block' : 'none';
+                }
+            });
+        }
 
         // Temperature range slider
         document.getElementById('claude-temperature').addEventListener('input', (e) => {
@@ -1286,8 +1489,24 @@ class WorkspaceManager {
     }
 
     openNewProjectModal() {
-        document.getElementById('new-project-modal').style.display = 'flex';
-        this.resetProjectForm();
+        console.log('Opening New Project modal...');
+        const modal = document.getElementById('new-project-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            console.log('Modal displayed');
+            try {
+                this.resetProjectForm();
+            } catch (error) {
+                console.error('Error resetting form:', error);
+            }
+        } else {
+            console.error('New Project modal not found');
+            // Fallback: use simple prompt
+            const projectName = prompt('Enter project name:');
+            if (projectName) {
+                alert(`Project creation for "${projectName}" will be implemented soon!`);
+            }
+        }
     }
 
     closeNewProjectModal() {
@@ -1296,14 +1515,30 @@ class WorkspaceManager {
     }
 
     resetProjectForm() {
+        console.log('Resetting project form...');
         this.currentStep = 0;
-        document.getElementById('new-project-form').reset();
-        this.updateStepDisplay();
 
-        // Reset configurations
-        document.getElementById('claude-config').style.display = 'block';
-        document.getElementById('bmad-config').style.display = 'none';
-        document.querySelector('.range-value').textContent = '0.7';
+        const form = document.getElementById('new-project-form');
+        if (form) {
+            form.reset();
+        } else {
+            console.warn('new-project-form not found');
+        }
+
+        try {
+            this.updateStepDisplay();
+        } catch (error) {
+            console.error('Error updating step display:', error);
+        }
+
+        // Reset configurations with error handling
+        const claudeConfig = document.getElementById('claude-config');
+        const bmadConfig = document.getElementById('bmad-config');
+        const rangeValue = document.querySelector('.range-value');
+
+        if (claudeConfig) claudeConfig.style.display = 'block';
+        if (bmadConfig) bmadConfig.style.display = 'none';
+        if (rangeValue) rangeValue.textContent = '0.7';
     }
 
     nextStep() {
@@ -1324,16 +1559,30 @@ class WorkspaceManager {
     }
 
     updateStepDisplay() {
+        console.log('Updating step display to step:', this.currentStep, this.steps[this.currentStep]);
+
         // Hide all step sections
-        document.querySelectorAll('.step-section').forEach(section => {
+        const stepSections = document.querySelectorAll('.step-section');
+        if (stepSections.length === 0) {
+            console.warn('No step sections found');
+            return;
+        }
+
+        stepSections.forEach(section => {
             section.classList.remove('active');
         });
 
         // Show current step
-        document.getElementById(`step-${this.steps[this.currentStep]}`).classList.add('active');
+        const currentStepElement = document.getElementById(`step-${this.steps[this.currentStep]}`);
+        if (currentStepElement) {
+            currentStepElement.classList.add('active');
+        } else {
+            console.error(`Step element not found: step-${this.steps[this.currentStep]}`);
+        }
 
         // Update progress steps
-        document.querySelectorAll('.progress-steps .step').forEach((step, index) => {
+        const progressSteps = document.querySelectorAll('.progress-steps .step');
+        progressSteps.forEach((step, index) => {
             step.classList.remove('active', 'completed');
             if (index < this.currentStep) {
                 step.classList.add('completed');
@@ -1342,10 +1591,14 @@ class WorkspaceManager {
             }
         });
 
-        // Update buttons
-        document.getElementById('prev-step-btn').style.display = this.currentStep > 0 ? 'inline-block' : 'none';
-        document.getElementById('next-step-btn').style.display = this.currentStep < this.steps.length - 1 ? 'inline-block' : 'none';
-        document.getElementById('create-project-btn').style.display = this.currentStep === this.steps.length - 1 ? 'inline-block' : 'none';
+        // Update buttons with error handling
+        const prevBtn = document.getElementById('prev-step-btn');
+        const nextBtn = document.getElementById('next-step-btn');
+        const createBtn = document.getElementById('create-project-btn');
+
+        if (prevBtn) prevBtn.style.display = this.currentStep > 0 ? 'inline-block' : 'none';
+        if (nextBtn) nextBtn.style.display = this.currentStep < this.steps.length - 1 ? 'inline-block' : 'none';
+        if (createBtn) createBtn.style.display = this.currentStep === this.steps.length - 1 ? 'inline-block' : 'none';
     }
 
     validateCurrentStep() {
@@ -1459,32 +1712,45 @@ class WorkspaceManager {
     }
 
     collectFormData() {
+        // Helper function to safely get element value
+        const getValue = (id, defaultValue = '') => {
+            const element = document.getElementById(id);
+            return element ? element.value.trim() : defaultValue;
+        };
+
+        const getChecked = (id, defaultValue = false) => {
+            const element = document.getElementById(id);
+            return element ? element.checked : defaultValue;
+        };
+
         const formData = {
-            name: document.getElementById('project-name').value.trim(),
-            description: document.getElementById('project-description').value.trim(),
-            targetFolder: document.getElementById('project-path').value.trim(),
-            template: document.getElementById('project-template').value,
-            githubRepo: document.getElementById('github-repo').value.trim() || null,
-            initGit: document.getElementById('init-git').checked,
-            createReadme: document.getElementById('create-readme').checked,
-            createGitignore: document.getElementById('create-gitignore').checked
+            name: getValue('project-name'),
+            description: getValue('project-description'),
+            targetFolder: getValue('project-path'),
+            template: getValue('project-template', 'blank'),
+            githubRepo: getValue('github-repo') || null,
+            initGit: getChecked('init-git', true),
+            createReadme: getChecked('create-readme', true),
+            createGitignore: getChecked('create-gitignore', true)
         };
 
         // Claude Code configuration
-        const claudeEnabled = document.getElementById('enable-claude').checked;
+        const claudeEnabledEl = document.getElementById('enable-claude');
+        const claudeEnabled = claudeEnabledEl ? claudeEnabledEl.checked : true;
+
         formData.claudeConfig = {
             enabled: claudeEnabled,
-            model: claudeEnabled ? document.getElementById('claude-model').value : 'claude-3-5-sonnet-20241022',
-            temperature: claudeEnabled ? parseFloat(document.getElementById('claude-temperature').value) : 0.7,
-            maxTokens: claudeEnabled ? parseInt(document.getElementById('claude-max-tokens').value) : 4000,
-            context: claudeEnabled ? document.getElementById('claude-context').value.trim() : ''
+            model: claudeEnabled ? getValue('claude-model', 'claude-3-5-sonnet-20241022') : 'claude-3-5-sonnet-20241022',
+            temperature: claudeEnabled ? parseFloat(getValue('claude-temperature', '0.7')) : 0.7,
+            maxTokens: claudeEnabled ? parseInt(getValue('claude-max-tokens', '4000')) : 4000,
+            context: claudeEnabled ? getValue('claude-context') : ''
         };
 
         // BMAD configuration
-        const bmadEnabled = document.getElementById('enable-bmad').checked;
+        const bmadEnabled = getChecked('enable-bmad', false);
         formData.bmadConfig = {
             enabled: bmadEnabled,
-            workflow: bmadEnabled ? document.getElementById('bmad-workflow').value : 'agile',
+            workflow: bmadEnabled ? getValue('bmad-workflow', 'agile') : 'agile',
             agents: bmadEnabled ? Array.from(document.querySelectorAll('input[name="bmadAgents"]:checked')).map(cb => cb.value) : ['dev']
         };
 
@@ -1590,13 +1856,21 @@ class WorkspaceManager {
     }
 
     openBmadQuickStartModal() {
-        document.getElementById('bmad-quickstart-modal').style.display = 'flex';
-        this.resetBmadQuickStartForm();
+        const modal = document.getElementById('bmad-quick-start-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            this.resetBmadQuickStartForm();
+        } else {
+            console.error('BMAD Quick Start modal not found');
+        }
     }
 
     closeBmadQuickStartModal() {
-        document.getElementById('bmad-quickstart-modal').style.display = 'none';
-        this.resetBmadQuickStartForm();
+        const modal = document.getElementById('bmad-quick-start-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            this.resetBmadQuickStartForm();
+        }
     }
 
     resetBmadQuickStartForm() {
@@ -1803,8 +2077,13 @@ class WorkspaceManager {
     }
 
     openBrainstormModal() {
-        document.getElementById('brainstorm-modal').style.display = 'flex';
-        this.resetBrainstormForm();
+        const modal = document.getElementById('brainstorm-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            this.resetBrainstormForm();
+        } else {
+            console.error('Brainstorm modal not found');
+        }
     }
 
     closeBrainstormModal() {
@@ -3643,6 +3922,10 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM Content Loaded, creating WorkspaceManager...');
     workspaceManager = new WorkspaceManager();
 
+    // Make WorkspaceManager available globally for HTML onclick handlers
+    window.workspaceManager = workspaceManager;
+    console.log('✅ WorkspaceManager assigned to window.workspaceManager');
+
     // Debug: Force reload projects after a delay to ensure everything is ready
     setTimeout(() => {
         console.log('🔧 DEBUG: Force-reloading projects after delay...');
@@ -3665,323 +3948,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('❌ Could not find project-selector element!');
         }
     }, 3000);
-
-    // Night Mode Methods
-    async initNightModeStatus() {
-        try {
-            const response = await fetch('/api/night-mode/status');
-            const result = await response.json();
-
-            if (result.success) {
-                this.updateNightModeDisplay(result.data);
-            }
-        } catch (error) {
-            console.error('Error fetching night mode status:', error);
-        }
-
-        // Check status every minute
-        setInterval(async () => {
-            await this.updateNightModeStatus();
-        }, 60000);
-    }
-
-    async updateNightModeStatus() {
-        try {
-            const response = await fetch('/api/night-mode/status');
-            const result = await response.json();
-
-            if (result.success) {
-                this.updateNightModeDisplay(result.data);
-            }
-        } catch (error) {
-            console.error('Error updating night mode status:', error);
-        }
-    }
-
-    updateNightModeDisplay(status) {
-        // Update indicators if they exist
-        const indicator = document.querySelector('.night-mode-indicator');
-        if (indicator) {
-            if (status.isActive) {
-                indicator.classList.add('active');
-            } else {
-                indicator.classList.remove('active');
-            }
-        }
-
-        // Update queue display
-        this.updateQueueDisplay(status.queueLength);
-    }
-
-    updateQueueDisplay(count) {
-        const badge = document.getElementById('night-queue-badge');
-        if (badge) {
-            badge.textContent = count;
-            badge.style.display = count > 0 ? 'inline-block' : 'none';
-        }
-    }
-
-    async queueForNightMode() {
-        try {
-            // Get current brainstorm data
-            const brainstormData = this.getCurrentBrainstormData();
-
-            if (!brainstormData || !brainstormData.projectName) {
-                this.showNotification('Please complete the project brainstorm first', 'warning');
-                return;
-            }
-
-            const response = await fetch('/api/night-mode/queue-from-brainstorm', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ brainstormData })
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                this.showNotification(`Project "${brainstormData.projectName}" queued for night development! 🌙`, 'success');
-                this.updateNightModeStatus();
-                this.showNightModeConfirmation(result.data);
-            } else {
-                this.showNotification(result.error, 'error');
-            }
-        } catch (error) {
-            console.error('Error queuing for night mode:', error);
-            this.showNotification('Failed to queue project for night mode', 'error');
-        }
-    }
-
-    getCurrentBrainstormData() {
-        // Extract data from the brainstorm form
-        return {
-            projectName: document.getElementById('final-project-name')?.value ||
-                        document.getElementById('setup-project-name')?.textContent ||
-                        'Untitled Project',
-            overview: document.getElementById('brief-overview')?.textContent || 'No overview provided',
-            objectives: this.extractObjectives(),
-            scope: document.getElementById('brief-features')?.textContent || 'No features defined',
-            features: this.extractFeatures(),
-            techStack: this.extractTechStack(),
-            workflow: 'agile',
-            priority: 1
-        };
-    }
-
-    extractObjectives() {
-        const objectivesList = document.getElementById('brief-objectives');
-        if (objectivesList) {
-            return Array.from(objectivesList.children).map(li => li.textContent);
-        }
-        return ['Complete project development'];
-    }
-
-    extractFeatures() {
-        const featuresList = document.getElementById('features-list');
-        if (featuresList) {
-            return Array.from(featuresList.children).map(li => li.textContent);
-        }
-        return ['Basic functionality'];
-    }
-
-    extractTechStack() {
-        return {
-            frontend: document.getElementById('frontend-tech')?.textContent || 'React',
-            backend: document.getElementById('backend-tech')?.textContent || 'Node.js',
-            database: document.getElementById('database-tech')?.textContent || 'MongoDB'
-        };
-    }
-
-    showNightModeConfirmation(projectData) {
-        const modal = document.createElement('div');
-        modal.className = 'modal night-mode-confirmation';
-        modal.style.display = 'block';
-
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>🌙 Night Mode Queued</h3>
-                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="night-mode-summary">
-                        <h4>Your project is queued for automatic development!</h4>
-                        <div class="project-info">
-                            <p><strong>Project:</strong> ${projectData.name}</p>
-                            <p><strong>Priority:</strong> ${projectData.priority}</p>
-                            <p><strong>Queued at:</strong> ${new Date(projectData.queuedAt).toLocaleTimeString()}</p>
-                        </div>
-                        <div class="night-schedule">
-                            <h5>Development Schedule</h5>
-                            <p>🕚 Development starts: 11:00 PM</p>
-                            <p>☀️ Summary ready: 6:00 AM</p>
-                            <p>📧 You'll receive a morning summary with progress</p>
-                        </div>
-                        <div class="what-happens">
-                            <h5>What happens during night mode?</h5>
-                            <ul>
-                                <li>🏗️ Project setup and scaffolding</li>
-                                <li>💻 Feature implementation</li>
-                                <li>🧪 Automated testing</li>
-                                <li>📚 Documentation generation</li>
-                                <li>⚡ Code optimization</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Got it!</button>
-                    <button class="btn btn-night" onclick="workspaceManager.viewNightQueue()">View Queue</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-    }
-
-    async viewNightQueue() {
-        try {
-            const response = await fetch('/api/night-mode/queue');
-            const result = await response.json();
-
-            if (result.success) {
-                this.showQueueModal(result.data.queue);
-            }
-        } catch (error) {
-            console.error('Error fetching queue:', error);
-            this.showNotification('Failed to load night mode queue', 'error');
-        }
-    }
-
-    showQueueModal(queue) {
-        const modal = document.createElement('div');
-        modal.className = 'modal queue-modal';
-        modal.style.display = 'block';
-
-        const queueHTML = queue.map(project => `
-            <div class="queue-item">
-                <div class="project-info">
-                    <span class="project-name">${project.name}</span>
-                    <small>Queued: ${new Date(project.queuedAt).toLocaleString()}</small>
-                </div>
-                <div class="project-meta">
-                    <span class="priority">Priority ${project.priority}</span>
-                    <span class="status">${project.status}</span>
-                </div>
-            </div>
-        `).join('');
-
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>🌙 Night Mode Development Queue</h3>
-                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="queue-list">
-                        ${queue.length > 0 ? queueHTML : '<p>No projects in queue</p>'}
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Close</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-    }
-
-    // Night mode event handlers
-    handleNightModeStarted(data) {
-        this.showNotification('🌙 Night mode development started', 'info');
-        this.addActivity('Night mode automatic development began');
-        this.updateNightModeStatus();
-    }
-
-    handleNightModeStopped(data) {
-        this.showNotification('☀️ Night mode development completed', 'success');
-        this.addActivity('Night mode development finished');
-        this.updateNightModeStatus();
-
-        if (data.summary) {
-            this.showMorningSummary(data.summary);
-        }
-    }
-
-    handleNightModePhaseCompleted(data) {
-        this.addActivity(`Night mode: ${data.phase} completed for ${data.project}`);
-    }
-
-    handleNightModeProjectCompleted(data) {
-        this.showNotification(`🎉 Project "${data.name}" completed during night mode!`, 'success');
-        this.addActivity(`Project "${data.name}" completed automatically`);
-    }
-
-    showMorningSummary(summary) {
-        const modal = document.createElement('div');
-        modal.className = 'modal morning-summary-modal';
-        modal.style.display = 'block';
-
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>☀️ Good Morning! Your Night Development Summary</h3>
-                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="morning-summary">
-                        <div class="summary-overview">
-                            <h4>🌙 While you were sleeping...</h4>
-                            <p>Development ran for ${summary.duration}</p>
-                        </div>
-                        <div class="summary-stats">
-                            <div class="stat-card">
-                                <span class="stat-number">${summary.projectsCompleted}</span>
-                                <span class="stat-label">Projects Completed</span>
-                            </div>
-                            <div class="stat-card">
-                                <span class="stat-number">${summary.tasksCompleted}</span>
-                                <span class="stat-label">Tasks Completed</span>
-                            </div>
-                            <div class="stat-card">
-                                <span class="stat-number">${summary.errors}</span>
-                                <span class="stat-label">Issues Found</span>
-                            </div>
-                        </div>
-                        <div class="summary-highlights">
-                            <h5>✨ Highlights</h5>
-                            <ul>
-                                ${summary.highlights.map(highlight => `<li>${highlight}</li>`).join('')}
-                            </ul>
-                        </div>
-                        ${summary.recommendations.length > 0 ? `
-                            <div class="summary-recommendations">
-                                <h5>📋 Recommendations</h5>
-                                ${summary.recommendations.map(rec => `
-                                    <div class="recommendation ${rec.priority}">
-                                        <strong>${rec.type}:</strong> ${rec.message}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Thanks!</button>
-                    <button class="btn btn-primary" onclick="workspaceManager.viewCompletedProjects()">View Projects</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-    }
-
-    async viewCompletedProjects() {
-        // Switch to projects tab or reload project list
-        window.location.href = '/projects';
-    }
 });
 
 // Handle window resize for terminals

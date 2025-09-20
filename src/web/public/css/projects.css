@@ -105,6 +105,45 @@
     margin-bottom: 16px;
 }
 
+.project-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.status-selector,
+.priority-selector {
+    padding: 4px 8px;
+    font-size: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--dark-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.status-selector:hover,
+.priority-selector:hover {
+    border-color: var(--primary-color);
+    background: var(--card-bg);
+}
+
+.status-selector {
+    min-width: 100px;
+}
+
+.priority-selector {
+    min-width: 80px;
+}
+
+.status-selector:focus,
+.priority-selector:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
 .project-title {
     font-size: 18px;
     font-weight: 600;

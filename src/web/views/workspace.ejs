@@ -198,9 +198,21 @@
                                 </div>
                             </div>
                             <div class="claude-controls">
-                                <button id="start-claude-btn" class="btn">Start Claude</button>
-                                <button id="stop-claude-btn" class="btn danger" disabled>Stop Claude</button>
-                                <button id="restart-claude-btn" class="btn" disabled>Restart</button>
+                                <button id="start-claude-btn" class="btn">🚀 Start Claude</button>
+                                <button id="hold-claude-btn" class="btn warning" disabled>⏸️ Hold</button>
+                                <button id="resume-claude-btn" class="btn success" disabled style="display: none;">▶️ Resume</button>
+                                <button id="stop-claude-btn" class="btn danger" disabled>🛑 Stop</button>
+                                <button id="restart-claude-btn" class="btn" disabled>🔄 Restart</button>
+                            </div>
+                            <div class="claude-status-bar">
+                                <div class="status-indicator">
+                                    <span id="claude-status-badge" class="status-badge stopped">Stopped</span>
+                                    <span id="claude-uptime-display" class="uptime-display">00:00:00</span>
+                                </div>
+                                <div class="session-info">
+                                    <span id="claude-session-id" class="session-id"></span>
+                                    <span id="claude-last-activity" class="last-activity"></span>
+                                </div>
                             </div>
                         </div>
                         <div class="claude-main">
@@ -295,7 +307,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Create New Project</h3>
-                <button class="modal-close" onclick="workspaceManager.closeNewProjectModal()">&times;</button>
+                <button class="modal-close" onclick="document.getElementById('new-project-modal').style.display='none'">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="new-project-form">
@@ -488,7 +500,7 @@
                 <button type="button" class="btn btn-secondary" id="prev-step-btn" style="display: none;">Previous</button>
                 <button type="button" class="btn" id="next-step-btn">Next</button>
                 <button type="button" class="btn btn-primary" id="create-project-btn" style="display: none;">Create Project</button>
-                <button type="button" class="btn btn-secondary" onclick="workspaceManager.closeNewProjectModal()">Cancel</button>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('new-project-modal').style.display='none'">Cancel</button>
             </div>
         </div>
     </div>
@@ -888,22 +900,224 @@
 
                 if (result.success && result.data) {
                     selector.innerHTML = '<option value="">Select Project...</option>';
-                    result.data.forEach(project => {
-                        const option = document.createElement('option');
-                        option.value = project.id;
-                        const projectName = project.name.length > 30 ? project.name.substring(0, 27) + '...' : project.name;
-                        const folderName = project.targetFolder.split('/').pop() || project.targetFolder;
-                        option.textContent = `${projectName} — ${folderName}`;
-                        option.title = `${project.name} - ${project.targetFolder}`;
-                        selector.appendChild(option);
+
+                    // Filter to only show active projects
+                    const activeProjects = result.data.filter(project => {
+                        const status = project.projectStatus || 'active';
+                        return status === 'active';
                     });
-                    console.log('✅ Backup loader populated dropdown successfully');
+                    console.log(`🔍 Backup loader filtered to ${activeProjects.length} active projects (from ${result.data.length} total)`);
+
+                    if (activeProjects.length === 0) {
+                        const noProjectsOption = document.createElement('option');
+                        noProjectsOption.value = '';
+                        noProjectsOption.textContent = 'No active projects found';
+                        noProjectsOption.disabled = true;
+                        selector.appendChild(noProjectsOption);
+                    } else {
+                        activeProjects.forEach(project => {
+                            const option = document.createElement('option');
+                            option.value = project.id;
+                            const projectName = project.name.length > 30 ? project.name.substring(0, 27) + '...' : project.name;
+                            const folderName = project.targetFolder.split('/').pop() || project.targetFolder;
+                            option.textContent = `${projectName} — ${folderName}`;
+                            option.title = `${project.name} - ${project.targetFolder}`;
+                            selector.appendChild(option);
+                        });
+                    }
+                    console.log('✅ Backup loader populated dropdown with active projects only');
                 }
             } catch (error) {
                 console.error('❌ Backup loader failed:', error);
                 selector.innerHTML = '<option value="">Error loading projects</option>';
             }
         }
+
+        // Backup tab and button functionality
+        function setupBackupEventListeners() {
+            console.log('🔧 Setting up backup event listeners...');
+
+            // Tab switching
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const tabName = e.target.dataset.tab;
+                    if (tabName) {
+                        // Remove active class from all tabs and content
+                        document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+                        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+
+                        // Add active class to clicked tab and corresponding content
+                        e.target.classList.add('active');
+                        const tabContent = document.getElementById(tabName + '-tab');
+                        if (tabContent) {
+                            tabContent.classList.add('active');
+                        }
+                        console.log('✅ Switched to tab:', tabName);
+                    }
+                });
+            });
+
+            // Direct modal handler (immediate, doesn't wait for WorkspaceManager)
+            const newProjectBtn = document.getElementById('new-project-btn');
+            if (newProjectBtn) {
+                // Remove any existing listeners first
+                const newBtn = newProjectBtn.cloneNode(true);
+                newProjectBtn.parentNode.replaceChild(newBtn, newProjectBtn);
+
+                newBtn.addEventListener('click', () => {
+                    console.log('🔘 New Project button clicked');
+                    const modal = document.getElementById('new-project-modal');
+                    if (modal) {
+                        console.log('✅ Modal found, displaying...');
+                        modal.style.display = 'flex';
+
+                        // Reset to first step
+                        currentStep = 0;
+                        showStep(0);
+
+                        // Clear form
+                        const form = document.getElementById('new-project-form');
+                        if (form) form.reset();
+                    } else {
+                        console.error('❌ Modal not found, using fallback prompt');
+                        const projectName = prompt('Enter project name:');
+                        if (projectName) {
+                            alert(`Project "${projectName}" creation will be implemented`);
+                        }
+                    }
+                });
+                console.log('✅ New Project button handler attached directly');
+            }
+
+            // Add navigation for modal steps
+            let currentStep = 0;
+            const steps = ['basic', 'claude', 'bmad', 'settings'];
+
+            function showStep(stepIndex) {
+                const stepSections = document.querySelectorAll('.step-section');
+                stepSections.forEach((section, index) => {
+                    section.classList.toggle('active', index === stepIndex);
+                });
+
+                // Update navigation buttons
+                const prevBtn = document.getElementById('prev-step-btn');
+                const nextBtn = document.getElementById('next-step-btn');
+                const createBtn = document.getElementById('create-project-btn');
+
+                if (prevBtn) prevBtn.style.display = stepIndex > 0 ? 'inline-block' : 'none';
+                if (nextBtn) nextBtn.style.display = stepIndex < steps.length - 1 ? 'inline-block' : 'none';
+                if (createBtn) createBtn.style.display = stepIndex === steps.length - 1 ? 'inline-block' : 'none';
+            }
+
+            // Next button handler
+            const nextStepBtn = document.getElementById('next-step-btn');
+            if (nextStepBtn) {
+                const newNextBtn = nextStepBtn.cloneNode(true);
+                nextStepBtn.parentNode.replaceChild(newNextBtn, nextStepBtn);
+
+                newNextBtn.addEventListener('click', () => {
+                    if (currentStep < steps.length - 1) {
+                        currentStep++;
+                        showStep(currentStep);
+                    }
+                });
+            }
+
+            // Previous button handler
+            const prevStepBtn = document.getElementById('prev-step-btn');
+            if (prevStepBtn) {
+                const newPrevBtn = prevStepBtn.cloneNode(true);
+                prevStepBtn.parentNode.replaceChild(newPrevBtn, prevStepBtn);
+
+                newPrevBtn.addEventListener('click', () => {
+                    if (currentStep > 0) {
+                        currentStep--;
+                        showStep(currentStep);
+                    }
+                });
+            }
+
+            // Create Project button handler
+            const createProjectBtn = document.getElementById('create-project-btn');
+            if (createProjectBtn) {
+                const newCreateBtn = createProjectBtn.cloneNode(true);
+                createProjectBtn.parentNode.replaceChild(newCreateBtn, createProjectBtn);
+
+                newCreateBtn.addEventListener('click', () => {
+                    const projectName = document.getElementById('project-name')?.value || '';
+                    const projectPath = document.getElementById('project-path')?.value || '';
+
+                    if (!projectName || !projectPath) {
+                        alert('Please fill in project name and path');
+                        return;
+                    }
+
+                    // Submit the project
+                    fetch('/api/projects', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: projectName,
+                            targetFolder: projectPath,
+                            description: document.getElementById('project-description')?.value || '',
+                            initGit: document.getElementById('init-git')?.checked || true,
+                            createReadme: document.getElementById('create-readme')?.checked || true,
+                            createGitignore: document.getElementById('create-gitignore')?.checked || true
+                        })
+                    }).then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            alert('Project created successfully!');
+                            document.getElementById('new-project-modal').style.display = 'none';
+                            backupLoadProjects(); // Refresh projects list
+                        } else {
+                            alert('Failed to create project: ' + (result.error || 'Unknown error'));
+                        }
+                    }).catch(error => {
+                        alert('Error creating project: ' + error.message);
+                    });
+                });
+            }
+
+            const bmadBtn = document.getElementById('bmad-quick-start-btn');
+            if (bmadBtn) {
+                bmadBtn.addEventListener('click', () => {
+                    console.log('🚀 BMAD Quick Start button clicked (backup handler)');
+                    alert('BMAD Quick Start functionality requires the full WorkspaceManager. Please refresh the page or check console for errors.');
+                });
+            }
+
+            const brainstormBtn = document.getElementById('brainstorm-btn');
+            if (brainstormBtn) {
+                brainstormBtn.addEventListener('click', () => {
+                    console.log('💡 Brainstorm button clicked (backup handler)');
+                    alert('Brainstorm functionality requires the full WorkspaceManager. Please refresh the page or check console for errors.');
+                });
+            }
+
+            console.log('✅ Backup event listeners set up');
+        }
+
+        // Create a safe workspaceManager placeholder to prevent errors
+        window.workspaceManager = window.workspaceManager || {};
+
+        // Create placeholder methods for all common workspaceManager methods
+        const placeholderMethods = [
+            'startClaude', 'openTerminal', 'startBmad', 'openFiles', 'createNewTerminal',
+            'addBmadAgent', 'startBmadWorkflow', 'sendCollabMessage', 'closeNewProjectModal',
+            'closeBmadQuickStartModal', 'closeBrainstormModal', 'nextStep', 'prevStep',
+            'createProject', 'nextBrainstormStep', 'prevBrainstormStep', 'createProjectFromBrainstorm'
+        ];
+
+        placeholderMethods.forEach(methodName => {
+            if (!window.workspaceManager[methodName]) {
+                window.workspaceManager[methodName] = function(...args) {
+                    console.warn(`workspaceManager.${methodName} called but not ready`);
+                    alert(`Feature "${methodName}" is not ready yet. Please wait a moment or refresh the page.`);
+                };
+            }
+        });
 
         // Set up reload button and backup loading
         document.addEventListener('DOMContentLoaded', () => {
@@ -913,6 +1127,30 @@
                 reloadBtn.addEventListener('click', backupLoadProjects);
                 console.log('✅ Reload button handler added');
             }
+
+            // Set up backup event listeners after a delay to see if main WorkspaceManager works
+            setTimeout(() => {
+                // Check if main WorkspaceManager is working by looking for its event listeners
+                const testTab = document.querySelector('.tab-btn');
+                if (testTab && !testTab.hasAttribute('data-backup-listener')) {
+                    // Test if clicking works
+                    const testEvent = new Event('click');
+                    let clicked = false;
+                    const testHandler = () => { clicked = true; };
+                    testTab.addEventListener('click', testHandler);
+                    testTab.dispatchEvent(testEvent);
+                    testTab.removeEventListener('click', testHandler);
+
+                    if (!clicked) {
+                        console.log('🔧 Main event listeners appear to have failed, setting up backup...');
+                        setupBackupEventListeners();
+                        // Mark that we've added backup listeners
+                        document.querySelectorAll('.tab-btn').forEach(btn => {
+                            btn.setAttribute('data-backup-listener', 'true');
+                        });
+                    }
+                }
+            }, 2000);
 
             // Try backup loader after a delay if main loader hasn't worked
             setTimeout(() => {

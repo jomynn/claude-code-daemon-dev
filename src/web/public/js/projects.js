@@ -826,28 +826,105 @@ class ProjectManager {
     async loadBmadRoles() {
         try {
             const response = await fetch('/api/projects/bmad/roles');
+
+            // Handle rate limiting
+            if (response.status === 429) {
+                console.warn('Rate limit exceeded for BMAD roles. Using fallback data.');
+                this.bmadRoles = this.getFallbackRoles();
+                this.bmadCategories = this.getFallbackCategories();
+                return { roles: this.bmadRoles, categories: this.bmadCategories };
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const result = await response.json();
             if (result.success) {
                 this.bmadRoles = result.data.roles;
                 this.bmadCategories = result.data.categories;
                 return result.data;
+            } else {
+                throw new Error(result.error || 'Failed to load BMAD roles');
             }
         } catch (error) {
             console.error('Error loading BMAD roles:', error);
+            // Use fallback data on error
+            this.bmadRoles = this.getFallbackRoles();
+            this.bmadCategories = this.getFallbackCategories();
+            return { roles: this.bmadRoles, categories: this.bmadCategories };
         }
     }
 
     async loadBmadWorkflows() {
         try {
             const response = await fetch('/api/projects/bmad/workflows');
+
+            // Handle rate limiting
+            if (response.status === 429) {
+                console.warn('Rate limit exceeded for BMAD workflows. Using fallback data.');
+                this.bmadWorkflows = this.getFallbackWorkflows();
+                return this.bmadWorkflows;
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const result = await response.json();
             if (result.success) {
                 this.bmadWorkflows = result.data;
                 return result.data;
+            } else {
+                throw new Error(result.error || 'Failed to load BMAD workflows');
             }
         } catch (error) {
             console.error('Error loading BMAD workflows:', error);
+            // Use fallback data on error
+            this.bmadWorkflows = this.getFallbackWorkflows();
+            return this.bmadWorkflows;
         }
+    }
+
+    // Fallback data methods for when API is unavailable
+    getFallbackRoles() {
+        return {
+            'dev': { name: 'Developer', description: 'Primary development role' },
+            'qa': { name: 'Quality Assurance', description: 'Testing and quality control' },
+            'pm': { name: 'Project Manager', description: 'Project coordination and management' },
+            'design': { name: 'Designer', description: 'UI/UX design role' },
+            'product': { name: 'Product Manager', description: 'Product strategy and requirements' }
+        };
+    }
+
+    getFallbackCategories() {
+        return {
+            'core': ['dev', 'qa', 'pm'],
+            'extended': ['design', 'product']
+        };
+    }
+
+    getFallbackWorkflows() {
+        return [
+            {
+                id: 'agile',
+                name: 'Agile Development',
+                description: 'Standard agile workflow with sprints',
+                phases: ['planning', 'development', 'testing', 'review', 'deployment']
+            },
+            {
+                id: 'lean',
+                name: 'Lean Startup',
+                description: 'Rapid prototyping and iteration',
+                phases: ['ideation', 'prototype', 'test', 'learn', 'iterate']
+            },
+            {
+                id: 'standard',
+                name: 'Standard Development',
+                description: 'Traditional waterfall-style development',
+                phases: ['requirements', 'design', 'development', 'testing', 'deployment']
+            }
+        ];
     }
 
     renderBmadRoleSelector(selectedRoles = []) {

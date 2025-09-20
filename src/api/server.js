@@ -82,8 +82,12 @@ class ApiServer {
         // Rate limiting
         const limiter = rateLimit({
             windowMs: 15 * 60 * 1000, // 15 minutes
-            max: 100, // limit each IP to 100 requests per windowMs
-            message: 'Too many requests from this IP'
+            max: process.env.NODE_ENV === 'development' ? 1000 : 100, // More lenient in development
+            message: {
+                success: false,
+                error: 'Too many requests from this IP',
+                code: 'RATE_LIMIT_EXCEEDED'
+            }
         });
         this.app.use('/api/', limiter);
 

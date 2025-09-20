@@ -12,12 +12,19 @@ class Dashboard {
         this.requestData = [];
         this.lastUpdate = null;
 
+        // Workspace status tracking
+        this.currentProject = null;
+        this.claudeStatus = 'stopped';
+        this.bmadStatus = 'inactive';
+
         this.init();
     }
 
     async init() {
         this.setupWebSocket();
         this.setupCharts();
+        this.setupWorkspaceStatus();
+        this.setupQuickActions();
         this.loadInitialData();
         this.startPeriodicUpdates();
     }
@@ -398,6 +405,319 @@ class Dashboard {
             return `${(num / 1000).toFixed(1)  }K`;
         }
         return num.toString();
+    }
+
+    // Workspace Status Methods
+    setupWorkspaceStatus() {
+        // Load current workspace status
+        this.loadWorkspaceStatus();
+
+        // Set up periodic workspace status updates
+        setInterval(() => {
+            this.loadWorkspaceStatus();
+        }, 5000); // Update every 5 seconds
+
+        // Set up workspace control buttons
+        const startClaudeBtn = document.getElementById('start-claude-dashboard-btn');
+        const stopClaudeBtn = document.getElementById('stop-claude-dashboard-btn');
+        const startBmadBtn = document.getElementById('start-bmad-dashboard-btn');
+        const openWorkspaceBtn = document.getElementById('open-workspace-btn');
+
+        if (startClaudeBtn) {
+            startClaudeBtn.addEventListener('click', () => this.startClaude());
+        }
+        if (stopClaudeBtn) {
+            stopClaudeBtn.addEventListener('click', () => this.stopClaude());
+        }
+        if (startBmadBtn) {
+            startBmadBtn.addEventListener('click', () => this.startBmad());
+        }
+        if (openWorkspaceBtn) {
+            openWorkspaceBtn.addEventListener('click', () => {
+                window.open('/workspace', '_blank');
+            });
+        }
+    }
+
+    setupQuickActions() {
+        const createProjectBtn = document.getElementById('create-project-action');
+        const openWorkspaceBtn = document.getElementById('open-workspace-action');
+        const viewProjectsBtn = document.getElementById('view-projects-action');
+        const viewLogsBtn = document.getElementById('view-logs-action');
+
+        if (createProjectBtn) {
+            createProjectBtn.addEventListener('click', () => {
+                window.location.href = '/projects';
+            });
+        }
+        if (openWorkspaceBtn) {
+            openWorkspaceBtn.addEventListener('click', () => {
+                window.open('/workspace', '_blank');
+            });
+        }
+        if (viewProjectsBtn) {
+            viewProjectsBtn.addEventListener('click', () => {
+                window.location.href = '/projects';
+            });
+        }
+        if (viewLogsBtn) {
+            viewLogsBtn.addEventListener('click', () => {
+                window.location.href = '/logs';
+            });
+        }
+    }
+
+    async loadWorkspaceStatus() {
+        try {
+            // Load projects
+            const projectsResponse = await fetch('/api/projects');
+            const projectsResult = await projectsResponse.json();
+
+            if (projectsResult.success && projectsResult.data) {
+                // Find active projects
+                const activeProjects = projectsResult.data.filter(p =>
+                    (p.projectStatus || 'active') === 'active'
+                );
+
+                // Update project status display
+                this.updateProjectStatus(activeProjects);
+            }
+
+            // Load Claude status
+            const claudeResponse = await fetch('/api/projects/claude/status');
+            if (claudeResponse.ok) {
+                const claudeResult = await claudeResponse.json();
+                this.updateClaudeStatus(claudeResult.data || {});
+            }
+        } catch (error) {
+            console.error('Error loading workspace status:', error);
+        }
+    }
+
+    updateProjectStatus(activeProjects) {
+        const projectNameEl = document.getElementById('active-project-name');
+        const projectPathEl = document.getElementById('active-project-path');
+        const projectPriorityEl = document.getElementById('active-project-priority');
+        const projectActivityEl = document.getElementById('active-project-activity');
+        const projectStatusBadge = document.getElementById('project-status-badge');
+        const openWorkspaceBtn = document.getElementById('open-workspace-btn');
+
+        if (activeProjects.length > 0) {
+            // Show the most recently updated active project
+            const currentProject = activeProjects.sort((a, b) =>
+                new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
+            )[0];
+
+            this.currentProject = currentProject;
+
+            if (projectNameEl) projectNameEl.textContent = currentProject.name;
+            if (projectPathEl) {
+                const shortPath = currentProject.targetFolder.length > 30
+                    ? '...' + currentProject.targetFolder.slice(-30)
+                    : currentProject.targetFolder;
+                projectPathEl.textContent = shortPath;
+                projectPathEl.title = currentProject.targetFolder;
+            }
+            if (projectPriorityEl) {
+                const priority = currentProject.priority || 'normal';
+                const priorityEmoji = {
+                    'low': '🔵',
+                    'normal': '⚪',
+                    'high': '🟠',
+                    'critical': '🔴'
+                };
+                projectPriorityEl.textContent = `${priorityEmoji[priority]} ${priority}`;
+            }
+            if (projectActivityEl) {
+                const lastActivity = currentProject.updatedAt || currentProject.createdAt;
+                projectActivityEl.textContent = this.formatRelativeTime(lastActivity);
+            }
+            if (projectStatusBadge) {
+                projectStatusBadge.textContent = '✅ Active';
+                projectStatusBadge.className = 'status-badge active';
+            }
+            if (openWorkspaceBtn) {
+                openWorkspaceBtn.disabled = false;
+                openWorkspaceBtn.textContent = 'Open Workspace';
+            }
+        } else {
+            // No active projects
+            if (projectNameEl) projectNameEl.textContent = 'None selected';
+            if (projectPathEl) projectPathEl.textContent = '--';
+            if (projectPriorityEl) projectPriorityEl.textContent = '--';
+            if (projectActivityEl) projectActivityEl.textContent = '--';
+            if (projectStatusBadge) {
+                projectStatusBadge.textContent = 'No Project';
+                projectStatusBadge.className = 'status-badge inactive';
+            }
+            if (openWorkspaceBtn) {
+                openWorkspaceBtn.disabled = true;
+                openWorkspaceBtn.textContent = 'No Project';
+            }
+        }
+    }
+
+    updateClaudeStatus(claudeData) {
+        const statusIndicator = document.getElementById('claude-status-indicator');
+        const sessionStatus = document.getElementById('claude-session-status');
+        const sessionUptime = document.getElementById('claude-session-uptime');
+        const currentModel = document.getElementById('claude-current-model');
+        const messageCount = document.getElementById('claude-message-count');
+        const startBtn = document.getElementById('start-claude-dashboard-btn');
+        const stopBtn = document.getElementById('stop-claude-dashboard-btn');
+
+        const isRunning = claudeData.running || false;
+        const session = claudeData.session || {};
+
+        this.claudeStatus = isRunning ? 'running' : 'stopped';
+
+        if (statusIndicator) {
+            if (isRunning) {
+                statusIndicator.textContent = '🟢 Running';
+                statusIndicator.className = 'status-badge running';
+            } else {
+                statusIndicator.textContent = '🔴 Stopped';
+                statusIndicator.className = 'status-badge stopped';
+            }
+        }
+
+        if (sessionStatus) {
+            sessionStatus.textContent = isRunning ? 'Active session' : 'Not running';
+        }
+
+        if (sessionUptime) {
+            if (isRunning && session.startedAt) {
+                const startTime = new Date(session.startedAt);
+                const uptime = this.formatUptime(Date.now() - startTime.getTime());
+                sessionUptime.textContent = uptime;
+            } else {
+                sessionUptime.textContent = '00:00:00';
+            }
+        }
+
+        if (messageCount) {
+            messageCount.textContent = session.messageCount || 0;
+        }
+
+        if (startBtn) {
+            startBtn.disabled = isRunning || !this.currentProject;
+            startBtn.textContent = !this.currentProject ? 'No Project' : 'Start Claude';
+        }
+
+        if (stopBtn) {
+            stopBtn.disabled = !isRunning;
+        }
+    }
+
+    async startClaude() {
+        if (!this.currentProject) {
+            alert('Please select a project first');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/projects/${this.currentProject.id}/start-claude`, {
+                method: 'POST'
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                this.showNotification('Claude Code started successfully', 'success');
+                this.loadWorkspaceStatus(); // Refresh status
+            } else {
+                this.showNotification('Failed to start Claude Code: ' + result.error, 'error');
+            }
+        } catch (error) {
+            this.showNotification('Error starting Claude Code: ' + error.message, 'error');
+        }
+    }
+
+    async stopClaude() {
+        if (!this.currentProject) return;
+
+        try {
+            const response = await fetch(`/api/projects/${this.currentProject.id}/claude/stop`, {
+                method: 'POST'
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                this.showNotification('Claude Code stopped', 'info');
+                this.loadWorkspaceStatus(); // Refresh status
+            } else {
+                this.showNotification('Failed to stop Claude Code: ' + result.error, 'error');
+            }
+        } catch (error) {
+            this.showNotification('Error stopping Claude Code: ' + error.message, 'error');
+        }
+    }
+
+    async startBmad() {
+        if (!this.currentProject) {
+            alert('Please select a project first');
+            return;
+        }
+
+        // For now, just show a notification
+        this.showNotification('BMAD workflow functionality coming soon!', 'info');
+    }
+
+    formatRelativeTime(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+        if (diffHours < 1) {
+            return `${diffMinutes}m ago`;
+        } else if (diffHours < 24) {
+            return `${diffHours}h ago`;
+        } else {
+            const diffDays = Math.floor(diffHours / 24);
+            return `${diffDays}d ago`;
+        }
+    }
+
+    formatUptime(ms) {
+        const hours = Math.floor(ms / (1000 * 60 * 60));
+        const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    showNotification(message, type = 'info') {
+        // Create a simple notification
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            padding: 15px 20px;
+            border-radius: 8px;
+            border-left: 4px solid ${type === 'success' ? 'var(--success-color)' : type === 'error' ? 'var(--danger-color)' : 'var(--primary-color)'};
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            max-width: 300px;
+            transition: all 0.3s ease;
+        `;
+        notification.textContent = message;
+
+        document.body.appendChild(notification);
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
     }
 }
 

@@ -77,6 +77,76 @@ class ClaudeCodeIntegration extends EventEmitter {
     }
 
     /**
+     * Wait for response from Claude Code process
+     */
+    async waitForResponse(process, timeout = 30000) {
+        return new Promise((resolve, reject) => {
+            let response = '';
+            let responseStarted = false;
+            let lastChunkTime = Date.now();
+
+            console.log('Starting to wait for Claude response...');
+
+            const timeoutId = setTimeout(() => {
+                console.log('Response timeout reached. Response so far:', response.substring(0, 200) + '...');
+                cleanup();
+                resolve(response.trim() || '⚠️ No response received. Claude may be processing or encountered an issue.');
+            }, timeout);
+
+            const onData = (data) => {
+                const chunk = data.toString();
+                response += chunk;
+                lastChunkTime = Date.now();
+
+                console.log('Received chunk:', chunk.substring(0, 100) + (chunk.length > 100 ? '...' : ''));
+
+                if (!responseStarted && chunk.trim()) {
+                    responseStarted = true;
+                    console.log('Response started');
+                }
+
+                // Detect when Claude response is complete - more flexible detection
+                if (responseStarted) {
+                    // Look for typical Claude completion patterns
+                    const completionPatterns = [
+                        /How can I help you/i,
+                        /Is there anything else/i,
+                        /Let me know if/i,
+                        /claude>/,
+                        /\$ /,
+                        /Human:/,
+                        /^$/m  // Empty line after substantial content
+                    ];
+
+                    const isComplete = completionPatterns.some(pattern => pattern.test(chunk)) ||
+                        (response.length > 200 && chunk.includes('\n\n')) ||
+                        (response.length > 100 && chunk.trim().length === 0);
+
+                    if (isComplete) {
+                        console.log('Response completion detected. Final response length:', response.length);
+                        cleanup();
+                        resolve(response.trim());
+                    }
+                }
+            };
+
+            const onError = (error) => {
+                cleanup();
+                resolve(`Error: ${error.message}`);
+            };
+
+            const cleanup = () => {
+                clearTimeout(timeoutId);
+                process.stdout.removeListener('data', onData);
+                process.stderr.removeListener('data', onError);
+            };
+
+            process.stdout.on('data', onData);
+            process.stderr.on('data', onError);
+        });
+    }
+
+    /**
      * Stop Claude Code for a specific project
      */
     async stopClaudeCode(projectId) {
@@ -140,9 +210,14 @@ class ClaudeCodeIntegration extends EventEmitter {
             // Write command to Claude Code stdin
             processInfo.process.stdin.write(command + '\n');
 
+            // Wait for response from Claude Code with timeout
+            const response = await this.waitForResponse(processInfo.process, 30000);
+
             return {
                 success: true,
-                message: 'Command sent to Claude Code'
+                message: 'Command sent to Claude Code',
+                response: response,
+                timestamp: new Date().toISOString()
             };
 
         } catch (error) {

@@ -246,5 +246,40 @@
     "createdAt": "2025-09-19T16:19:07.705Z",
     "updatedAt": "2025-09-19T16:19:07.705Z",
     "status": "initialized"
+  },
+  {
+    "id": "proj-1758381842898-ccldc5gvz",
+    "name": "Web3-Audit-Intelligence-System",
+    "description": "### Step 2: Create Project (5 min)\n1. **Go to Projects**: `http://localhost:5003/projects`\n2. **Click \"Create New Project\"**\n3. **Fill details:**\n   - Name: `Web3-Audit-Intelligence-System`\n   - Folder: `/Volumes/Extreme SSD/Workspace/web3-audit-intelligence`\n   - Model: `claude-3-5-sonnet-20241022`\n   - Priority: `High`",
+    "targetFolder": "/Volumes/Extreme SSD/Workspace/web3-audit-intelligence",
+    "template": null,
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022",
+      "maxTokens": 4000,
+      "temperature": 0.7
+    },
+    "bmadConfig": {
+      "enabled": true,
+      "agents": [
+        "dev",
+        "qa",
+        "pm",
+        "po"
+      ],
+      "workflow": "standard",
+      "startedAt": "2025-09-20T16:28:16.690Z",
+      "status": "running"
+    },
+    "settings": {
+      "initGit": true,
+      "createReadme": true,
+      "createGitignore": true
+    },
+    "createdAt": "2025-09-20T15:24:02.898Z",
+    "updatedAt": "2025-09-20T15:24:02.898Z",
+    "status": "initialized",
+    "terminalSessions": {}
   }
 ]

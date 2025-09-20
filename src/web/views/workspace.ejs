@@ -44,19 +44,82 @@
                 <div class="project-details">
                     <h3 id="current-project-name">No Project Selected</h3>
                     <span id="current-project-path"></span>
+                    <div class="project-meta">
+                        <span id="project-created-at" class="project-meta-item"></span>
+                        <span id="project-last-activity" class="project-meta-item"></span>
+                    </div>
                 </div>
                 <div class="project-stats">
                     <div class="stat-item">
                         <span class="stat-label">Claude Status:</span>
                         <span id="claude-status" class="status-badge">Stopped</span>
+                        <span id="claude-uptime" class="status-uptime" style="display: none;"></span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-label">Terminals:</span>
                         <span id="terminal-count">0</span>
+                        <span id="terminal-sessions" class="session-info"></span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-label">BMAD Agents:</span>
                         <span id="bmad-agent-count">0</span>
+                        <span id="bmad-status" class="session-info"></span>
+                    </div>
+                </div>
+                <div class="session-actions">
+                    <button id="save-session-btn" class="btn-small" title="Save current session">💾 Save Session</button>
+                    <button id="export-session-btn" class="btn-small" title="Export session data">📤 Export</button>
+                    <button id="workspace-settings-btn" class="btn-small" title="Workspace settings">⚙️ Settings</button>
+                </div>
+            </div>
+
+            <!-- Session Data Panel -->
+            <div class="session-panel" id="session-panel" style="display: none;">
+                <div class="session-header">
+                    <h4>📊 Session Data</h4>
+                    <button id="close-session-panel" class="btn-close">×</button>
+                </div>
+                <div class="session-tabs">
+                    <button class="session-tab-btn active" data-tab="activity">Activity</button>
+                    <button class="session-tab-btn" data-tab="statistics">Statistics</button>
+                    <button class="session-tab-btn" data-tab="history">History</button>
+                </div>
+                <div class="session-content">
+                    <div class="session-tab-content active" id="session-activity">
+                        <div class="activity-timeline" id="activity-timeline">
+                            <div class="timeline-item">
+                                <span class="timeline-time">No activity yet</span>
+                                <span class="timeline-event">Start working on your project to see activity</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="session-tab-content" id="session-statistics">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value" id="commands-sent">0</div>
+                                <div class="stat-label">Commands Sent</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="session-duration">0m</div>
+                                <div class="stat-label">Session Duration</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="files-modified">0</div>
+                                <div class="stat-label">Files Modified</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="terminal-commands">0</div>
+                                <div class="stat-label">Terminal Commands</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="session-tab-content" id="session-history">
+                        <div class="history-list" id="history-list">
+                            <div class="history-item">
+                                <div class="history-timestamp">Start your session to see history</div>
+                                <div class="history-action">Commands and actions will appear here</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -71,6 +134,7 @@
                     <button class="tab-btn" data-tab="files">File Explorer</button>
                 </div>
                 <div class="tab-actions">
+                    <button id="session-data-btn" class="btn-small">📊 Session Data</button>
                     <button id="split-view-btn" class="btn-small">Split View</button>
                     <button id="fullscreen-btn" class="btn-small">Fullscreen</button>
                 </div>
@@ -193,11 +257,11 @@
                                 </div>
                             </div>
                             <div class="claude-controls">
-                                <button id="start-claude-btn" class="btn">🚀 Start Claude</button>
-                                <button id="hold-claude-btn" class="btn warning" disabled>⏸️ Hold</button>
-                                <button id="resume-claude-btn" class="btn success" disabled style="display: none;">▶️ Resume</button>
-                                <button id="stop-claude-btn" class="btn danger" disabled>🛑 Stop</button>
-                                <button id="restart-claude-btn" class="btn" disabled>🔄 Restart</button>
+                                <button id="start-claude-btn" class="btn" title="Start Claude">🚀</button>
+                                <button id="hold-claude-btn" class="btn warning" disabled title="Hold">⏸️</button>
+                                <button id="resume-claude-btn" class="btn success" disabled style="display: none;" title="Resume">▶️</button>
+                                <button id="stop-claude-btn" class="btn danger" disabled title="Stop">🛑</button>
+                                <button id="restart-claude-btn" class="btn" disabled title="Restart">🔄</button>
                             </div>
                             <div class="claude-status-bar">
                                 <div class="status-indicator">
@@ -220,7 +284,7 @@
                                 </div>
                                 <div class="chat-input">
                                     <input type="text" id="claude-input" placeholder="Ask Claude anything..." disabled>
-                                    <button id="send-claude-btn" class="btn" disabled>Send</button>
+                                    <button id="send-claude-btn" class="btn" disabled>📤</button>
                                 </div>
                             </div>
                         </div>

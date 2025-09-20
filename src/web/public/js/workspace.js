@@ -11,6 +11,17 @@ class WorkspaceManager {
         this.bmadAgents = new Map();
         this.socket = null;
         this.activeTab = 'overview';
+        this.pendingClaudeResponse = false;
+
+        // Session tracking
+        this.sessionData = {
+            startTime: new Date(),
+            commandsSent: 0,
+            filesModified: 0,
+            terminalCommands: 0,
+            activity: [],
+            history: []
+        };
 
         this.init();
     }
@@ -24,12 +35,16 @@ class WorkspaceManager {
             this.setupSocketConnection();
             console.log('Step 3: About to load projects...');
             await this.loadProjects();
+            console.log('Step 3.5: Restoring last session...');
+            this.restoreLastSession();
             console.log('Step 4: Initializing tabs...');
             this.initializeTabs();
             console.log('Step 5: Starting resource monitoring...');
             this.startResourceMonitoring();
             console.log('Step 6: Setting up project creation...');
             this.setupProjectCreation();
+            console.log('Step 7: Setting up session data...');
+            this.setupSessionData();
             console.log('WorkspaceManager initialization complete');
         } catch (error) {
             console.error('Error during WorkspaceManager initialization:', error);
@@ -55,6 +70,7 @@ class WorkspaceManager {
             projectSelector.addEventListener('change', (e) => {
                 if (e.target.value) {
                     this.loadProject(e.target.value);
+                    this.saveLastSession(e.target.value);
                 }
             });
         }
@@ -318,7 +334,9 @@ class WorkspaceManager {
                 this.loadProjectTerminals();
                 this.checkClaudeStatus();
                 this.loadBmadConfiguration();
-                this.addActivity(`Loaded project: ${this.currentProject.name}`);
+                this.updateRunningStatus();
+                this.startStatusTimer();
+                this.addActivity('project', `Loaded project: ${this.currentProject.name}`);
             }
         } catch (error) {
             console.error('Error loading project:', error);
@@ -785,13 +803,50 @@ class WorkspaceManager {
 
     async sendClaudeMessage() {
         const input = document.getElementById('claude-input');
+        const sendBtn = document.getElementById('send-claude-btn');
         const message = input.value.trim();
 
-        if (!message || !this.currentProject || !this.claudeSession) return;
+        if (!message || !this.currentProject || !this.claudeSession) {
+            if (!this.currentProject) {
+                this.addClaudeMessage('system', '⚠️ Please select a project first');
+            } else if (!this.claudeSession) {
+                this.addClaudeMessage('system', '⚠️ Please start Claude Code first');
+            }
+            return;
+        }
+
+        // Prevent multiple simultaneous requests
+        if (this.pendingClaudeResponse) {
+            this.addClaudeMessage('system', '⏳ Please wait for the current response to complete');
+            return;
+        }
 
         // Add user message to chat
         this.addClaudeMessage('user', message);
         input.value = '';
+
+        // Track session activity
+        this.sessionData.commandsSent++;
+        this.addActivity('claude', `Sent command: ${message.substring(0, 50)}${message.length > 50 ? '...' : ''}`);
+
+        // Show processing status with typing indicator
+        this.pendingClaudeResponse = true;
+        const statusMsg = this.addClaudeMessage('system', '🔄 Sending to Claude Code... ⚡');
+
+        // Add typing indicator animation
+        let dots = '';
+        const typingInterval = setInterval(() => {
+            dots = dots.length >= 3 ? '' : dots + '.';
+            statusMsg.innerHTML = `🔄 Claude is processing${dots} <span class="typing-indicator">⚡</span>`;
+        }, 500);
+
+        // Store interval to clear later
+        statusMsg._typingInterval = typingInterval;
+
+        if (sendBtn) {
+            sendBtn.disabled = true;
+            sendBtn.textContent = '⏳';
+        }
 
         try {
             const response = await fetch(`/api/projects/${this.currentProject.id}/claude/command`, {
@@ -804,11 +859,76 @@ class WorkspaceManager {
             const result = await response.json();
 
             if (result.success) {
-                // Response will come via WebSocket
+                // Remove processing message
+                if (statusMsg && statusMsg.parentNode) {
+                    statusMsg.remove();
+                }
+
+                // Clear typing animation
+                if (statusMsg._typingInterval) {
+                    clearInterval(statusMsg._typingInterval);
+                }
+
+                // Display Claude's response with streaming indicators
+                if (result.response && result.response !== 'Command sent to Claude Code') {
+                    // Update status message to show success
+                    statusMsg.innerHTML = '✅ Response received from Claude Code';
+
+                    // Add Claude's actual response
+                    this.addClaudeMessage('claude', result.response);
+
+                    // Remove the status message after a delay
+                    setTimeout(() => {
+                        if (statusMsg && statusMsg.parentNode) {
+                            statusMsg.remove();
+                        }
+                    }, 2000);
+                } else if (result.timeout) {
+                    // Handle timeout case
+                    statusMsg.innerHTML = '⏰ Command sent - Claude is processing (may take time for complex tasks)';
+                } else {
+                    // Fallback for basic acknowledgment
+                    statusMsg.innerHTML = result.message || 'Command sent to Claude Code';
+                }
+
+                // Reset pending state
+                this.pendingClaudeResponse = false;
+                if (sendBtn) {
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = '📤';
+                }
+            } else {
+                // Clear typing animation on error
+                if (statusMsg._typingInterval) {
+                    clearInterval(statusMsg._typingInterval);
+                }
+
+                this.pendingClaudeResponse = false;
+                statusMsg.innerHTML = `❌ Error: ${result.error || 'Failed to send command'}`;
+
+                if (sendBtn) {
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = '📤';
+                }
             }
         } catch (error) {
             console.error('Error sending Claude message:', error);
-            this.addClaudeMessage('system', 'Error sending message to Claude Code.');
+
+            // Clear typing animation on error
+            if (statusMsg._typingInterval) {
+                clearInterval(statusMsg._typingInterval);
+            }
+
+            this.pendingClaudeResponse = false;
+            statusMsg.innerHTML = '❌ Connection error - please try again';
+            this.addClaudeMessage('system', '❌ Network error sending message to Claude Code.');
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.textContent = '📤';
+            }
+            if (statusMsg && statusMsg.parentNode) {
+                statusMsg.remove();
+            }
         }
     }
 
@@ -831,10 +951,20 @@ class WorkspaceManager {
         if (welcome) {
             welcome.remove();
         }
+
+        return messageDiv; // Return the element for later manipulation
     }
 
     handleClaudeOutput(data) {
         this.addClaudeMessage('claude', data.output);
+
+        // Reset pending state when we receive a response
+        this.pendingClaudeResponse = false;
+        const sendBtn = document.getElementById('send-claude-btn');
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.textContent = '📤';
+        }
     }
 
     async checkClaudeStatus() {
@@ -3913,6 +4043,408 @@ ${phase.deliverables.map(deliverable => `- [ ] ${deliverable}`).join('\n')}
             'default': 'react-app'
         };
         return templateMap[category] || templateMap.default;
+    }
+
+    // Session Persistence Methods
+    saveLastSession(projectId) {
+        try {
+            localStorage.setItem('claude-workspace-last-project', projectId);
+            console.log('💾 Saved last project session:', projectId);
+        } catch (error) {
+            console.warn('Failed to save session:', error);
+        }
+    }
+
+    restoreLastSession() {
+        try {
+            const lastProjectId = localStorage.getItem('claude-workspace-last-project');
+            if (lastProjectId) {
+                console.log('🔄 Restoring last session for project:', lastProjectId);
+                const selector = document.getElementById('project-selector');
+                if (selector) {
+                    // Wait for projects to load before setting selection
+                    const checkAndRestore = () => {
+                        const option = selector.querySelector(`option[value="${lastProjectId}"]`);
+                        if (option) {
+                            selector.value = lastProjectId;
+                            this.loadProject(lastProjectId);
+                            console.log('✅ Successfully restored project session:', lastProjectId);
+                        } else {
+                            console.log('⚠️ Last project not found, may have been deleted');
+                        }
+                    };
+
+                    // Try immediately, then after a delay if needed
+                    checkAndRestore();
+                    setTimeout(checkAndRestore, 1000);
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to restore session:', error);
+        }
+    }
+
+    clearSession() {
+        try {
+            localStorage.removeItem('claude-workspace-last-project');
+            console.log('🧹 Cleared workspace session');
+        } catch (error) {
+            console.warn('Failed to clear session:', error);
+        }
+    }
+
+    // Session Data Management
+    setupSessionData() {
+        console.log('Setting up session data...');
+
+        // Session panel toggle
+        const sessionDataBtn = document.getElementById('session-data-btn');
+        if (sessionDataBtn) {
+            sessionDataBtn.addEventListener('click', () => {
+                this.toggleSessionPanel();
+            });
+        }
+
+        // Close session panel
+        const closeSessionPanel = document.getElementById('close-session-panel');
+        if (closeSessionPanel) {
+            closeSessionPanel.addEventListener('click', () => {
+                this.toggleSessionPanel();
+            });
+        }
+
+        // Session tab switching
+        const sessionTabBtns = document.querySelectorAll('.session-tab-btn');
+        sessionTabBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.switchSessionTab(e.target.dataset.tab);
+            });
+        });
+
+        // Session action buttons
+        const saveSessionBtn = document.getElementById('save-session-btn');
+        if (saveSessionBtn) {
+            saveSessionBtn.addEventListener('click', () => {
+                this.saveSessionData();
+            });
+        }
+
+        const exportSessionBtn = document.getElementById('export-session-btn');
+        if (exportSessionBtn) {
+            exportSessionBtn.addEventListener('click', () => {
+                this.exportSessionData();
+            });
+        }
+
+        // Start session statistics timer
+        this.startSessionTimer();
+    }
+
+    toggleSessionPanel() {
+        const panel = document.getElementById('session-panel');
+        if (panel) {
+            panel.classList.toggle('active');
+            if (panel.classList.contains('active')) {
+                this.updateSessionData();
+            }
+        }
+    }
+
+    switchSessionTab(tabName) {
+        // Update tab buttons
+        document.querySelectorAll('.session-tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+        // Update tab content
+        document.querySelectorAll('.session-tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById(`session-${tabName}`).classList.add('active');
+
+        // Update content based on tab
+        if (tabName === 'activity') {
+            this.updateActivityTimeline();
+        } else if (tabName === 'statistics') {
+            this.updateStatistics();
+        } else if (tabName === 'history') {
+            this.updateHistory();
+        }
+    }
+
+    addActivity(type, description) {
+        const activity = {
+            type,
+            description,
+            timestamp: new Date(),
+            projectId: this.currentProject?.id
+        };
+
+        this.sessionData.activity.unshift(activity);
+        this.sessionData.history.unshift(activity);
+
+        // Keep only last 50 activities
+        if (this.sessionData.activity.length > 50) {
+            this.sessionData.activity = this.sessionData.activity.slice(0, 50);
+        }
+
+        this.updateActivityTimeline();
+    }
+
+    updateActivityTimeline() {
+        const timeline = document.getElementById('activity-timeline');
+        if (!timeline) return;
+
+        if (this.sessionData.activity.length === 0) {
+            timeline.innerHTML = `
+                <div class="timeline-item">
+                    <span class="timeline-time">No activity yet</span>
+                    <span class="timeline-event">Start working on your project to see activity</span>
+                </div>
+            `;
+            return;
+        }
+
+        timeline.innerHTML = this.sessionData.activity.map(activity => `
+            <div class="timeline-item">
+                <span class="timeline-time">${this.formatTimeAgo(activity.timestamp)}</span>
+                <span class="timeline-event">${activity.description}</span>
+            </div>
+        `).join('');
+    }
+
+    updateStatistics() {
+        const duration = Math.floor((new Date() - this.sessionData.startTime) / (1000 * 60));
+
+        document.getElementById('commands-sent').textContent = this.sessionData.commandsSent;
+        document.getElementById('session-duration').textContent = `${duration}m`;
+        document.getElementById('files-modified').textContent = this.sessionData.filesModified;
+        document.getElementById('terminal-commands').textContent = this.sessionData.terminalCommands;
+    }
+
+    updateHistory() {
+        const historyList = document.getElementById('history-list');
+        if (!historyList) return;
+
+        if (this.sessionData.history.length === 0) {
+            historyList.innerHTML = `
+                <div class="history-item">
+                    <div class="history-timestamp">Start your session to see history</div>
+                    <div class="history-action">Commands and actions will appear here</div>
+                </div>
+            `;
+            return;
+        }
+
+        historyList.innerHTML = this.sessionData.history.map(item => `
+            <div class="history-item">
+                <div class="history-timestamp">${item.timestamp.toLocaleString()}</div>
+                <div class="history-action">${item.description}</div>
+            </div>
+        `).join('');
+    }
+
+    updateSessionData() {
+        this.updateActivityTimeline();
+        this.updateStatistics();
+        this.updateHistory();
+        this.updateProjectInfo();
+    }
+
+    updateProjectInfo() {
+        if (!this.currentProject) return;
+
+        // Update project metadata
+        const createdAt = document.getElementById('project-created-at');
+        if (createdAt && this.currentProject.createdAt) {
+            createdAt.textContent = `Created: ${new Date(this.currentProject.createdAt).toLocaleDateString()}`;
+        }
+
+        const lastActivity = document.getElementById('project-last-activity');
+        if (lastActivity) {
+            const lastActivityTime = this.sessionData.activity[0]?.timestamp || this.sessionData.startTime;
+            lastActivity.textContent = `Last activity: ${this.formatTimeAgo(lastActivityTime)}`;
+        }
+
+        // Update session info
+        const terminalSessions = document.getElementById('terminal-sessions');
+        if (terminalSessions) {
+            terminalSessions.textContent = this.terminals.size > 0 ? `${this.terminals.size} active` : '';
+        }
+
+        const bmadStatus = document.getElementById('bmad-status');
+        if (bmadStatus && this.currentProject.bmadConfig?.enabled) {
+            bmadStatus.textContent = this.currentProject.bmadConfig.status || 'enabled';
+        }
+
+        // Update Claude uptime
+        const claudeUptime = document.getElementById('claude-uptime');
+        if (claudeUptime && this.claudeSession) {
+            claudeUptime.style.display = 'inline';
+            claudeUptime.textContent = `(${this.formatUptime(this.claudeSession.startTime)})`;
+        }
+    }
+
+    startSessionTimer() {
+        setInterval(() => {
+            if (document.getElementById('session-panel').classList.contains('active')) {
+                this.updateStatistics();
+                this.updateProjectInfo();
+            }
+        }, 30000); // Update every 30 seconds
+    }
+
+    saveSessionData() {
+        try {
+            const sessionExport = {
+                project: this.currentProject?.name || 'Unknown',
+                startTime: this.sessionData.startTime,
+                endTime: new Date(),
+                statistics: {
+                    commandsSent: this.sessionData.commandsSent,
+                    filesModified: this.sessionData.filesModified,
+                    terminalCommands: this.sessionData.terminalCommands,
+                    duration: Math.floor((new Date() - this.sessionData.startTime) / (1000 * 60))
+                },
+                activity: this.sessionData.activity,
+                history: this.sessionData.history
+            };
+
+            localStorage.setItem(`workspace-session-${Date.now()}`, JSON.stringify(sessionExport));
+            this.addActivity('system', '💾 Session data saved successfully');
+        } catch (error) {
+            console.error('Failed to save session:', error);
+            this.addActivity('system', '❌ Failed to save session data');
+        }
+    }
+
+    exportSessionData() {
+        try {
+            const sessionExport = {
+                project: this.currentProject?.name || 'Unknown',
+                startTime: this.sessionData.startTime,
+                endTime: new Date(),
+                statistics: {
+                    commandsSent: this.sessionData.commandsSent,
+                    filesModified: this.sessionData.filesModified,
+                    terminalCommands: this.sessionData.terminalCommands,
+                    duration: Math.floor((new Date() - this.sessionData.startTime) / (1000 * 60))
+                },
+                activity: this.sessionData.activity,
+                history: this.sessionData.history
+            };
+
+            const blob = new Blob([JSON.stringify(sessionExport, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `workspace-session-${this.currentProject?.name || 'unknown'}-${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            this.addActivity('system', '📤 Session data exported successfully');
+        } catch (error) {
+            console.error('Failed to export session:', error);
+            this.addActivity('system', '❌ Failed to export session data');
+        }
+    }
+
+    formatTimeAgo(timestamp) {
+        const now = new Date();
+        const diff = Math.floor((now - timestamp) / 1000);
+
+        if (diff < 60) return 'Just now';
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        return `${Math.floor(diff / 86400)}d ago`;
+    }
+
+    formatUptime(startTime) {
+        const now = new Date();
+        const diff = Math.floor((now - startTime) / 1000);
+        const hours = Math.floor(diff / 3600);
+        const minutes = Math.floor((diff % 3600) / 60);
+        const seconds = diff % 60;
+
+        if (hours > 0) return `${hours}h ${minutes}m`;
+        if (minutes > 0) return `${minutes}m ${seconds}s`;
+        return `${seconds}s`;
+    }
+
+    // Real-time status management
+    updateRunningStatus() {
+        this.updateClaudeStatus();
+        this.updateTerminalCount();
+        this.updateBmadAgentCount();
+    }
+
+    updateClaudeStatus() {
+        const statusElement = document.getElementById('claude-status');
+        const uptimeElement = document.getElementById('claude-uptime');
+
+        if (this.claudeSession && this.claudeSession.status === 'running') {
+            statusElement.textContent = 'Running';
+            statusElement.className = 'status-badge running';
+
+            if (this.claudeSession.startTime) {
+                uptimeElement.textContent = this.formatUptime(this.claudeSession.startTime);
+                uptimeElement.style.display = 'inline';
+            }
+        } else {
+            statusElement.textContent = 'Stopped';
+            statusElement.className = 'status-badge stopped';
+            uptimeElement.style.display = 'none';
+        }
+    }
+
+    updateTerminalCount() {
+        const countElement = document.getElementById('terminal-count');
+        const sessionsElement = document.getElementById('terminal-sessions');
+
+        countElement.textContent = this.terminals.size;
+
+        if (this.terminals.size > 0) {
+            const activeTerminals = Array.from(this.terminals.values()).filter(t => t.connected);
+            sessionsElement.textContent = `(${activeTerminals.length} active)`;
+        } else {
+            sessionsElement.textContent = '';
+        }
+    }
+
+    updateBmadAgentCount() {
+        const countElement = document.getElementById('bmad-agent-count');
+        const statusElement = document.getElementById('bmad-status');
+
+        countElement.textContent = this.bmadAgents.size;
+
+        if (this.bmadAgents.size > 0) {
+            const activeAgents = Array.from(this.bmadAgents.values()).filter(a => a.status === 'active');
+            statusElement.textContent = `(${activeAgents.length} active)`;
+        } else {
+            statusElement.textContent = '';
+        }
+    }
+
+    startStatusTimer() {
+        // Clear existing timer
+        if (this.statusTimer) {
+            clearInterval(this.statusTimer);
+        }
+
+        // Update status every second
+        this.statusTimer = setInterval(() => {
+            this.updateRunningStatus();
+        }, 1000);
+    }
+
+    stopStatusTimer() {
+        if (this.statusTimer) {
+            clearInterval(this.statusTimer);
+            this.statusTimer = null;
+        }
     }
 }
 

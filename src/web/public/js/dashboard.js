@@ -435,7 +435,21 @@ class Dashboard {
         }
         if (openWorkspaceBtn) {
             openWorkspaceBtn.addEventListener('click', () => {
-                window.open('/workspace', '_blank');
+                // Share current project data with workspace
+                let workspaceUrl = '/workspace';
+                if (this.currentProject && this.currentProject.id) {
+                    workspaceUrl += `?project=${this.currentProject.id}&from=dashboard`;
+
+                    // Store current project data for sharing
+                    localStorage.setItem('dashboard-current-project', JSON.stringify({
+                        project: this.currentProject,
+                        claudeStatus: this.claudeStatus,
+                        bmadStatus: this.bmadStatus,
+                        timestamp: new Date().toISOString()
+                    }));
+                }
+
+                window.open(workspaceUrl, '_blank');
             });
         }
     }
@@ -453,7 +467,21 @@ class Dashboard {
         }
         if (openWorkspaceBtn) {
             openWorkspaceBtn.addEventListener('click', () => {
-                window.open('/workspace', '_blank');
+                // Share current project data with workspace (quick action)
+                let workspaceUrl = '/workspace';
+                if (this.currentProject && this.currentProject.id) {
+                    workspaceUrl += `?project=${this.currentProject.id}&from=dashboard-quick`;
+
+                    // Store current project data for sharing
+                    localStorage.setItem('dashboard-current-project', JSON.stringify({
+                        project: this.currentProject,
+                        claudeStatus: this.claudeStatus,
+                        bmadStatus: this.bmadStatus,
+                        timestamp: new Date().toISOString()
+                    }));
+                }
+
+                window.open(workspaceUrl, '_blank');
             });
         }
         if (viewProjectsBtn) {

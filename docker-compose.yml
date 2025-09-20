@@ -4,15 +4,13 @@ services:
   claude-daemon:
     build: .
     ports:
-      - "5000:5000"
+      - "5001:5000"
+    env_file:
+      - .env
     environment:
-      - NODE_ENV=development
       - DATABASE_PATH=/data/claude-daemon.db
-      - LOG_LEVEL=debug
     volumes:
-      - ./data:/data
-      - ./logs:/app/logs
-      - ./config:/app/config
+      - claude_data:/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/health", "||", "exit", "1"]
@@ -30,3 +28,4 @@ services:
 
 volumes:
   redis_data:
+  claude_data:

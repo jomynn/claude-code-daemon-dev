@@ -141,49 +141,56 @@ class ApiServer {
         this.app.get('/', (req, res) => {
             res.render('dashboard', {
                 title: 'Claude Code Daemon Dashboard',
-                env: process.env.NODE_ENV
+                env: process.env.NODE_ENV,
+                currentPage: 'dashboard'
             });
         });
 
         this.app.get('/usage', (req, res) => {
             res.render('usage', {
                 title: 'Usage Analytics',
-                env: process.env.NODE_ENV
+                env: process.env.NODE_ENV,
+                currentPage: 'usage'
             });
         });
 
         this.app.get('/alerts', (req, res) => {
             res.render('alerts', {
                 title: 'Alerts & Notifications',
-                env: process.env.NODE_ENV
+                env: process.env.NODE_ENV,
+                currentPage: 'alerts'
             });
         });
 
         this.app.get('/logs', (req, res) => {
             res.render('logs', {
                 title: 'Container Logs',
-                env: process.env.NODE_ENV
+                env: process.env.NODE_ENV,
+                currentPage: 'logs'
             });
         });
 
         this.app.get('/slack-config', (req, res) => {
             res.render('slack-config', {
                 title: 'Claude Code Daemon - Slack Configuration',
-                env: process.env.NODE_ENV || 'development'
+                env: process.env.NODE_ENV || 'development',
+                currentPage: 'slack-config'
             });
         });
 
         this.app.get('/projects', (req, res) => {
             res.render('projects', {
                 title: 'Project Management',
-                env: process.env.NODE_ENV
+                env: process.env.NODE_ENV,
+                currentPage: 'projects'
             });
         });
 
         this.app.get('/workspace', (req, res) => {
             res.render('workspace', {
                 title: 'Claude Code Workspace',
-                env: process.env.NODE_ENV
+                env: process.env.NODE_ENV,
+                currentPage: 'workspace'
             });
         });
 

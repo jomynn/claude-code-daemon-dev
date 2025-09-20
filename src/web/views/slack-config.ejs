@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slack Configuration - <%= title %></title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/slack-config.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Slack Integration Configuration</h1>
+            <nav>
+                <a href="/">Dashboard</a>
+                <a href="/usage">Usage Analytics</a>
+                <a href="/alerts">Alerts</a>
+                <a href="/projects">Projects</a>
+                <a href="/workspace">Workspace</a>
+                <a href="/logs">Logs</a>
+                <a href="/slack-config" class="active">Slack Config</a>
+            </nav>
+            <div class="status-indicator">
+                <span id="slack-connection-status" class="status-dot offline"></span>
+                <span id="slack-status-text">Disconnected</span>
+            </div>
+        </header>
+
+        <main>
+            <!-- Slack Status Overview -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Slack Bot Status</h3>
+                    <div class="stat-value" id="bot-status">❌ Disconnected</div>
+                    <div class="stat-label">Connection Status</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Configured Channels</h3>
+                    <div class="stat-value" id="channel-count">0</div>
+                    <div class="stat-label">Active Channels</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Messages Sent</h3>
+                    <div class="stat-value" id="messages-sent">0</div>
+                    <div class="stat-label">Today</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Commands Available</h3>
+                    <div class="stat-value" id="commands-count">10</div>
+                    <div class="stat-label">Slash Commands</div>
+                </div>
+            </div>
+
+            <!-- Configuration Sections -->
+            <div class="config-sections">
+                <!-- Bot Configuration -->
+                <div class="config-section">
+                    <h3>🤖 Bot Configuration</h3>
+                    <div class="config-card">
+                        <div class="config-info">
+                            <h4>Slack App Credentials</h4>
+                            <p>Configure your Slack app tokens and secrets. You need to create a Slack app and get these credentials from the Slack API dashboard.</p>
+                        </div>
+
+                        <div class="config-form">
+                            <div class="form-group">
+                                <label for="bot-token">Bot User OAuth Token *</label>
+                                <input type="password" id="bot-token" placeholder="xoxb-your-bot-token" value="">
+                                <small>Starts with xoxb-</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="app-token">App-Level Token *</label>
+                                <input type="password" id="app-token" placeholder="xapp-your-app-token" value="">
+                                <small>Starts with xapp- (for Socket Mode)</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="signing-secret">Signing Secret *</label>
+                                <input type="password" id="signing-secret" placeholder="your-signing-secret" value="">
+                                <small>For request verification</small>
+                            </div>
+
+                            <div class="form-actions">
+                                <button id="test-connection" class="btn btn-secondary">Test Connection</button>
+                                <button id="save-credentials" class="btn btn-primary">Save Credentials</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Channel Configuration -->
+                <div class="config-section">
+                    <h3>📢 Channel Configuration</h3>
+                    <div class="config-card">
+                        <div class="config-info">
+                            <h4>Notification Channels</h4>
+                            <p>Configure which Slack channels receive different types of notifications and alerts.</p>
+                        </div>
+
+                        <div class="channels-grid">
+                            <div class="channel-config">
+                                <label for="alerts-channel">🚨 Alerts Channel</label>
+                                <input type="text" id="alerts-channel" placeholder="#claude-alerts" value="">
+                                <small>Critical alerts and system warnings</small>
+                            </div>
+
+                            <div class="channel-config">
+                                <label for="status-channel">📊 Status Channel</label>
+                                <input type="text" id="status-channel" placeholder="#claude-status" value="">
+                                <small>Project status updates and health checks</small>
+                            </div>
+
+                            <div class="channel-config">
+                                <label for="commands-channel">⚡ Commands Channel</label>
+                                <input type="text" id="commands-channel" placeholder="#claude-control" value="">
+                                <small>Command responses and interactive features</small>
+                            </div>
+
+                            <div class="channel-config">
+                                <label for="general-channel">💬 General Channel</label>
+                                <input type="text" id="general-channel" placeholder="#claude-general" value="">
+                                <small>General notifications and updates</small>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button id="validate-channels" class="btn btn-secondary">Validate Channels</button>
+                            <button id="save-channels" class="btn btn-primary">Save Channels</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Command Configuration -->
+                <div class="config-section">
+                    <h3>⚡ Available Commands</h3>
+                    <div class="config-card">
+                        <div class="commands-list" id="commands-list">
+                            <!-- Commands will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Section -->
+                <div class="config-section">
+                    <h3>🧪 Test Integration</h3>
+                    <div class="config-card">
+                        <div class="test-controls">
+                            <div class="form-group">
+                                <label for="test-channel">Test Channel</label>
+                                <select id="test-channel">
+                                    <option value="general">General</option>
+                                    <option value="alerts">Alerts</option>
+                                    <option value="status">Status</option>
+                                    <option value="commands">Commands</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="test-message">Test Message</label>
+                                <textarea id="test-message" placeholder="Hello from Claude Code Daemon! 🤖">Hello from Claude Code Daemon! 🤖</textarea>
+                            </div>
+
+                            <div class="test-actions">
+                                <button id="send-test-message" class="btn btn-primary">Send Test Message</button>
+                                <button id="send-test-alert" class="btn btn-warning">Send Test Alert</button>
+                                <button id="send-status-update" class="btn btn-success">Send Status Update</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Setup Instructions -->
+            <div class="setup-instructions">
+                <h3>📚 Setup Instructions</h3>
+                <div class="instruction-card">
+                    <h4>1. Create a Slack App</h4>
+                    <ol>
+                        <li>Go to <a href="https://api.slack.com/apps" target="_blank">api.slack.com/apps</a></li>
+                        <li>Click "Create New App" → "From scratch"</li>
+                        <li>Name your app (e.g., "Claude Code Daemon") and select your workspace</li>
+                    </ol>
+                </div>
+
+                <div class="instruction-card">
+                    <h4>2. Configure Bot Permissions</h4>
+                    <p>Go to "OAuth & Permissions" and add these scopes:</p>
+                    <ul>
+                        <li><code>app_mentions:read</code> - Read mentions</li>
+                        <li><code>chat:write</code> - Send messages</li>
+                        <li><code>chat:write.public</code> - Send to public channels</li>
+                        <li><code>commands</code> - Handle slash commands</li>
+                        <li><code>channels:read</code> - View channels</li>
+                        <li><code>groups:read</code> - View private channels</li>
+                        <li><code>im:read</code> - View direct messages</li>
+                    </ul>
+                </div>
+
+                <div class="instruction-card">
+                    <h4>3. Enable Socket Mode</h4>
+                    <ol>
+                        <li>Go to "Socket Mode" and enable it</li>
+                        <li>Generate an App-Level Token with <code>connections:write</code> scope</li>
+                        <li>Subscribe to these bot events: <code>app_mention</code>, <code>message.im</code></li>
+                    </ol>
+                </div>
+
+                <div class="instruction-card">
+                    <h4>4. Create Slash Commands</h4>
+                    <p>Go to "Slash Commands" and create commands for:</p>
+                    <ul>
+                        <li><code>/claude-help</code> - Request URL: <code>https://your-domain.com/api/slack/command</code></li>
+                        <li><code>/claude-status</code></li>
+                        <li><code>/claude-projects</code></li>
+                        <li><code>/claude-start</code></li>
+                        <li><code>/claude-stop</code></li>
+                        <li>...and others as needed</li>
+                    </ul>
+                </div>
+
+                <div class="instruction-card">
+                    <h4>5. Install to Workspace</h4>
+                    <ol>
+                        <li>Go to "Install App" and install to your workspace</li>
+                        <li>Copy the Bot User OAuth Token (starts with xoxb-)</li>
+                        <li>Copy the App-Level Token (starts with xapp-)</li>
+                        <li>Copy the Signing Secret from "Basic Information"</li>
+                    </ol>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Claude Code Daemon &copy; 2024 | Slack Integration Configuration</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/slack-config.js"></script>
+</body>
+</html>

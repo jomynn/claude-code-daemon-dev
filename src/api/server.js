@@ -13,6 +13,7 @@ const winston = require('winston');
 const path = require('path');
 
 const config = require('../daemon/config');
+const NotificationService = require('../daemon/notification-service');
 const usageRoutes = require('./routes/usage');
 const alertsRoutes = require('./routes/alerts');
 const systemRoutes = require('./routes/system');
@@ -20,6 +21,7 @@ const bmadRoutes = require('./routes/bmad');
 const projectsRoutes = require('./routes/projects');
 const nightModeRoutes = require('./routes/night-mode-simple');
 const logsRoutes = require('./routes/logs');
+const slackRoutes = require('./routes/slack');
 const { apiCorsMiddleware } = require('./middleware/cors');
 const { requestLogger } = require('./middleware/logging');
 
@@ -46,10 +48,22 @@ class ApiServer {
             ]
         });
 
+        this.notificationService = new NotificationService();
+        this.initializeServices();
+
         this.setupMiddleware();
         this.setupRoutes();
         this.setupWebSocket();
         this.setupErrorHandling();
+    }
+
+    async initializeServices() {
+        try {
+            await this.notificationService.initialize();
+            this.logger.info('Notification service initialized');
+        } catch (error) {
+            this.logger.error('Failed to initialize notification service:', error);
+        }
     }
 
     setupMiddleware() {
@@ -107,6 +121,9 @@ class ApiServer {
     }
 
     setupRoutes() {
+        // Inject notification service into Slack routes
+        slackRoutes.setNotificationService(this.notificationService);
+
         // API routes
         this.app.use('/api/usage', usageRoutes);
         this.app.use('/api/alerts', alertsRoutes);
@@ -115,6 +132,7 @@ class ApiServer {
         this.app.use('/api/projects', projectsRoutes);
         this.app.use('/api/night-mode', nightModeRoutes);
         this.app.use('/api/logs', logsRoutes);
+        this.app.use('/api/slack', slackRoutes);
 
         // Dashboard routes
         this.app.get('/', (req, res) => {
@@ -142,6 +160,13 @@ class ApiServer {
             res.render('logs', {
                 title: 'Container Logs',
                 env: process.env.NODE_ENV
+            });
+        });
+
+        this.app.get('/slack-config', (req, res) => {
+            res.render('slack-config', {
+                title: 'Claude Code Daemon - Slack Configuration',
+                env: process.env.NODE_ENV || 'development'
             });
         });
 

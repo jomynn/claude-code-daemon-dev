@@ -7,12 +7,14 @@ const EventEmitter = require('events');
 const nodemailer = require('nodemailer');
 const axios = require('axios');
 const winston = require('winston');
+const SlackService = require('../integrations/slack-service');
 
 class NotificationService extends EventEmitter {
     constructor() {
         super();
         this.channels = new Map();
         this.alertHistory = [];
+        this.slackService = null;
         this.logger = winston.createLogger({
             level: 'info',
             format: winston.format.combine(
@@ -32,7 +34,11 @@ class NotificationService extends EventEmitter {
             this.setupEmailChannel();
         }
 
-        if (process.env.SLACK_WEBHOOK) {
+        // Initialize enhanced Slack service if bot token is available
+        if (process.env.SLACK_BOT_TOKEN) {
+            await this.setupEnhancedSlackService();
+        } else if (process.env.SLACK_WEBHOOK) {
+            // Fallback to webhook-only Slack
             this.setupSlackChannel();
         }
 
@@ -103,6 +109,54 @@ class NotificationService extends EventEmitter {
                 }
             }
         });
+    }
+
+    async setupEnhancedSlackService() {
+        try {
+            this.slackService = new SlackService();
+            const initialized = await this.slackService.initialize();
+
+            if (initialized) {
+                // Set up enhanced Slack channel that uses the bot service
+                this.channels.set('slack-enhanced', {
+                    type: 'slack-enhanced',
+                    send: async (alert) => {
+                        try {
+                            // Determine which Slack channel to send to based on alert type/severity
+                            let channelKey = 'general';
+                            if (alert.severity === 'critical') {
+                                channelKey = 'alerts';
+                            } else if (alert.type.includes('status') || alert.type.includes('health')) {
+                                channelKey = 'status';
+                            }
+
+                            await this.slackService.sendAlert(alert, channelKey);
+                            this.logger.info('Enhanced Slack alert sent successfully');
+                        } catch (error) {
+                            this.logger.error('Failed to send enhanced Slack alert:', error);
+                            throw error;
+                        }
+                    }
+                });
+
+                // Set up event listeners for Slack bot events
+                this.slackService.on('claude-started', (data) => {
+                    this.emit('claude-started-via-slack', data);
+                });
+
+                this.slackService.on('claude-stopped', (data) => {
+                    this.emit('claude-stopped-via-slack', data);
+                });
+
+                this.slackService.on('bmad-started', (data) => {
+                    this.emit('bmad-started-via-slack', data);
+                });
+
+                this.logger.info('Enhanced Slack service initialized successfully');
+            }
+        } catch (error) {
+            this.logger.error('Failed to setup enhanced Slack service:', error);
+        }
     }
 
     setupWebhookChannel() {
@@ -301,8 +355,111 @@ class NotificationService extends EventEmitter {
         return count;
     }
 
+    // Enhanced Slack methods
+    async sendSlackMessage(message, channelKey = 'general', options = {}) {
+        if (this.slackService && this.slackService.isInitialized) {
+            return await this.slackService.sendCustomMessage(message, channelKey, options);
+        } else {
+            this.logger.warn('Enhanced Slack service not available for custom message');
+            return false;
+        }
+    }
+
+    async sendSlackStatusUpdate(status, channelKey = 'status') {
+        if (this.slackService && this.slackService.isInitialized) {
+            return await this.slackService.sendStatusUpdate(status, channelKey);
+        } else {
+            this.logger.warn('Enhanced Slack service not available for status update');
+            return false;
+        }
+    }
+
+    async updateSlackChannels(newChannels) {
+        if (this.slackService && this.slackService.isInitialized) {
+            await this.slackService.updateChannelConfig(newChannels);
+            this.logger.info('Updated Slack channel configuration');
+            return true;
+        } else {
+            this.logger.warn('Enhanced Slack service not available for channel update');
+            return false;
+        }
+    }
+
+    getSlackChannelConfig() {
+        if (this.slackService && this.slackService.isInitialized) {
+            return this.slackService.getChannelConfig();
+        }
+        return null;
+    }
+
+    getSlackServiceStatus() {
+        return {
+            available: !!this.slackService,
+            initialized: this.slackService ? this.slackService.isInitialized : false,
+            channels: this.getSlackChannelConfig()
+        };
+    }
+
+    // Send project status updates to Slack
+    async notifyProjectStatusChange(projectName, oldStatus, newStatus, user = null) {
+        const message = user
+            ? `🔄 Project *${projectName}* status changed from \`${oldStatus}\` to \`${newStatus}\` by <@${user}>`
+            : `🔄 Project *${projectName}* status changed from \`${oldStatus}\` to \`${newStatus}\``;
+
+        await this.sendSlackMessage(message, 'status');
+
+        // Also send as a structured alert
+        await this.sendAlert({
+            type: 'project-status-change',
+            severity: 'info',
+            message: `Project ${projectName} status changed`,
+            data: {
+                project: projectName,
+                oldStatus,
+                newStatus,
+                user
+            }
+        });
+    }
+
+    // Send Claude session updates to Slack
+    async notifyClaudeSession(action, projectName, user = null, details = {}) {
+        const actionEmojis = {
+            started: '🚀',
+            stopped: '⏹️',
+            paused: '⏸️',
+            resumed: '▶️',
+            error: '❌'
+        };
+
+        const emoji = actionEmojis[action] || '📢';
+        const userText = user ? ` by <@${user}>` : '';
+        const message = `${emoji} Claude Code ${action} for project *${projectName}*${userText}`;
+
+        await this.sendSlackMessage(message, 'status');
+    }
+
+    // Send BMAD workflow updates to Slack
+    async notifyBmadWorkflow(action, projectName, workflow, user = null, details = {}) {
+        const actionEmojis = {
+            started: '⚡',
+            completed: '✅',
+            failed: '❌',
+            paused: '⏸️'
+        };
+
+        const emoji = actionEmojis[action] || '📢';
+        const userText = user ? ` by <@${user}>` : '';
+        const message = `${emoji} BMAD workflow (*${workflow}*) ${action} for project *${projectName}*${userText}`;
+
+        await this.sendSlackMessage(message, 'status');
+    }
+
     async cleanup() {
         // Cleanup any resources
+        if (this.slackService) {
+            await this.slackService.cleanup();
+        }
         this.channels.clear();
         this.alertHistory = [];
         this.logger.info('Notification service cleaned up');

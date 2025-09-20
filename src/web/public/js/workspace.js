@@ -92,6 +92,9 @@ class WorkspaceManager {
             console.log('🔄 Manual reload projects button clicked');
             this.loadProjects();
         });
+
+        // Night mode status monitoring
+        this.initNightModeStatus();
     }
 
     setupSocketConnection() {
@@ -121,12 +124,31 @@ class WorkspaceManager {
         this.socket.on('bmad-update', (data) => {
             this.handleBmadUpdate(data);
         });
+
+        // Night mode events
+        this.socket.on('night-mode:started', (data) => {
+            this.handleNightModeStarted(data);
+        });
+
+        this.socket.on('night-mode:stopped', (data) => {
+            this.handleNightModeStopped(data);
+        });
+
+        this.socket.on('night-mode:phase-completed', (data) => {
+            this.handleNightModePhaseCompleted(data);
+        });
+
+        this.socket.on('night-mode:project-completed', (data) => {
+            this.handleNightModeProjectCompleted(data);
+        });
     }
 
     async loadProjects() {
         try {
             console.log('🔄 Starting loadProjects...');
             const selector = document.getElementById('project-selector');
+            const container = document.querySelector('.project-selector-container');
+            const countBadge = document.getElementById('project-count-badge');
             console.log('🎯 Project selector element:', selector);
 
             if (!selector) {
@@ -137,6 +159,8 @@ class WorkspaceManager {
             // Show loading state
             selector.innerHTML = '<option value="">Loading projects...</option>';
             selector.disabled = true;
+            if (container) container.classList.add('loading');
+            if (countBadge) countBadge.style.display = 'none';
             console.log('⏳ Set loading state');
 
             const response = await fetch('/api/projects');
@@ -158,43 +182,128 @@ class WorkspaceManager {
                     selector.appendChild(noProjectsOption);
                     console.log('📝 Added "No projects found" option');
                 } else {
-                    result.data.forEach((project, index) => {
-                        const option = document.createElement('option');
-                        option.value = project.id;
-                        option.textContent = `${project.name} (${project.targetFolder})`;
-                        selector.appendChild(option);
-                        console.log(`✨ Added project ${index + 1}/${result.data.length}: ${project.name} (ID: ${project.id})`);
+                    // Group projects by status for better organization
+                    const activeProjects = [];
+                    const inactiveProjects = [];
+
+                    result.data.forEach(project => {
+                        if (project.status === 'active' || project.status === 'running') {
+                            activeProjects.push(project);
+                        } else {
+                            inactiveProjects.push(project);
+                        }
                     });
+
+                    // Add active projects first
+                    if (activeProjects.length > 0) {
+                        const activeGroup = document.createElement('optgroup');
+                        activeGroup.label = '🟢 Active Projects';
+
+                        activeProjects.forEach((project, index) => {
+                            const option = document.createElement('option');
+                            option.value = project.id;
+
+                            // Format project name with better readability
+                            const projectName = project.name.length > 30
+                                ? project.name.substring(0, 27) + '...'
+                                : project.name;
+
+                            // Extract just the folder name from the full path for cleaner display
+                            const folderName = project.targetFolder.split('/').pop() || project.targetFolder;
+
+                            option.textContent = `${projectName} — ${folderName}`;
+                            option.title = `${project.name} - ${project.targetFolder}`;
+                            activeGroup.appendChild(option);
+                            console.log(`✨ Added active project ${index + 1}/${activeProjects.length}: ${project.name}`);
+                        });
+
+                        selector.appendChild(activeGroup);
+                    }
+
+                    // Add inactive projects
+                    if (inactiveProjects.length > 0) {
+                        const inactiveGroup = document.createElement('optgroup');
+                        inactiveGroup.label = '⚪ Other Projects';
+
+                        inactiveProjects.forEach((project, index) => {
+                            const option = document.createElement('option');
+                            option.value = project.id;
+
+                            // Format project name with better readability
+                            const projectName = project.name.length > 30
+                                ? project.name.substring(0, 27) + '...'
+                                : project.name;
+
+                            // Extract just the folder name from the full path for cleaner display
+                            const folderName = project.targetFolder.split('/').pop() || project.targetFolder;
+
+                            option.textContent = `${projectName} — ${folderName}`;
+                            option.title = `${project.name} - ${project.targetFolder}`;
+                            inactiveGroup.appendChild(option);
+                            console.log(`✨ Added project ${index + 1}/${inactiveProjects.length}: ${project.name}`);
+                        });
+
+                        selector.appendChild(inactiveGroup);
+                    }
+
+                    // If no grouping is available, add all projects without groups
+                    if (activeProjects.length === 0 && inactiveProjects.length === 0) {
+                        result.data.forEach((project, index) => {
+                            const option = document.createElement('option');
+                            option.value = project.id;
+
+                            // Format project name with better readability
+                            const projectName = project.name.length > 30
+                                ? project.name.substring(0, 27) + '...'
+                                : project.name;
+
+                            // Extract just the folder name from the full path for cleaner display
+                            const folderName = project.targetFolder.split('/').pop() || project.targetFolder;
+
+                            option.textContent = `${projectName} — ${folderName}`;
+                            option.title = `${project.name} - ${project.targetFolder}`;
+                            selector.appendChild(option);
+                            console.log(`✨ Added project ${index + 1}/${result.data.length}: ${project.name} (ID: ${project.id})`);
+                        });
+                    }
 
                     // Verify all options were added
                     const optionCount = selector.options.length;
-                    console.log(`🔍 Selector now has ${optionCount} options (including default)`);
-
-                    // Log all options for debugging
-                    for (let i = 0; i < selector.options.length; i++) {
-                        console.log(`  Option ${i}: "${selector.options[i].textContent}" (value: "${selector.options[i].value}")`);
-                    }
+                    console.log(`🔍 Selector now has ${optionCount} options/groups`);
                 }
 
                 console.log(`🎉 Successfully loaded ${result.data.length} projects`);
+
+                // Update project count badge
+                if (countBadge) {
+                    countBadge.textContent = result.data.length.toString();
+                    countBadge.style.display = 'inline-block';
+                    countBadge.title = `${result.data.length} project${result.data.length !== 1 ? 's' : ''} available`;
+                }
 
                 // Add a visual indicator that projects have been loaded
                 selector.style.borderLeft = '3px solid #28a745';
                 setTimeout(() => {
                     selector.style.borderLeft = '';
                 }, 2000);
+
+                // Remove loading state
+                if (container) container.classList.remove('loading');
             } else {
                 console.error('❌ Projects API returned error:', result);
                 selector.innerHTML = '<option value="">Error loading projects</option>';
                 selector.disabled = true;
+                if (container) container.classList.remove('loading');
             }
         } catch (error) {
             console.error('💥 Error loading projects:', error);
             const selector = document.getElementById('project-selector');
+            const container = document.querySelector('.project-selector-container');
             if (selector) {
                 selector.innerHTML = '<option value="">Error loading projects</option>';
                 selector.disabled = true;
             }
+            if (container) container.classList.remove('loading');
         }
     }
 
@@ -3605,6 +3714,323 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('❌ Could not find project-selector element!');
         }
     }, 3000);
+
+    // Night Mode Methods
+    async initNightModeStatus() {
+        try {
+            const response = await fetch('/api/night-mode/status');
+            const result = await response.json();
+
+            if (result.success) {
+                this.updateNightModeDisplay(result.data);
+            }
+        } catch (error) {
+            console.error('Error fetching night mode status:', error);
+        }
+
+        // Check status every minute
+        setInterval(async () => {
+            await this.updateNightModeStatus();
+        }, 60000);
+    }
+
+    async updateNightModeStatus() {
+        try {
+            const response = await fetch('/api/night-mode/status');
+            const result = await response.json();
+
+            if (result.success) {
+                this.updateNightModeDisplay(result.data);
+            }
+        } catch (error) {
+            console.error('Error updating night mode status:', error);
+        }
+    }
+
+    updateNightModeDisplay(status) {
+        // Update indicators if they exist
+        const indicator = document.querySelector('.night-mode-indicator');
+        if (indicator) {
+            if (status.isActive) {
+                indicator.classList.add('active');
+            } else {
+                indicator.classList.remove('active');
+            }
+        }
+
+        // Update queue display
+        this.updateQueueDisplay(status.queueLength);
+    }
+
+    updateQueueDisplay(count) {
+        const badge = document.getElementById('night-queue-badge');
+        if (badge) {
+            badge.textContent = count;
+            badge.style.display = count > 0 ? 'inline-block' : 'none';
+        }
+    }
+
+    async queueForNightMode() {
+        try {
+            // Get current brainstorm data
+            const brainstormData = this.getCurrentBrainstormData();
+
+            if (!brainstormData || !brainstormData.projectName) {
+                this.showNotification('Please complete the project brainstorm first', 'warning');
+                return;
+            }
+
+            const response = await fetch('/api/night-mode/queue-from-brainstorm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ brainstormData })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.showNotification(`Project "${brainstormData.projectName}" queued for night development! 🌙`, 'success');
+                this.updateNightModeStatus();
+                this.showNightModeConfirmation(result.data);
+            } else {
+                this.showNotification(result.error, 'error');
+            }
+        } catch (error) {
+            console.error('Error queuing for night mode:', error);
+            this.showNotification('Failed to queue project for night mode', 'error');
+        }
+    }
+
+    getCurrentBrainstormData() {
+        // Extract data from the brainstorm form
+        return {
+            projectName: document.getElementById('final-project-name')?.value ||
+                        document.getElementById('setup-project-name')?.textContent ||
+                        'Untitled Project',
+            overview: document.getElementById('brief-overview')?.textContent || 'No overview provided',
+            objectives: this.extractObjectives(),
+            scope: document.getElementById('brief-features')?.textContent || 'No features defined',
+            features: this.extractFeatures(),
+            techStack: this.extractTechStack(),
+            workflow: 'agile',
+            priority: 1
+        };
+    }
+
+    extractObjectives() {
+        const objectivesList = document.getElementById('brief-objectives');
+        if (objectivesList) {
+            return Array.from(objectivesList.children).map(li => li.textContent);
+        }
+        return ['Complete project development'];
+    }
+
+    extractFeatures() {
+        const featuresList = document.getElementById('features-list');
+        if (featuresList) {
+            return Array.from(featuresList.children).map(li => li.textContent);
+        }
+        return ['Basic functionality'];
+    }
+
+    extractTechStack() {
+        return {
+            frontend: document.getElementById('frontend-tech')?.textContent || 'React',
+            backend: document.getElementById('backend-tech')?.textContent || 'Node.js',
+            database: document.getElementById('database-tech')?.textContent || 'MongoDB'
+        };
+    }
+
+    showNightModeConfirmation(projectData) {
+        const modal = document.createElement('div');
+        modal.className = 'modal night-mode-confirmation';
+        modal.style.display = 'block';
+
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🌙 Night Mode Queued</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="night-mode-summary">
+                        <h4>Your project is queued for automatic development!</h4>
+                        <div class="project-info">
+                            <p><strong>Project:</strong> ${projectData.name}</p>
+                            <p><strong>Priority:</strong> ${projectData.priority}</p>
+                            <p><strong>Queued at:</strong> ${new Date(projectData.queuedAt).toLocaleTimeString()}</p>
+                        </div>
+                        <div class="night-schedule">
+                            <h5>Development Schedule</h5>
+                            <p>🕚 Development starts: 11:00 PM</p>
+                            <p>☀️ Summary ready: 6:00 AM</p>
+                            <p>📧 You'll receive a morning summary with progress</p>
+                        </div>
+                        <div class="what-happens">
+                            <h5>What happens during night mode?</h5>
+                            <ul>
+                                <li>🏗️ Project setup and scaffolding</li>
+                                <li>💻 Feature implementation</li>
+                                <li>🧪 Automated testing</li>
+                                <li>📚 Documentation generation</li>
+                                <li>⚡ Code optimization</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Got it!</button>
+                    <button class="btn btn-night" onclick="workspaceManager.viewNightQueue()">View Queue</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    }
+
+    async viewNightQueue() {
+        try {
+            const response = await fetch('/api/night-mode/queue');
+            const result = await response.json();
+
+            if (result.success) {
+                this.showQueueModal(result.data.queue);
+            }
+        } catch (error) {
+            console.error('Error fetching queue:', error);
+            this.showNotification('Failed to load night mode queue', 'error');
+        }
+    }
+
+    showQueueModal(queue) {
+        const modal = document.createElement('div');
+        modal.className = 'modal queue-modal';
+        modal.style.display = 'block';
+
+        const queueHTML = queue.map(project => `
+            <div class="queue-item">
+                <div class="project-info">
+                    <span class="project-name">${project.name}</span>
+                    <small>Queued: ${new Date(project.queuedAt).toLocaleString()}</small>
+                </div>
+                <div class="project-meta">
+                    <span class="priority">Priority ${project.priority}</span>
+                    <span class="status">${project.status}</span>
+                </div>
+            </div>
+        `).join('');
+
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🌙 Night Mode Development Queue</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="queue-list">
+                        ${queue.length > 0 ? queueHTML : '<p>No projects in queue</p>'}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Close</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    }
+
+    // Night mode event handlers
+    handleNightModeStarted(data) {
+        this.showNotification('🌙 Night mode development started', 'info');
+        this.addActivity('Night mode automatic development began');
+        this.updateNightModeStatus();
+    }
+
+    handleNightModeStopped(data) {
+        this.showNotification('☀️ Night mode development completed', 'success');
+        this.addActivity('Night mode development finished');
+        this.updateNightModeStatus();
+
+        if (data.summary) {
+            this.showMorningSummary(data.summary);
+        }
+    }
+
+    handleNightModePhaseCompleted(data) {
+        this.addActivity(`Night mode: ${data.phase} completed for ${data.project}`);
+    }
+
+    handleNightModeProjectCompleted(data) {
+        this.showNotification(`🎉 Project "${data.name}" completed during night mode!`, 'success');
+        this.addActivity(`Project "${data.name}" completed automatically`);
+    }
+
+    showMorningSummary(summary) {
+        const modal = document.createElement('div');
+        modal.className = 'modal morning-summary-modal';
+        modal.style.display = 'block';
+
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>☀️ Good Morning! Your Night Development Summary</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="morning-summary">
+                        <div class="summary-overview">
+                            <h4>🌙 While you were sleeping...</h4>
+                            <p>Development ran for ${summary.duration}</p>
+                        </div>
+                        <div class="summary-stats">
+                            <div class="stat-card">
+                                <span class="stat-number">${summary.projectsCompleted}</span>
+                                <span class="stat-label">Projects Completed</span>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-number">${summary.tasksCompleted}</span>
+                                <span class="stat-label">Tasks Completed</span>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-number">${summary.errors}</span>
+                                <span class="stat-label">Issues Found</span>
+                            </div>
+                        </div>
+                        <div class="summary-highlights">
+                            <h5>✨ Highlights</h5>
+                            <ul>
+                                ${summary.highlights.map(highlight => `<li>${highlight}</li>`).join('')}
+                            </ul>
+                        </div>
+                        ${summary.recommendations.length > 0 ? `
+                            <div class="summary-recommendations">
+                                <h5>📋 Recommendations</h5>
+                                ${summary.recommendations.map(rec => `
+                                    <div class="recommendation ${rec.priority}">
+                                        <strong>${rec.type}:</strong> ${rec.message}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Thanks!</button>
+                    <button class="btn btn-primary" onclick="workspaceManager.viewCompletedProjects()">View Projects</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    }
+
+    async viewCompletedProjects() {
+        // Switch to projects tab or reload project list
+        window.location.href = '/projects';
+    }
 });
 
 // Handle window resize for terminals

@@ -51,16 +51,248 @@
 .workspace-controls {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex: 1;
+    justify-content: flex-end;
 }
 
 .workspace-controls select {
     background: var(--dark-bg);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
-    padding: 8px 12px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    min-width: 220px;
+    max-width: 350px;
+    flex-shrink: 1;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.workspace-controls select:hover {
+    border-color: var(--primary-color);
+    background: rgba(76, 175, 80, 0.05);
+}
+
+.workspace-controls select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.workspace-controls select option {
+    padding: 10px;
+    background: var(--dark-bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.workspace-controls select option:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.workspace-controls select option:disabled {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Custom dropdown styling for better readability */
+.workspace-controls select optgroup {
+    font-weight: bold;
+    color: var(--primary-color);
+    padding: 8px;
+    background: rgba(76, 175, 80, 0.1);
+}
+
+/* Project selector container */
+.project-selector-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+/* Project count badge */
+.project-count-badge {
+    background: var(--primary-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    min-width: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.project-count-badge:hover {
+    transform: scale(1.1);
+}
+
+/* Loading indicator for dropdown */
+.project-selector-loading {
+    position: absolute;
+    right: 35px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--primary-color);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: none;
+}
+
+.loading .project-selector-loading {
+    display: block;
+}
+
+@keyframes spin {
+    0% { transform: translateY(-50%) rotate(0deg); }
+    100% { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Night Mode Styles */
+.btn-night {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: white;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-night:hover {
+    background: linear-gradient(135deg, #34495e, #3d566e);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(44, 62, 80, 0.3);
+}
+
+.btn-night::before {
+    content: '🌙';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(-50%); }
+    50% { transform: translateY(-60%); }
+}
+
+.approach-card[data-approach="night"] {
+    border: 2px solid #2c3e50;
+    background: linear-gradient(135deg, rgba(44, 62, 80, 0.1), rgba(52, 73, 94, 0.05));
+}
+
+.approach-card[data-approach="night"]:hover {
+    border-color: #34495e;
+    box-shadow: 0 6px 20px rgba(44, 62, 80, 0.2);
+}
+
+/* Night Mode Status Panel */
+.night-mode-panel {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.night-mode-status {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.night-mode-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #95a5a6;
+    transition: all 0.3s ease;
+}
+
+.night-mode-indicator.active {
+    background: #2c3e50;
+    box-shadow: 0 0 10px rgba(44, 62, 80, 0.5);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.queue-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 15px 0;
+}
+
+.queue-item {
+    background: rgba(44, 62, 80, 0.1);
+    padding: 10px;
     border-radius: 4px;
-    min-width: 200px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.queue-item .project-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.queue-item .priority {
+    background: var(--primary-color);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+/* Morning Summary Styles */
+.morning-summary {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin: 15px 0;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 24px;
+    font-weight: 700;
+    display: block;
+}
+
+.stat-label {
+    font-size: 12px;
+    opacity: 0.9;
 }
 
 .workspace-main {
@@ -798,6 +1030,44 @@
     color: var(--text-primary);
 }
 
+/* Better Button Styling for Controls */
+.workspace-controls .btn {
+    white-space: nowrap;
+    font-size: 13px;
+    padding: 6px 12px;
+}
+
+.workspace-controls .btn-small {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.workspace-controls .btn-reload {
+    background: #ff9800;
+    color: white;
+}
+
+.workspace-controls .btn-reload:hover {
+    background: #f57c00;
+}
+
+/* Improved Layout for Medium Screens */
+@media (max-width: 1200px) {
+    .workspace-controls {
+        gap: 8px;
+    }
+
+    .workspace-controls select {
+        min-width: 160px;
+        max-width: 200px;
+    }
+
+    .workspace-controls .btn {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .workspace-header {
@@ -812,7 +1082,18 @@
 
     .workspace-controls {
         justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px;
     }
+
+    .workspace-controls select {
+        min-width: 140px;
+        max-width: 180px;
+        order: -1;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
 
     .terminal-workspace,
     .claude-workspace,

@@ -24,10 +24,14 @@
                 </nav>
             </div>
             <div class="workspace-controls">
-                <select id="project-selector">
-                    <option value="">Select Project...</option>
-                </select>
-                <button id="reload-projects-btn" class="btn btn-small" style="background: #ff9800; margin-left: 10px;" title="Reload projects if dropdown is not showing all projects">🔄 Reload Projects</button>
+                <div class="project-selector-container">
+                    <select id="project-selector">
+                        <option value="">Select Project...</option>
+                    </select>
+                    <div class="project-selector-loading"></div>
+                    <span id="project-count-badge" class="project-count-badge" title="Total projects available" style="display: none;">0</span>
+                </div>
+                <button id="reload-projects-btn" class="btn btn-small btn-reload" title="Reload projects if dropdown is not showing all projects">🔄 Reload</button>
                 <button id="new-project-btn" class="btn">New Project</button>
                 <button id="bmad-quick-start-btn" class="btn btn-bmad">🚀 BMAD Quick Start</button>
                 <button id="brainstorm-btn" class="btn btn-brainstorm">💡 Brainstorm Project</button>
@@ -803,6 +807,17 @@
                         <div class="setup-options">
                             <h5>Development Approach</h5>
                             <div class="approach-cards">
+                                <div class="approach-card" data-approach="night">
+                                    <h6>🌙 Night Mode Development</h6>
+                                    <p>Automatic development while you sleep</p>
+                                    <ul>
+                                        <li>Queue for overnight development</li>
+                                        <li>Wake up to completed project</li>
+                                        <li>Morning progress summary</li>
+                                    </ul>
+                                    <button class="btn btn-night" onclick="workspaceManager.queueForNightMode()">Queue for Night</button>
+                                </div>
+
                                 <div class="approach-card" data-approach="bmad">
                                     <h6>🚀 BMAD Quick Start</h6>
                                     <p>Multi-agent development with automated workflows</p>

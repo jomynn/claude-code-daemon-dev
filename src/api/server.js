@@ -18,6 +18,7 @@ const alertsRoutes = require('./routes/alerts');
 const systemRoutes = require('./routes/system');
 const bmadRoutes = require('./routes/bmad');
 const projectsRoutes = require('./routes/projects');
+const nightModeRoutes = require('./routes/night-mode-simple');
 const { apiCorsMiddleware } = require('./middleware/cors');
 const { requestLogger } = require('./middleware/logging');
 
@@ -107,6 +108,7 @@ class ApiServer {
         this.app.use('/api/system', systemRoutes);
         this.app.use('/api/bmad', bmadRoutes);
         this.app.use('/api/projects', projectsRoutes);
+        this.app.use('/api/night-mode', nightModeRoutes);
 
         // Dashboard routes
         this.app.get('/', (req, res) => {

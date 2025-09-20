@@ -49,12 +49,17 @@ class SlackService extends EventEmitter {
         }
 
         try {
+            this.logger.info('Starting Slack service initialization...');
+            this.logger.info(`Bot Token: ${this.config.botToken ? 'Set' : 'Not set'}`);
+            this.logger.info(`App Token: ${this.config.appToken ? 'Set' : 'Not set'}`);
+            this.logger.info(`Socket Mode: ${!!this.config.appToken ? 'Enabled' : 'Disabled'}`);
+
             // Initialize Slack App with Socket Mode for real-time events
             this.app = new App({
                 token: this.config.botToken,
                 appToken: this.config.appToken,
                 signingSecret: this.config.signingSecret,
-                socketMode: true,
+                socketMode: !!this.config.appToken, // Only enable if app token exists
                 logLevel: 'info'
             });
 
@@ -65,7 +70,9 @@ class SlackService extends EventEmitter {
             this.setupEventHandlers();
 
             // Start the app
+            this.logger.info('Starting Slack app...');
             await this.app.start();
+            this.logger.info('Slack app started successfully');
 
             // Cache channel IDs
             await this.cacheChannelIds();
@@ -76,7 +83,8 @@ class SlackService extends EventEmitter {
 
             return true;
         } catch (error) {
-            this.logger.error('Failed to initialize Slack service:', error);
+            this.logger.error('Failed to initialize Slack service:', error.message);
+            this.logger.error('Stack trace:', error.stack);
             return false;
         }
     }
@@ -341,8 +349,19 @@ class SlackService extends EventEmitter {
     async sendCustomMessage(message, channelKey = 'general', options = {}) {
         if (!this.isInitialized) return false;
 
-        const channelId = this.channelIds.get(channelKey);
-        if (!channelId) return false;
+        let channelId = this.channelIds.get(channelKey);
+
+        // If the requested channel isn't found, try to fall back to #general
+        if (!channelId) {
+            this.logger.warn(`Channel not found for key: ${channelKey}, attempting to use #general`);
+            channelId = this.channelIds.get('general');
+        }
+
+        // If still no channel found, try to use the actual #general channel name
+        if (!channelId) {
+            channelId = '#general';
+            this.logger.warn('Using #general as fallback channel');
+        }
 
         try {
             await this.webClient.chat.postMessage({
@@ -350,10 +369,12 @@ class SlackService extends EventEmitter {
                 text: message,
                 ...options
             });
-
+            this.logger.info(`Message sent successfully to channel: ${channelId}`);
             return true;
         } catch (error) {
             this.logger.error('Failed to send custom message:', error);
+            this.logger.error('Channel attempted:', channelId);
+            this.logger.error('Available channels:', Array.from(this.channelIds.keys()));
             return false;
         }
     }

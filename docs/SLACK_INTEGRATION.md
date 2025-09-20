@@ -17,6 +17,36 @@ This guide provides comprehensive instructions for setting up and configuring Sl
 - Claude Code Daemon running (version 1.0.0+)
 - Node.js environment with required dependencies installed
 
+## 🏠 Localhost Development Setup
+
+Since you're running on localhost, you need to expose your local server to the internet for Slack to communicate with it. Here are your options:
+
+### Option 1: ngrok (Recommended) 🚀
+```bash
+# Install ngrok
+npm install -g ngrok
+
+# Start your daemon (in one terminal)
+npm start
+
+# Expose to internet (in another terminal)
+ngrok http 5000
+```
+Copy the HTTPS URL (e.g., `https://abc123.ngrok.io`) for Slack configuration.
+
+### Option 2: Socket Mode Only (Easiest) ⚡
+- No tunneling needed
+- Uses WebSocket connection to Slack
+- Leave slash command URLs empty
+- Works great for development
+
+### Option 3: LocalTunnel (Alternative)
+```bash
+npm install -g localtunnel
+lt --port 5000 --subdomain claude-daemon
+```
+Use: `https://claude-daemon.loca.lt`
+
 ## 🔧 Step 1: Create a Slack App
 
 ### 1.1 Create the App
@@ -53,20 +83,47 @@ message.im           - Messages in direct messages
 ```
 
 ### 1.5 Create Slash Commands
-Go to **"Slash Commands"** and create these commands:
+
+**For Localhost Development (Choose One Option):**
+
+#### Option A: Use ngrok (Recommended)
+1. Install ngrok: `npm install -g ngrok` or download from [ngrok.com](https://ngrok.com)
+2. Run your daemon: `npm start` (port 5000)
+3. In another terminal: `ngrok http 5000`
+4. Copy the HTTPS URL (e.g., `https://abc123.ngrok.io`)
+5. Use this URL for slash commands: `https://abc123.ngrok.io/api/slack/command`
+
+#### Option B: Use Socket Mode (No Public URL Needed)
+- Enable Socket Mode in your Slack app (already configured above)
+- Leave Request URL **empty** for slash commands
+- Socket Mode handles communication without needing a public URL
+
+#### Option C: Use LocalTunnel
+```bash
+npm install -g localtunnel
+lt --port 5000 --subdomain claude-daemon
+```
+Use: `https://claude-daemon.loca.lt/api/slack/command`
+
+**Create these slash commands with the URL from your chosen option:**
 
 | Command | Description | Request URL |
 |---------|-------------|-------------|
-| `/claude-help` | Show all available commands | `https://your-domain.com/api/slack/command` |
-| `/claude-status` | Get system status | `https://your-domain.com/api/slack/command` |
-| `/claude-projects` | List all projects | `https://your-domain.com/api/slack/command` |
-| `/claude-start` | Start Claude Code for a project | `https://your-domain.com/api/slack/command` |
-| `/claude-stop` | Stop Claude Code for a project | `https://your-domain.com/api/slack/command` |
-| `/claude-bmad` | Start BMAD workflow | `https://your-domain.com/api/slack/command` |
-| `/claude-logs` | Get recent logs | `https://your-domain.com/api/slack/command` |
-| `/claude-alerts` | Get recent alerts | `https://your-domain.com/api/slack/command` |
-| `/claude-usage` | Get usage statistics | `https://your-domain.com/api/slack/command` |
-| `/claude-health` | Perform health check | `https://your-domain.com/api/slack/command` |
+| `/claude-help` | Show all available commands | `[YOUR_URL]/api/slack/command` |
+| `/claude-status` | Get system status | `[YOUR_URL]/api/slack/command` |
+| `/claude-projects` | List all projects | `[YOUR_URL]/api/slack/command` |
+| `/claude-start` | Start Claude Code for a project | `[YOUR_URL]/api/slack/command` |
+| `/claude-stop` | Stop Claude Code for a project | `[YOUR_URL]/api/slack/command` |
+| `/claude-bmad` | Start BMAD workflow | `[YOUR_URL]/api/slack/command` |
+| `/claude-logs` | Get recent logs | `[YOUR_URL]/api/slack/command` |
+| `/claude-alerts` | Get recent alerts | `[YOUR_URL]/api/slack/command` |
+| `/claude-usage` | Get usage statistics | `[YOUR_URL]/api/slack/command` |
+| `/claude-health` | Perform health check | `[YOUR_URL]/api/slack/command` |
+
+**Note:** Replace `[YOUR_URL]` with:
+- `https://your-ngrok-url.ngrok.io` (ngrok)
+- Leave empty if using Socket Mode only
+- `https://your-subdomain.loca.lt` (localtunnel)
 
 ### 1.6 Install the App
 1. Go to **"Install App"**

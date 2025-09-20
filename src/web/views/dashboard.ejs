@@ -11,11 +11,15 @@
 <body>
     <div class="container">
         <header>
-            <h1>Claude Code Daemon Dashboard</h1>
-            <%- include('partials/navigation') %>
-            <div class="status-indicator">
-                <span id="connection-status" class="status-dot"></span>
-                <span>Live</span>
+            <div class="header-top">
+                <h1>Claude Code Daemon Dashboard</h1>
+                <div class="status-indicator">
+                    <span id="connection-status" class="status-dot"></span>
+                    <span>Live</span>
+                </div>
+            </div>
+            <div class="header-nav">
+                <%- include('partials/navigation') %>
             </div>
         </header>
 
@@ -137,6 +141,52 @@
                         </div>
                         <div class="workspace-actions">
                             <button id="start-bmad-dashboard-btn" class="btn btn-small btn-primary" disabled>Start BMAD</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slack Connection Status -->
+            <div class="slack-connection-section">
+                <h3>Slack Integration Status</h3>
+                <div class="slack-connection-card">
+                    <div class="connection-header">
+                        <div class="connection-info">
+                            <h4>🔗 Slack Connection</h4>
+                            <span class="slack-status-badge disconnected" id="slack-connection-badge">Disconnected</span>
+                        </div>
+                        <div class="connection-actions">
+                            <button id="test-slack-connection" class="btn btn-small btn-secondary" disabled>Test Connection</button>
+                            <button id="configure-slack" class="btn btn-small btn-primary">Configure</button>
+                        </div>
+                    </div>
+                    <div class="connection-details">
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">Bot Status:</span>
+                                <span class="detail-value" id="slack-bot-status">Not Connected</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Workspace:</span>
+                                <span class="detail-value" id="slack-workspace">--</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Channels:</span>
+                                <span class="detail-value" id="slack-channels-count">0</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Last Activity:</span>
+                                <span class="detail-value" id="slack-last-activity">Never</span>
+                            </div>
+                        </div>
+                        <div class="slack-features">
+                            <h5>Available Features:</h5>
+                            <div class="features-list">
+                                <span class="feature-item" data-feature="alerts">🚨 Alerts</span>
+                                <span class="feature-item" data-feature="status">📊 Status Updates</span>
+                                <span class="feature-item" data-feature="commands">⚡ Slash Commands</span>
+                                <span class="feature-item" data-feature="notifications">📢 Notifications</span>
+                            </div>
                         </div>
                     </div>
                 </div>

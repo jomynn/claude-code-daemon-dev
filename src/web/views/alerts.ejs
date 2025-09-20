@@ -10,11 +10,15 @@
 <body>
     <div class="container">
         <header>
-            <h1>Alerts & Notifications</h1>
-            <%- include('partials/navigation') %>
-            <div class="status-indicator">
-                <span id="connection-status" class="status-dot"></span>
-                <span>Live</span>
+            <div class="header-top">
+                <h1>Alerts & Notifications</h1>
+                <div class="status-indicator">
+                    <span id="connection-status" class="status-dot"></span>
+                    <span>Live</span>
+                </div>
+            </div>
+            <div class="header-nav">
+                <%- include('partials/navigation') %>
             </div>
         </header>
 

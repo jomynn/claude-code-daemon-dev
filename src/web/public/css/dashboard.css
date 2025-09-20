@@ -34,12 +34,21 @@ body {
 
 /* Header */
 header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     padding: 20px 0;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 30px;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.header-nav {
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 header h1 {
@@ -166,6 +175,125 @@ nav a.active {
     background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
     border-radius: 4px;
     transition: width 0.3s ease;
+}
+
+/* Slack Connection Section */
+.slack-connection-section {
+    margin: 30px 0;
+}
+
+.slack-connection-section h3 {
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    font-size: 20px;
+}
+
+.slack-connection-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.connection-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.connection-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.connection-info h4 {
+    color: var(--text-primary);
+    font-size: 16px;
+    margin: 0;
+}
+
+.slack-status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.slack-status-badge.connected {
+    background: rgba(76, 175, 80, 0.2);
+    color: var(--success-color);
+    border: 1px solid var(--success-color);
+}
+
+.slack-status-badge.disconnected {
+    background: rgba(244, 67, 54, 0.2);
+    color: var(--danger-color);
+    border: 1px solid var(--danger-color);
+}
+
+.connection-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.connection-details {
+    margin-bottom: 20px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.slack-features h5 {
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.features-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.feature-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.feature-item.active {
+    background: rgba(33, 150, 243, 0.2);
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-secondary {
+    background: var(--border-color);
+    color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+    background: #555;
+}
+
+.btn-secondary:disabled {
+    background: #333;
+    color: #666;
+    cursor: not-allowed;
 }
 
 /* Charts */

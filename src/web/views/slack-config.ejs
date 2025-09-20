@@ -11,11 +11,15 @@
 <body>
     <div class="container">
         <header>
-            <h1>Slack Integration Configuration</h1>
-            <%- include('partials/navigation') %>
-            <div class="status-indicator">
-                <span id="slack-connection-status" class="status-dot offline"></span>
-                <span id="slack-status-text">Disconnected</span>
+            <div class="header-top">
+                <h1>Slack Integration Configuration</h1>
+                <div class="status-indicator">
+                    <span id="slack-connection-status" class="status-dot offline"></span>
+                    <span id="slack-status-text">Disconnected</span>
+                </div>
+            </div>
+            <div class="header-nav">
+                <%- include('partials/navigation') %>
             </div>
         </header>
 

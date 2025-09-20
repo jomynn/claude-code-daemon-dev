@@ -24,6 +24,7 @@ class Dashboard {
         this.setupWebSocket();
         this.setupCharts();
         this.setupWorkspaceStatus();
+        this.setupSlackConnectionStatus();
         this.setupQuickActions();
         this.loadInitialData();
         this.startPeriodicUpdates();
@@ -684,6 +685,167 @@ class Dashboard {
         const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((ms % (1000 * 60)) / 1000);
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    // Slack Connection Status Methods
+    setupSlackConnectionStatus() {
+        // Load initial Slack status
+        this.loadSlackStatus();
+
+        // Set up periodic Slack status updates
+        setInterval(() => {
+            this.loadSlackStatus();
+        }, 30000); // Update every 30 seconds
+
+        // Set up Slack action buttons
+        const testSlackBtn = document.getElementById('test-slack-connection');
+        const configureSlackBtn = document.getElementById('configure-slack');
+
+        if (testSlackBtn) {
+            testSlackBtn.addEventListener('click', () => this.testSlackConnection());
+        }
+        if (configureSlackBtn) {
+            configureSlackBtn.addEventListener('click', () => {
+                window.location.href = '/slack-config';
+            });
+        }
+    }
+
+    async loadSlackStatus() {
+        try {
+            const response = await fetch('/api/slack/status');
+            const result = await response.json();
+
+            if (result.success) {
+                this.updateSlackStatus(result.data);
+            } else {
+                // If API call fails, show as disconnected
+                this.updateSlackStatus({
+                    available: false,
+                    initialized: false,
+                    channels: {}
+                });
+            }
+        } catch (error) {
+            console.error('Error loading Slack status:', error);
+            // If there's an error, show as disconnected
+            this.updateSlackStatus({
+                available: false,
+                initialized: false,
+                channels: {}
+            });
+        }
+    }
+
+    updateSlackStatus(status) {
+        const slackConnectionBadge = document.getElementById('slack-connection-badge');
+        const slackBotStatus = document.getElementById('slack-bot-status');
+        const slackWorkspace = document.getElementById('slack-workspace');
+        const slackChannelsCount = document.getElementById('slack-channels-count');
+        const slackLastActivity = document.getElementById('slack-last-activity');
+        const testSlackBtn = document.getElementById('test-slack-connection');
+        const featureItems = document.querySelectorAll('.feature-item');
+
+        const isConnected = status.available && status.initialized;
+        const channels = status.channels || {};
+        const channelCount = Object.keys(channels).length;
+
+        // Update connection badge
+        if (slackConnectionBadge) {
+            if (isConnected) {
+                slackConnectionBadge.textContent = 'Connected';
+                slackConnectionBadge.className = 'slack-status-badge connected';
+            } else {
+                slackConnectionBadge.textContent = 'Disconnected';
+                slackConnectionBadge.className = 'slack-status-badge disconnected';
+            }
+        }
+
+        // Update bot status
+        if (slackBotStatus) {
+            slackBotStatus.textContent = isConnected ? 'Connected' : 'Not Connected';
+        }
+
+        // Update workspace info
+        if (slackWorkspace) {
+            slackWorkspace.textContent = status.workspace || '--';
+        }
+
+        // Update channels count
+        if (slackChannelsCount) {
+            slackChannelsCount.textContent = channelCount;
+        }
+
+        // Update last activity
+        if (slackLastActivity) {
+            if (isConnected) {
+                slackLastActivity.textContent = 'Just now';
+            } else {
+                slackLastActivity.textContent = 'Never';
+            }
+        }
+
+        // Update test button
+        if (testSlackBtn) {
+            testSlackBtn.disabled = !isConnected;
+        }
+
+        // Update feature indicators
+        featureItems.forEach(item => {
+            const feature = item.getAttribute('data-feature');
+            if (isConnected) {
+                // Check if specific feature is configured
+                let featureEnabled = false;
+                switch (feature) {
+                    case 'alerts':
+                        featureEnabled = channels.alerts || channels.general;
+                        break;
+                    case 'status':
+                        featureEnabled = channels.status || channels.general;
+                        break;
+                    case 'commands':
+                        featureEnabled = channels.commands || channels.general;
+                        break;
+                    case 'notifications':
+                        featureEnabled = channelCount > 0;
+                        break;
+                    default:
+                        featureEnabled = isConnected;
+                }
+
+                if (featureEnabled) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+
+    async testSlackConnection() {
+        const testBtn = document.getElementById('test-slack-connection');
+        if (!testBtn) return;
+
+        testBtn.disabled = true;
+        testBtn.textContent = 'Testing...';
+
+        try {
+            const response = await fetch('/api/slack/status');
+            const result = await response.json();
+
+            if (result.success && result.data.initialized) {
+                this.showNotification('✅ Slack connection successful!', 'success');
+            } else {
+                this.showNotification('❌ Slack connection failed. Check configuration.', 'error');
+            }
+        } catch (error) {
+            this.showNotification('❌ Error testing Slack connection: ' + error.message, 'error');
+        } finally {
+            testBtn.disabled = false;
+            testBtn.textContent = 'Test Connection';
+        }
     }
 
     showNotification(message, type = 'info') {

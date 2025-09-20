@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Workspace Projects</title>
+    <script>
+        async function testProjectsAPI() {
+            console.log('Testing projects API...');
+            try {
+                const response = await fetch('/api/projects');
+                console.log('Response status:', response.status);
+                const result = await response.json();
+                console.log('API Result:', result);
+                console.log('Number of projects:', result.data ? result.data.length : 'No data');
+
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = 'Error: ' + error.message;
+            }
+        }
+
+        function testProjectSelector() {
+            const selector = document.getElementById('fake-selector');
+            if (!selector) {
+                console.log('No selector found');
+                return;
+            }
+
+            console.log('Testing with fake selector...');
+            testProjectsAPI();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, testing...');
+            testProjectsAPI();
+        });
+    </script>
+</head>
+<body>
+    <h1>Debug Workspace Projects</h1>
+    <button onclick="testProjectsAPI()">Test API</button>
+    <button onclick="testProjectSelector()">Test Selector</button>
+    <select id="fake-selector">
+        <option value="">Loading...</option>
+    </select>
+    <div id="result"></div>
+</body>
+</html>

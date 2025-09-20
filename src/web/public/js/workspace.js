@@ -17,30 +17,47 @@ class WorkspaceManager {
 
     async init() {
         console.log('Initializing WorkspaceManager...');
-        this.setupEventListeners();
-        this.setupSocketConnection();
-        console.log('About to load projects...');
-        this.loadProjects();
-        this.initializeTabs();
-        this.startResourceMonitoring();
-        this.setupProjectCreation();
-        console.log('WorkspaceManager initialization complete');
+        try {
+            console.log('Step 1: Setting up event listeners...');
+            this.setupEventListeners();
+            console.log('Step 2: Setting up socket connection...');
+            this.setupSocketConnection();
+            console.log('Step 3: About to load projects...');
+            await this.loadProjects();
+            console.log('Step 4: Initializing tabs...');
+            this.initializeTabs();
+            console.log('Step 5: Starting resource monitoring...');
+            this.startResourceMonitoring();
+            console.log('Step 6: Setting up project creation...');
+            this.setupProjectCreation();
+            console.log('WorkspaceManager initialization complete');
+        } catch (error) {
+            console.error('Error during WorkspaceManager initialization:', error);
+        }
     }
 
     setupEventListeners() {
+        console.log('Setting up event listeners...');
+
         // Tab switching
-        document.querySelectorAll('.tab-btn').forEach(btn => {
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        console.log('Found tab buttons:', tabButtons.length);
+        tabButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 this.switchTab(e.target.dataset.tab);
             });
         });
 
         // Project selector
-        document.getElementById('project-selector').addEventListener('change', (e) => {
-            if (e.target.value) {
-                this.loadProject(e.target.value);
-            }
-        });
+        const projectSelector = document.getElementById('project-selector');
+        console.log('Found project selector:', !!projectSelector);
+        if (projectSelector) {
+            projectSelector.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    this.loadProject(e.target.value);
+                }
+            });
+        }
 
         // Claude Code controls
         document.getElementById('start-claude-btn').addEventListener('click', () => {
@@ -182,90 +199,24 @@ class WorkspaceManager {
                     selector.appendChild(noProjectsOption);
                     console.log('📝 Added "No projects found" option');
                 } else {
-                    // Group projects by status for better organization
-                    const activeProjects = [];
-                    const inactiveProjects = [];
+                    // Add all projects directly without complex grouping that wasn't working
+                    result.data.forEach((project, index) => {
+                        const option = document.createElement('option');
+                        option.value = project.id;
 
-                    result.data.forEach(project => {
-                        if (project.status === 'active' || project.status === 'running') {
-                            activeProjects.push(project);
-                        } else {
-                            inactiveProjects.push(project);
-                        }
+                        // Format project name with better readability
+                        const projectName = project.name.length > 30
+                            ? project.name.substring(0, 27) + '...'
+                            : project.name;
+
+                        // Extract just the folder name from the full path for cleaner display
+                        const folderName = project.targetFolder.split('/').pop() || project.targetFolder;
+
+                        option.textContent = `${projectName} — ${folderName}`;
+                        option.title = `${project.name} - ${project.targetFolder}`;
+                        selector.appendChild(option);
+                        console.log(`✨ Added project ${index + 1}/${result.data.length}: ${project.name} (ID: ${project.id})`);
                     });
-
-                    // Add active projects first
-                    if (activeProjects.length > 0) {
-                        const activeGroup = document.createElement('optgroup');
-                        activeGroup.label = '🟢 Active Projects';
-
-                        activeProjects.forEach((project, index) => {
-                            const option = document.createElement('option');
-                            option.value = project.id;
-
-                            // Format project name with better readability
-                            const projectName = project.name.length > 30
-                                ? project.name.substring(0, 27) + '...'
-                                : project.name;
-
-                            // Extract just the folder name from the full path for cleaner display
-                            const folderName = project.targetFolder.split('/').pop() || project.targetFolder;
-
-                            option.textContent = `${projectName} — ${folderName}`;
-                            option.title = `${project.name} - ${project.targetFolder}`;
-                            activeGroup.appendChild(option);
-                            console.log(`✨ Added active project ${index + 1}/${activeProjects.length}: ${project.name}`);
-                        });
-
-                        selector.appendChild(activeGroup);
-                    }
-
-                    // Add inactive projects
-                    if (inactiveProjects.length > 0) {
-                        const inactiveGroup = document.createElement('optgroup');
-                        inactiveGroup.label = '⚪ Other Projects';
-
-                        inactiveProjects.forEach((project, index) => {
-                            const option = document.createElement('option');
-                            option.value = project.id;
-
-                            // Format project name with better readability
-                            const projectName = project.name.length > 30
-                                ? project.name.substring(0, 27) + '...'
-                                : project.name;
-
-                            // Extract just the folder name from the full path for cleaner display
-                            const folderName = project.targetFolder.split('/').pop() || project.targetFolder;
-
-                            option.textContent = `${projectName} — ${folderName}`;
-                            option.title = `${project.name} - ${project.targetFolder}`;
-                            inactiveGroup.appendChild(option);
-                            console.log(`✨ Added project ${index + 1}/${inactiveProjects.length}: ${project.name}`);
-                        });
-
-                        selector.appendChild(inactiveGroup);
-                    }
-
-                    // If no grouping is available, add all projects without groups
-                    if (activeProjects.length === 0 && inactiveProjects.length === 0) {
-                        result.data.forEach((project, index) => {
-                            const option = document.createElement('option');
-                            option.value = project.id;
-
-                            // Format project name with better readability
-                            const projectName = project.name.length > 30
-                                ? project.name.substring(0, 27) + '...'
-                                : project.name;
-
-                            // Extract just the folder name from the full path for cleaner display
-                            const folderName = project.targetFolder.split('/').pop() || project.targetFolder;
-
-                            option.textContent = `${projectName} — ${folderName}`;
-                            option.title = `${project.name} - ${project.targetFolder}`;
-                            selector.appendChild(option);
-                            console.log(`✨ Added project ${index + 1}/${result.data.length}: ${project.name} (ID: ${project.id})`);
-                        });
-                    }
 
                     // Verify all options were added
                     const optionCount = selector.options.length;

@@ -21,6 +21,7 @@
                     <a href="/workspace" class="active">Workspace</a>
                     <a href="/usage">Usage</a>
                     <a href="/alerts">Alerts</a>
+                    <a href="/logs">Logs</a>
                 </nav>
             </div>
             <div class="workspace-controls">
@@ -869,6 +870,60 @@
         </div>
     </div>
 
-    <script src="/static/js/workspace.js"></script>
+    <script>
+        // Backup project loader in case main workspace.js fails
+        async function backupLoadProjects() {
+            console.log('🔧 Backup project loader executing...');
+            const selector = document.getElementById('project-selector');
+            if (!selector) {
+                console.log('❌ No project selector found');
+                return;
+            }
+
+            try {
+                selector.innerHTML = '<option value="">Loading projects...</option>';
+                const response = await fetch('/api/projects');
+                const result = await response.json();
+                console.log('✅ Backup loader got', result.data ? result.data.length : 0, 'projects');
+
+                if (result.success && result.data) {
+                    selector.innerHTML = '<option value="">Select Project...</option>';
+                    result.data.forEach(project => {
+                        const option = document.createElement('option');
+                        option.value = project.id;
+                        const projectName = project.name.length > 30 ? project.name.substring(0, 27) + '...' : project.name;
+                        const folderName = project.targetFolder.split('/').pop() || project.targetFolder;
+                        option.textContent = `${projectName} — ${folderName}`;
+                        option.title = `${project.name} - ${project.targetFolder}`;
+                        selector.appendChild(option);
+                    });
+                    console.log('✅ Backup loader populated dropdown successfully');
+                }
+            } catch (error) {
+                console.error('❌ Backup loader failed:', error);
+                selector.innerHTML = '<option value="">Error loading projects</option>';
+            }
+        }
+
+        // Set up reload button and backup loading
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add click handler to reload button
+            const reloadBtn = document.getElementById('reload-projects-btn');
+            if (reloadBtn) {
+                reloadBtn.addEventListener('click', backupLoadProjects);
+                console.log('✅ Reload button handler added');
+            }
+
+            // Try backup loader after a delay if main loader hasn't worked
+            setTimeout(() => {
+                const selector = document.getElementById('project-selector');
+                if (selector && selector.options.length <= 1) {
+                    console.log('🔧 Main loader appears to have failed, trying backup...');
+                    backupLoadProjects();
+                }
+            }, 3000);
+        });
+    </script>
+    <script src="/static/js/workspace.js?v=<%= Date.now() %>"></script>
 </body>
 </html>

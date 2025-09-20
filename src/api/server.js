@@ -19,6 +19,7 @@ const systemRoutes = require('./routes/system');
 const bmadRoutes = require('./routes/bmad');
 const projectsRoutes = require('./routes/projects');
 const nightModeRoutes = require('./routes/night-mode-simple');
+const logsRoutes = require('./routes/logs');
 const { apiCorsMiddleware } = require('./middleware/cors');
 const { requestLogger } = require('./middleware/logging');
 
@@ -109,6 +110,7 @@ class ApiServer {
         this.app.use('/api/bmad', bmadRoutes);
         this.app.use('/api/projects', projectsRoutes);
         this.app.use('/api/night-mode', nightModeRoutes);
+        this.app.use('/api/logs', logsRoutes);
 
         // Dashboard routes
         this.app.get('/', (req, res) => {
@@ -128,6 +130,13 @@ class ApiServer {
         this.app.get('/alerts', (req, res) => {
             res.render('alerts', {
                 title: 'Alerts & Notifications',
+                env: process.env.NODE_ENV
+            });
+        });
+
+        this.app.get('/logs', (req, res) => {
+            res.render('logs', {
+                title: 'Container Logs',
                 env: process.env.NODE_ENV
             });
         });

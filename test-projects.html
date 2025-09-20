@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Projects API</title>
+</head>
+<body>
+    <h1>Test Projects API</h1>
+    <select id="project-selector">
+        <option value="">Loading...</option>
+    </select>
+    <button onclick="loadProjectsTest()">Reload Projects</button>
+    <div id="log"></div>
+
+    <script>
+        function log(message) {
+            document.getElementById('log').innerHTML += '<div>' + message + '</div>';
+            console.log(message);
+        }
+
+        async function loadProjectsTest() {
+            try {
+                log('🔄 Starting loadProjects test...');
+                const selector = document.getElementById('project-selector');
+                log('🎯 Project selector element: ' + (selector ? 'found' : 'NOT FOUND'));
+
+                if (!selector) {
+                    log('❌ Project selector element not found!');
+                    return;
+                }
+
+                // Show loading state
+                selector.innerHTML = '<option value="">Loading projects...</option>';
+                log('⏳ Set loading state');
+
+                const response = await fetch('/api/projects');
+                log('📡 Fetch response status: ' + response.status + ', ok: ' + response.ok);
+                const result = await response.json();
+                log('📋 Projects API response: ' + JSON.stringify(result));
+                log('📊 Number of projects: ' + (result.data ? result.data.length : 'No data'));
+
+                if (result.success && result.data) {
+                    selector.innerHTML = '<option value="">Select Project...</option>';
+                    log('✅ Reset selector to default state');
+
+                    if (result.data.length === 0) {
+                        const noProjectsOption = document.createElement('option');
+                        noProjectsOption.value = '';
+                        noProjectsOption.textContent = 'No projects found';
+                        noProjectsOption.disabled = true;
+                        selector.appendChild(noProjectsOption);
+                        log('📝 Added "No projects found" option');
+                    } else {
+                        // Add all projects directly
+                        result.data.forEach((project, index) => {
+                            const option = document.createElement('option');
+                            option.value = project.id;
+
+                            // Format project name
+                            const projectName = project.name.length > 30
+                                ? project.name.substring(0, 27) + '...'
+                                : project.name;
+
+                            // Extract folder name
+                            const folderName = project.targetFolder.split('/').pop() || project.targetFolder;
+
+                            option.textContent = `${projectName} — ${folderName}`;
+                            option.title = `${project.name} - ${project.targetFolder}`;
+                            selector.appendChild(option);
+                            log(`✨ Added project ${index + 1}/${result.data.length}: ${project.name} (ID: ${project.id})`);
+                        });
+
+                        // Verify all options were added
+                        const optionCount = selector.options.length;
+                        log(`🔍 Selector now has ${optionCount} options`);
+                    }
+                } else {
+                    log('❌ API call failed or no data');
+                }
+            } catch (error) {
+                log('❌ Error in loadProjects: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        // Auto-load on page load
+        window.addEventListener('load', loadProjectsTest);
+    </script>
+</body>
+</html>

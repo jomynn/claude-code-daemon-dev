@@ -14,21 +14,21 @@ const pageDescription = 'Interactive development workspace with terminal access 
     <!-- Workspace Actions -->
     <div class="grid grid-3">
         <button class="action-card" onclick="window.location.href='/workspace-vscode'">
-            <div class="action-icon">
+            <div class="action-icon icon-vscode">
                 <i class="ti ti-brand-vscode"></i>
             </div>
             <div class="action-title">VS Code Interface</div>
             <div class="action-desc">Full-featured VS Code-like environment</div>
         </button>
         <button class="action-card" id="open-terminal">
-            <div class="action-icon">
+            <div class="action-icon icon-terminal">
                 <i class="ti ti-terminal"></i>
             </div>
             <div class="action-title">Terminal Access</div>
             <div class="action-desc">Direct terminal access to your system</div>
         </button>
         <button class="action-card" id="claude-assistant">
-            <div class="action-icon">
+            <div class="action-icon icon-claude">
                 <i class="ti ti-robot"></i>
             </div>
             <div class="action-title">Claude Assistant</div>
@@ -83,22 +83,22 @@ const pageDescription = 'Interactive development workspace with terminal access 
         </div>
         <div class="grid grid-4">
             <button class="tool-card">
-                <i class="ti ti-file-code"></i>
+                <i class="ti ti-file-code icon-hover-scale" style="background: var(--gradient-info); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
                 <h4>Code Editor</h4>
                 <p>Open file editor</p>
             </button>
             <button class="tool-card">
-                <i class="ti ti-git-branch"></i>
+                <i class="ti ti-git-branch icon-hover-scale" style="background: var(--gradient-warning); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
                 <h4>Git Manager</h4>
                 <p>Version control</p>
             </button>
             <button class="tool-card">
-                <i class="ti ti-package"></i>
+                <i class="ti ti-package icon-hover-scale" style="background: var(--gradient-success); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
                 <h4>Package Manager</h4>
                 <p>Manage dependencies</p>
             </button>
             <button class="tool-card">
-                <i class="ti ti-bug"></i>
+                <i class="ti ti-bug icon-hover-scale" style="background: var(--gradient-error); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
                 <h4>Debugger</h4>
                 <p>Debug your code</p>
             </button>
@@ -115,7 +115,7 @@ const pageDescription = 'Interactive development workspace with terminal access 
         </div>
         <div class="activity-list">
             <div class="activity-item">
-                <div class="activity-icon">
+                <div class="activity-icon status-icon-success">
                     <i class="ti ti-file-plus"></i>
                 </div>
                 <div class="activity-content">
@@ -124,7 +124,7 @@ const pageDescription = 'Interactive development workspace with terminal access 
                 </div>
             </div>
             <div class="activity-item">
-                <div class="activity-icon">
+                <div class="activity-icon status-icon-info">
                     <i class="ti ti-git-commit"></i>
                 </div>
                 <div class="activity-content">
@@ -133,7 +133,7 @@ const pageDescription = 'Interactive development workspace with terminal access 
                 </div>
             </div>
             <div class="activity-item">
-                <div class="activity-icon">
+                <div class="activity-icon status-icon-warning">
                     <i class="ti ti-bug"></i>
                 </div>
                 <div class="activity-content">
@@ -142,7 +142,7 @@ const pageDescription = 'Interactive development workspace with terminal access 
                 </div>
             </div>
             <div class="activity-item">
-                <div class="activity-icon">
+                <div class="activity-icon status-icon-purple">
                     <i class="ti ti-package"></i>
                 </div>
                 <div class="activity-content">

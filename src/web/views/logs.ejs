@@ -76,36 +76,11 @@ const pageDescription = 'Monitor real-time system logs, errors, and debug inform
                 </span>
             </div>
         </div>
-        <div class="logs-container">
-            <div class="log-entry log-info">
-                <span class="log-time">14:32:15</span>
-                <span class="log-level">INFO</span>
-                <span class="log-source">API</span>
-                <span class="log-message">Server started on port 5000</span>
-            </div>
-            <div class="log-entry log-success">
-                <span class="log-time">14:32:16</span>
-                <span class="log-level">INFO</span>
-                <span class="log-source">Daemon</span>
-                <span class="log-message">Claude Code Daemon initialized successfully</span>
-            </div>
-            <div class="log-entry log-warning">
-                <span class="log-time">14:32:18</span>
-                <span class="log-level">WARN</span>
-                <span class="log-source">Claude</span>
-                <span class="log-message">Rate limit approaching, 85% usage detected</span>
-            </div>
-            <div class="log-entry log-error">
-                <span class="log-time">14:32:20</span>
-                <span class="log-level">ERROR</span>
-                <span class="log-source">BMAD</span>
-                <span class="log-message">Failed to connect to agent: Connection timeout</span>
-            </div>
-            <div class="log-entry log-info">
-                <span class="log-time">14:32:22</span>
-                <span class="log-level">INFO</span>
-                <span class="log-source">API</span>
-                <span class="log-message">WebSocket client connected: 192.168.1.100</span>
+        <div class="logs-container" id="logs-container">
+            <!-- Live logs will be loaded here -->
+            <div class="loading-logs" style="text-align: center; padding: var(--space-lg); color: var(--text-secondary);">
+                <i class="ti ti-loader" style="font-size: 24px; margin-bottom: var(--space-sm); animation: spin 1s linear infinite;"></i>
+                <p>Loading logs...</p>
             </div>
         </div>
     </div>
@@ -220,5 +195,245 @@ const pageDescription = 'Monitor real-time system logs, errors, and debug inform
             background: var(--success);
         }
     </style>
+
+    <script>
+        let socket;
+        let currentFilters = {
+            level: 'all',
+            source: 'all',
+            autoRefresh: 5
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeLogControls();
+            loadLogs();
+            setupAutoRefresh();
+            connectWebSocket();
+        });
+
+        function initializeLogControls() {
+            // Log level filter
+            document.getElementById('log-level').addEventListener('change', function(e) {
+                currentFilters.level = e.target.value;
+                loadLogs();
+            });
+
+            // Log source filter
+            document.getElementById('log-source').addEventListener('change', function(e) {
+                currentFilters.source = e.target.value;
+                loadLogs();
+            });
+
+            // Auto refresh setting
+            document.getElementById('auto-refresh').addEventListener('change', function(e) {
+                currentFilters.autoRefresh = parseInt(e.target.value);
+                setupAutoRefresh();
+                updateAutoRefreshStatus();
+            });
+
+            // Manual refresh button
+            document.querySelector('.btn-primary').addEventListener('click', function() {
+                loadLogs();
+            });
+
+            // Clear logs button
+            document.querySelector('.btn-secondary').addEventListener('click', function() {
+                clearLogs();
+            });
+        }
+
+        function loadLogs() {
+            const params = new URLSearchParams();
+            if (currentFilters.level !== 'all') params.append('level', currentFilters.level);
+            if (currentFilters.source !== 'all') params.append('source', currentFilters.source);
+            params.append('limit', '100');
+
+            fetch('/api/logs?' + params.toString())
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        displayLogs(result.data.logs);
+                        updateLogStats(result.data.stats);
+                    } else {
+                        showError('Failed to load logs: ' + result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading logs:', error);
+                    showError('Failed to load logs');
+                });
+        }
+
+        function displayLogs(logs) {
+            const container = document.getElementById('logs-container');
+
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: var(--space-lg); color: var(--text-secondary);">No logs found</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            logs.forEach(log => {
+                const logEntry = createLogEntry(log);
+                container.appendChild(logEntry);
+            });
+
+            // Scroll to bottom for latest logs
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function createLogEntry(log) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry log-' + (log.level || 'info').toLowerCase();
+
+            const timestamp = new Date(log.timestamp).toLocaleTimeString();
+            const level = (log.level || 'INFO').toUpperCase();
+            const source = log.source || 'system';
+            const message = log.message || 'No message';
+
+            entry.innerHTML = \`
+                <div class="log-time">\${timestamp}</div>
+                <div class="log-level">\${level}</div>
+                <div class="log-source">\${source}</div>
+                <div class="log-message">\${message}</div>
+            \`;
+
+            return entry;
+        }
+
+        function updateLogStats(stats) {
+            if (stats) {
+                document.getElementById('total-logs').textContent = stats.total || '0';
+                document.getElementById('error-logs').textContent = stats.errors || '0';
+                document.getElementById('warning-logs').textContent = stats.warnings || '0';
+                document.getElementById('log-rate').textContent = (stats.rate || 0).toFixed(1) + '/s';
+            }
+        }
+
+        function clearLogs() {
+            if (confirm('Are you sure you want to clear all logs?')) {
+                fetch('/api/logs/clear', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            loadLogs();
+                        } else {
+                            alert('Failed to clear logs: ' + result.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error clearing logs:', error);
+                        alert('Failed to clear logs');
+                    });
+            }
+        }
+
+        function setupAutoRefresh() {
+            // Clear existing interval
+            if (window.logRefreshInterval) {
+                clearInterval(window.logRefreshInterval);
+            }
+
+            if (currentFilters.autoRefresh > 0) {
+                window.logRefreshInterval = setInterval(loadLogs, currentFilters.autoRefresh * 1000);
+            }
+        }
+
+        function updateAutoRefreshStatus() {
+            const statusText = document.querySelector('.card-header span');
+            if (currentFilters.autoRefresh > 0) {
+                statusText.textContent = \`Auto-updating every \${currentFilters.autoRefresh} seconds\`;
+                document.querySelector('.status-dot').className = 'status-dot status-online';
+            } else {
+                statusText.textContent = 'Manual refresh mode';
+                document.querySelector('.status-dot').className = 'status-dot';
+            }
+        }
+
+        function connectWebSocket() {
+            try {
+                socket = io();
+
+                socket.on('connect', function() {
+                    console.log('Connected to log stream');
+                });
+
+                socket.on('new-log', function(log) {
+                    // Check if log matches current filters
+                    if (matchesFilters(log)) {
+                        appendNewLog(log);
+                        updateLogStatsIncremental(log);
+                    }
+                });
+
+                socket.on('disconnect', function() {
+                    console.log('Disconnected from log stream');
+                });
+            } catch (error) {
+                console.log('WebSocket not available, using polling only');
+            }
+        }
+
+        function matchesFilters(log) {
+            if (currentFilters.level !== 'all' && log.level !== currentFilters.level) {
+                return false;
+            }
+            if (currentFilters.source !== 'all' && log.source !== currentFilters.source) {
+                return false;
+            }
+            return true;
+        }
+
+        function appendNewLog(log) {
+            const container = document.getElementById('logs-container');
+            const logEntry = createLogEntry(log);
+
+            // Add to top of container
+            container.insertBefore(logEntry, container.firstChild);
+
+            // Remove old logs if too many
+            const maxLogs = 100;
+            while (container.children.length > maxLogs) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function updateLogStatsIncremental(log) {
+            const totalElement = document.getElementById('total-logs');
+            const errorElement = document.getElementById('error-logs');
+            const warningElement = document.getElementById('warning-logs');
+
+            const currentTotal = parseInt(totalElement.textContent) || 0;
+            totalElement.textContent = currentTotal + 1;
+
+            if (log.level === 'error') {
+                const currentErrors = parseInt(errorElement.textContent) || 0;
+                errorElement.textContent = currentErrors + 1;
+            } else if (log.level === 'warn' || log.level === 'warning') {
+                const currentWarnings = parseInt(warningElement.textContent) || 0;
+                warningElement.textContent = currentWarnings + 1;
+            }
+        }
+
+        function showError(message) {
+            const container = document.getElementById('logs-container');
+            container.innerHTML = \`
+                <div style="text-align: center; padding: var(--space-lg); color: var(--error);">
+                    <i class="ti ti-alert-circle" style="font-size: 24px; margin-bottom: var(--space-sm);"></i>
+                    <p>\${message}</p>
+                </div>
+            \`;
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (window.logRefreshInterval) {
+                clearInterval(window.logRefreshInterval);
+            }
+            if (socket) {
+                socket.disconnect();
+            }
+        });
+    </script>
     `
 }) %>

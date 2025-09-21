@@ -16,18 +16,27 @@ const includeCharts = true;
     <!-- Stats Grid -->
     <div class="grid grid-4">
         <div class="stat-card">
+            <div class="stat-card-icon status-icon-info">
+                <i class="ti ti-coins"></i>
+            </div>
             <div class="stat-value" id="current-tokens">0</div>
             <div class="stat-label">Current Tokens</div>
             <div class="stat-change positive" id="tokens-change">+0%</div>
         </div>
 
         <div class="stat-card">
+            <div class="stat-card-icon status-icon-success">
+                <i class="ti ti-activity"></i>
+            </div>
             <div class="stat-value" id="requests-hour">0</div>
             <div class="stat-label">Requests/Hour</div>
             <div class="stat-change positive" id="requests-change">+0%</div>
         </div>
 
         <div class="stat-card">
+            <div class="stat-card-icon status-icon-warning">
+                <i class="ti ti-gauge"></i>
+            </div>
             <div class="stat-value" id="usage-percent">0%</div>
             <div class="stat-label">Usage Limit</div>
             <div class="progress" style="margin-top: var(--space-sm);">
@@ -36,6 +45,9 @@ const includeCharts = true;
         </div>
 
         <div class="stat-card">
+            <div class="stat-card-icon status-icon-purple">
+                <i class="ti ti-clock"></i>
+            </div>
             <div class="stat-value" id="time-remaining">--</div>
             <div class="stat-label">Time Remaining</div>
             <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-xs);">
@@ -48,7 +60,7 @@ const includeCharts = true;
     <div class="card">
         <div class="card-header">
             <h2 class="card-title">
-                <i class="ti ti-layout-dashboard"></i>
+                <i class="ti ti-layout-dashboard icon-hover-scale"></i>
                 Active Workspace Status
             </h2>
         </div>
@@ -57,7 +69,7 @@ const includeCharts = true;
                 <div class="card-header">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <h3 class="card-title">
-                            <i class="ti ti-target"></i>
+                            <i class="ti ti-target icon-hover-scale" style="background: var(--gradient-success); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
                             Current Project
                         </h3>
                         <span class="badge badge-secondary" id="project-status-badge">No Project</span>
@@ -499,7 +511,8 @@ const includeCharts = true;
                                 color: '#30363d'
                             },
                             ticks: {
-                                color: '#7d8590'
+                                color: '#7d8590',
+                                maxTicksLimit: 12
                             }
                         }
                     }
@@ -543,29 +556,212 @@ const includeCharts = true;
                                 color: '#30363d'
                             },
                             ticks: {
-                                color: '#7d8590'
+                                color: '#7d8590',
+                                maxTicksLimit: 8
                             }
                         }
                     }
                 }
             });
+
+            // Load historical data for charts
+            loadChartData();
+        }
+
+        function loadChartData() {
+            // Load usage history for chart
+            fetch('/api/usage/history?hours=24')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success && result.data.length > 0) {
+                        updateUsageChart(result.data);
+                    }
+                })
+                .catch(error => console.error('Error loading usage history:', error));
+
+            // Load request stats for chart
+            fetch('/api/usage/stats?period=day')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        updateRequestChart(result.data);
+                    }
+                })
+                .catch(error => console.error('Error loading request stats:', error));
+        }
+
+        function updateUsageChart(data) {
+            const labels = data.map(item => {
+                const date = new Date(item.timestamp);
+                return date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0');
+            });
+            const tokenData = data.map(item => item.tokens || 0);
+
+            window.usageChart.data.labels = labels;
+            window.usageChart.data.datasets[0].data = tokenData;
+            window.usageChart.update();
+        }
+
+        function updateRequestChart(statsData) {
+            // Create hourly distribution from stats
+            const hours = Array.from({length: 12}, (_, i) => {
+                const hour = (new Date().getHours() - 11 + i) % 24;
+                return hour + ':00';
+            });
+
+            // Generate sample request data (in production, this would come from real data)
+            const requestData = hours.map(() => Math.floor(Math.random() * 20 + 5));
+
+            window.requestChart.data.labels = hours;
+            window.requestChart.data.datasets[0].data = requestData;
+            window.requestChart.update();
         }
 
         function loadDashboardData() {
-            // Load initial data
+            // Load usage data
             fetch('/api/usage/current')
                 .then(response => response.json())
-                .then(data => updateUsageStats(data))
+                .then(result => {
+                    if (result.success) {
+                        updateUsageStats(result.data);
+                    }
+                })
                 .catch(error => console.error('Error loading usage data:', error));
+
+            // Load system status
+            fetch('/api/system/status')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        updateSystemStatus(result.data);
+                    }
+                })
+                .catch(error => console.error('Error loading system data:', error));
+
+            // Load project stats
+            fetch('/api/projects')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        updateProjectStats(result.data);
+                    }
+                })
+                .catch(error => console.error('Error loading project data:', error));
+
+            // Load alerts
+            fetch('/api/alerts')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        updateAlerts(result.data);
+                    }
+                })
+                .catch(error => console.error('Error loading alerts:', error));
         }
 
         function updateUsageStats(data) {
-            document.getElementById('current-tokens').textContent = data.tokens || 0;
-            document.getElementById('requests-hour').textContent = data.requestsPerHour || 0;
-            document.getElementById('usage-percent').textContent = data.usagePercent || 0;
+            document.getElementById('current-tokens').textContent = formatNumber(data.tokens || 0);
+            document.getElementById('requests-hour').textContent = formatNumber(data.requests_per_hour || 0);
+
+            const usagePercent = Math.round((data.tokens || 0) / (data.monthly_limit || 100000) * 100);
+            document.getElementById('usage-percent').textContent = usagePercent + '%';
 
             const progressBar = document.getElementById('usage-progress');
-            progressBar.style.width = (data.usagePercent || 0) + '%';
+            progressBar.style.width = usagePercent + '%';
+
+            // Update change indicators
+            const tokensChange = data.tokens_change || 0;
+            const requestsChange = data.requests_change || 0;
+
+            updateChangeIndicator('tokens-change', tokensChange);
+            updateChangeIndicator('requests-change', requestsChange);
+
+            // Update time remaining
+            if (data.time_remaining_hours !== undefined) {
+                const hours = Math.floor(data.time_remaining_hours);
+                const minutes = Math.floor((data.time_remaining_hours % 1) * 60);
+                document.getElementById('time-remaining').textContent = hours > 0 ? hours + 'h ' + minutes + 'm' : 'N/A';
+            }
+        }
+
+        function updateSystemStatus(data) {
+            // Update uptime
+            const uptimeHours = Math.floor(data.uptime.process / 3600);
+            const uptimeMinutes = Math.floor((data.uptime.process % 3600) / 60);
+            document.getElementById('uptime').textContent = uptimeHours + 'h ' + uptimeMinutes + 'm';
+
+            // Update memory usage
+            const memoryMB = Math.round(data.memory.heapUsed / 1024 / 1024);
+            document.getElementById('memory-usage').textContent = memoryMB + ' MB';
+
+            // Update daemon status
+            document.getElementById('daemon-status').textContent = 'Running';
+            document.getElementById('daemon-status').className = 'detail-value success';
+        }
+
+        function updateProjectStats(data) {
+            const activeProjects = data.filter(p => p.status === 'active').length;
+            const activeProject = data.find(p => p.status === 'active');
+
+            if (activeProject) {
+                document.getElementById('active-project-name').textContent = activeProject.name;
+                document.getElementById('active-project-path').textContent = activeProject.path || '--';
+                document.getElementById('active-project-priority').textContent = activeProject.priority || 'Normal';
+                document.getElementById('active-project-activity').textContent =
+                    activeProject.last_activity ? new Date(activeProject.last_activity).toLocaleString() : '--';
+
+                const badge = document.getElementById('project-status-badge');
+                badge.textContent = 'Active';
+                badge.className = 'badge badge-success';
+
+                document.getElementById('open-workspace-btn').disabled = false;
+            }
+        }
+
+        function updateAlerts(alerts) {
+            const alertsList = document.getElementById('alerts-list');
+            alertsList.innerHTML = '';
+
+            if (alerts.length === 0) {
+                alertsList.innerHTML = '<div class="alert alert-info"><i class="ti ti-info-circle"></i>No recent alerts</div>';
+                return;
+            }
+
+            alerts.slice(0, 5).forEach(alert => {
+                const alertElement = document.createElement('div');
+                alertElement.className = 'alert alert-' + (alert.type || 'info');
+                alertElement.innerHTML =
+                    '<i class="ti ti-' + getAlertIcon(alert.type) + '"></i>' +
+                    '<div>' +
+                        '<strong>' + (alert.title || 'Alert') + '</strong>' +
+                        '<p>' + alert.message + '</p>' +
+                        '<small>' + new Date(alert.timestamp).toLocaleString() + '</small>' +
+                    '</div>';
+                alertsList.appendChild(alertElement);
+            });
+        }
+
+        function updateChangeIndicator(elementId, change) {
+            const element = document.getElementById(elementId);
+            if (change > 0) {
+                element.textContent = '+' + change.toFixed(1) + '%';
+                element.className = 'stat-change positive';
+            } else if (change < 0) {
+                element.textContent = change.toFixed(1) + '%';
+                element.className = 'stat-change negative';
+            } else {
+                element.textContent = '0%';
+                element.className = 'stat-change';
+            }
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toString();
         }
 
         function setupEventListeners() {

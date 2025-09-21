@@ -80,29 +80,10 @@ const pageDescription = 'Monitor system alerts, warnings, and notification setti
             </h2>
         </div>
         <div id="alerts-container">
-            <div class="alert alert-error">
-                <i class="ti ti-x-circle"></i>
-                <div>
-                    <strong>Critical Error</strong>
-                    <p>API rate limit exceeded. Some requests may be throttled.</p>
-                    <small>2 minutes ago</small>
-                </div>
-            </div>
-            <div class="alert alert-warning">
-                <i class="ti ti-alert-triangle"></i>
-                <div>
-                    <strong>High Memory Usage</strong>
-                    <p>Memory usage is at 85%. Consider restarting the daemon.</p>
-                    <small>15 minutes ago</small>
-                </div>
-            </div>
-            <div class="alert alert-info">
-                <i class="ti ti-info-circle"></i>
-                <div>
-                    <strong>System Update Available</strong>
-                    <p>A new version of Claude Code Daemon is available for download.</p>
-                    <small>1 hour ago</small>
-                </div>
+            <!-- Live alerts will be loaded here -->
+            <div class="loading-alerts" style="text-align: center; padding: var(--space-lg); color: var(--text-secondary);">
+                <i class="ti ti-loader" style="font-size: 24px; margin-bottom: var(--space-sm); animation: spin 1s linear infinite;"></i>
+                <p>Loading alerts...</p>
             </div>
         </div>
     </div>
@@ -178,6 +159,351 @@ const pageDescription = 'Monitor system alerts, warnings, and notification setti
             color: var(--text-muted);
             font-size: var(--font-size-xs);
         }
+
+        .alert-error {
+            background: rgba(var(--error-rgb), 0.1);
+            border: 1px solid var(--error);
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+        }
+
+        .alert-error i {
+            color: var(--error);
+        }
+
+        .alert-warning {
+            background: rgba(var(--warning-rgb), 0.1);
+            border: 1px solid var(--warning);
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+        }
+
+        .alert-warning i {
+            color: var(--warning);
+        }
+
+        .alert-info {
+            background: rgba(var(--info-rgb), 0.1);
+            border: 1px solid var(--info);
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+        }
+
+        .alert-info i {
+            color: var(--info);
+        }
+
+        .alert-success {
+            background: rgba(var(--success-rgb), 0.1);
+            border: 1px solid var(--success);
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+        }
+
+        .alert-success i {
+            color: var(--success);
+        }
+
+        .empty-alerts {
+            text-align: center;
+            padding: var(--space-2xl);
+            color: var(--text-secondary);
+        }
+
+        .empty-alerts i {
+            font-size: 48px;
+            margin-bottom: var(--space-md);
+            color: var(--text-muted);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
+
+    <script>
+        let socket;
+        let currentFilters = {
+            level: 'all',
+            timeRange: '24h'
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeAlertControls();
+            loadAlerts();
+            setupAutoRefresh();
+            connectWebSocket();
+        });
+
+        function initializeAlertControls() {
+            // Alert level filter
+            document.getElementById('alert-level').addEventListener('change', function(e) {
+                currentFilters.level = e.target.value;
+                loadAlerts();
+            });
+
+            // Time range filter
+            document.getElementById('time-range').addEventListener('change', function(e) {
+                currentFilters.timeRange = e.target.value;
+                loadAlerts();
+            });
+
+            // Refresh button
+            document.querySelector('.btn-primary').addEventListener('click', function() {
+                loadAlerts();
+            });
+
+            // Clear all button
+            document.querySelector('.btn-secondary').addEventListener('click', function() {
+                clearAllAlerts();
+            });
+        }
+
+        function loadAlerts() {
+            const params = new URLSearchParams();
+            if (currentFilters.level !== 'all') params.append('level', currentFilters.level);
+            if (currentFilters.timeRange !== 'all') params.append('timeRange', currentFilters.timeRange);
+
+            fetch('/api/alerts?' + params.toString())
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        displayAlerts(result.data.alerts);
+                        updateAlertStats(result.data.stats);
+                    } else {
+                        showError('Failed to load alerts: ' + result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading alerts:', error);
+                    // Show empty state instead of error for missing API
+                    showEmptyState();
+                });
+        }
+
+        function displayAlerts(alerts) {
+            const container = document.getElementById('alerts-container');
+
+            if (!alerts || alerts.length === 0) {
+                showEmptyState();
+                return;
+            }
+
+            container.innerHTML = '';
+            alerts.forEach(alert => {
+                const alertElement = createAlertElement(alert);
+                container.appendChild(alertElement);
+            });
+        }
+
+        function createAlertElement(alert) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-' + (alert.level || 'info');
+
+            const icon = getAlertIcon(alert.level);
+            const timeAgo = formatTimeAgo(alert.timestamp);
+
+            alertDiv.innerHTML = \`
+                <i class="\${icon}"></i>
+                <div>
+                    <strong>\${alert.title || 'System Alert'}</strong>
+                    <p>\${alert.message || 'No message provided'}</p>
+                    <small>\${timeAgo}</small>
+                </div>
+            \`;
+
+            return alertDiv;
+        }
+
+        function getAlertIcon(level) {
+            switch (level) {
+                case 'error':
+                case 'critical':
+                    return 'ti ti-x-circle';
+                case 'warning':
+                    return 'ti ti-alert-triangle';
+                case 'success':
+                    return 'ti ti-check-circle';
+                case 'info':
+                default:
+                    return 'ti ti-info-circle';
+            }
+        }
+
+        function formatTimeAgo(timestamp) {
+            const now = new Date();
+            const alertTime = new Date(timestamp);
+            const diffMs = now - alertTime;
+            const diffMinutes = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMinutes / 60);
+            const diffDays = Math.floor(diffHours / 24);
+
+            if (diffMinutes < 1) return 'Just now';
+            if (diffMinutes < 60) return \`\${diffMinutes} minute\${diffMinutes === 1 ? '' : 's'} ago\`;
+            if (diffHours < 24) return \`\${diffHours} hour\${diffHours === 1 ? '' : 's'} ago\`;
+            return \`\${diffDays} day\${diffDays === 1 ? '' : 's'} ago\`;
+        }
+
+        function updateAlertStats(stats) {
+            if (stats) {
+                document.getElementById('total-alerts').textContent = stats.total || '0';
+                document.getElementById('critical-alerts').textContent = stats.critical || '0';
+                document.getElementById('warning-alerts').textContent = stats.warning || '0';
+                document.getElementById('info-alerts').textContent = stats.info || '0';
+            }
+        }
+
+        function clearAllAlerts() {
+            if (confirm('Are you sure you want to clear all alerts?')) {
+                fetch('/api/alerts/clear', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            loadAlerts();
+                        } else {
+                            alert('Failed to clear alerts: ' + result.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error clearing alerts:', error);
+                        alert('Failed to clear alerts');
+                    });
+            }
+        }
+
+        function showEmptyState() {
+            const container = document.getElementById('alerts-container');
+            container.innerHTML = \`
+                <div class="empty-alerts">
+                    <i class="ti ti-bell-off"></i>
+                    <h3>No Active Alerts</h3>
+                    <p>Your system is running smoothly with no active alerts.</p>
+                </div>
+            \`;
+        }
+
+        function showError(message) {
+            const container = document.getElementById('alerts-container');
+            container.innerHTML = \`
+                <div style="text-align: center; padding: var(--space-lg); color: var(--error);">
+                    <i class="ti ti-alert-circle" style="font-size: 24px; margin-bottom: var(--space-sm);"></i>
+                    <p>\${message}</p>
+                </div>
+            \`;
+        }
+
+        function setupAutoRefresh() {
+            // Refresh alerts every 30 seconds
+            setInterval(loadAlerts, 30000);
+        }
+
+        function connectWebSocket() {
+            try {
+                socket = io();
+
+                socket.on('connect', function() {
+                    console.log('Connected to alert stream');
+                });
+
+                socket.on('new-alert', function(alert) {
+                    // Check if alert matches current filters
+                    if (matchesFilters(alert)) {
+                        prependNewAlert(alert);
+                        updateAlertStatsIncremental(alert);
+                        // Show browser notification if enabled
+                        showBrowserNotification(alert);
+                    }
+                });
+
+                socket.on('alert-cleared', function(alertId) {
+                    removeAlert(alertId);
+                });
+
+                socket.on('disconnect', function() {
+                    console.log('Disconnected from alert stream');
+                });
+            } catch (error) {
+                console.log('WebSocket not available, using polling only');
+            }
+        }
+
+        function matchesFilters(alert) {
+            if (currentFilters.level !== 'all') {
+                if (currentFilters.level === 'critical' && alert.level !== 'critical' && alert.level !== 'error') {
+                    return false;
+                }
+                if (currentFilters.level === 'warning' && alert.level === 'info') {
+                    return false;
+                }
+                if (currentFilters.level === 'info' && alert.level === 'debug') {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function prependNewAlert(alert) {
+            const container = document.getElementById('alerts-container');
+
+            // Remove empty state if present
+            const emptyState = container.querySelector('.empty-alerts');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const alertElement = createAlertElement(alert);
+            container.insertBefore(alertElement, container.firstChild);
+        }
+
+        function removeAlert(alertId) {
+            const alertElement = document.querySelector(\`[data-alert-id="\${alertId}"]\`);
+            if (alertElement) {
+                alertElement.remove();
+            }
+        }
+
+        function updateAlertStatsIncremental(alert) {
+            const totalElement = document.getElementById('total-alerts');
+            const currentTotal = parseInt(totalElement.textContent) || 0;
+            totalElement.textContent = currentTotal + 1;
+
+            const levelElement = document.getElementById(alert.level + '-alerts');
+            if (levelElement) {
+                const currentCount = parseInt(levelElement.textContent) || 0;
+                levelElement.textContent = currentCount + 1;
+            }
+        }
+
+        function showBrowserNotification(alert) {
+            // Check if browser notifications are enabled (this would be stored in settings)
+            const browserNotificationsEnabled = false; // Would read from settings API
+
+            if (browserNotificationsEnabled && 'Notification' in window) {
+                if (Notification.permission === 'granted') {
+                    new Notification(alert.title || 'System Alert', {
+                        body: alert.message,
+                        icon: '/static/images/claude-icon.png'
+                    });
+                } else if (Notification.permission !== 'denied') {
+                    Notification.requestPermission().then(function(permission) {
+                        if (permission === 'granted') {
+                            new Notification(alert.title || 'System Alert', {
+                                body: alert.message,
+                                icon: '/static/images/claude-icon.png'
+                            });
+                        }
+                    });
+                }
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (socket) {
+                socket.disconnect();
+            }
+        });
+    </script>
     `
 }) %>

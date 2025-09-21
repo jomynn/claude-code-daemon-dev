@@ -316,22 +316,74 @@ const pageDescription = 'Configure Slack integration for notifications, alerts, 
                 .then(response => response.json())
                 .then(data => {
                     const badge = document.getElementById('slack-status');
-                    if (data.connected) {
+                    const statusText = badge.nextElementSibling;
+
+                    if (data.success && data.connected) {
                         badge.className = 'badge badge-success';
                         badge.textContent = 'Connected';
+
+                        let statusMessage = 'Connected to Slack workspace';
+                        if (data.workspace) {
+                            statusMessage += ': ' + data.workspace;
+                        }
+                        if (data.botUser) {
+                            statusMessage += ' as @' + data.botUser;
+                        }
+                        statusText.textContent = statusMessage;
                     } else {
                         badge.className = 'badge badge-error';
                         badge.textContent = 'Disconnected';
+
+                        let errorMessage = 'No workspace connected';
+                        if (data.error) {
+                            errorMessage = data.error;
+                        } else if (!data.configured) {
+                            errorMessage = 'Configuration incomplete';
+                        }
+                        statusText.textContent = errorMessage;
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
+                    const badge = document.getElementById('slack-status');
+                    const statusText = badge.nextElementSibling;
+                    badge.className = 'badge badge-error';
+                    badge.textContent = 'Error';
+                    statusText.textContent = 'Failed to check connection status';
                 });
         }
 
-        // Load current configuration
+        function loadCurrentConfiguration() {
+            fetch('/api/slack/config')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success && result.data) {
+                        const config = result.data;
+                        // Populate form fields with current configuration
+                        if (config.defaultChannel) {
+                            document.getElementById('default-channel').value = config.defaultChannel;
+                        }
+                        if (config.alertChannel) {
+                            document.getElementById('alert-channel').value = config.alertChannel;
+                        }
+                        // Note: Don't populate sensitive fields like tokens for security
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading configuration:', error);
+                });
+        }
+
+        function setupAutoRefresh() {
+            // Update connection status every 30 seconds
+            setInterval(updateConnectionStatus, 30000);
+        }
+
+        // Load current configuration and status
         document.addEventListener('DOMContentLoaded', function() {
             updateConnectionStatus();
+            loadCurrentConfiguration();
+            setupAutoRefresh();
         });
     </script>
     `

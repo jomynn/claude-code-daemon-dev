@@ -14,21 +14,21 @@ const pageDescription = 'Create, manage, and monitor your development projects w
     <!-- Project Actions -->
     <div class="grid grid-3">
         <button class="action-card" id="create-project">
-            <div class="action-icon">
+            <div class="action-icon icon-projects">
                 <i class="ti ti-folder-plus"></i>
             </div>
             <div class="action-title">Create New Project</div>
             <div class="action-desc">Start a new development project</div>
         </button>
         <button class="action-card" id="import-project">
-            <div class="action-icon">
+            <div class="action-icon icon-vscode">
                 <i class="ti ti-upload"></i>
             </div>
             <div class="action-title">Import Project</div>
             <div class="action-desc">Import existing project folder</div>
         </button>
         <button class="action-card" id="clone-project">
-            <div class="action-icon">
+            <div class="action-icon icon-workspace">
                 <i class="ti ti-git-branch"></i>
             </div>
             <div class="action-title">Clone Repository</div>
@@ -39,19 +39,19 @@ const pageDescription = 'Create, manage, and monitor your development projects w
     <!-- Project Stats -->
     <div class="grid grid-4">
         <div class="stat-card">
-            <div class="stat-value" id="total-projects">5</div>
+            <div class="stat-value" id="total-projects">0</div>
             <div class="stat-label">Total Projects</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value" id="active-sessions">2</div>
+            <div class="stat-value" id="active-sessions">0</div>
             <div class="stat-label">Active Sessions</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value" id="github-repos">3</div>
+            <div class="stat-value" id="github-repos">0</div>
             <div class="stat-label">GitHub Repos</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value" id="success-rate">94%</div>
+            <div class="stat-value" id="success-rate">0%</div>
             <div class="stat-label">Success Rate</div>
         </div>
     </div>
@@ -74,77 +74,16 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 </button>
             </div>
         </div>
-        <div class="grid grid-2">
-            <div class="card">
-                <div class="card-header">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h3 class="card-title">
-                            <i class="ti ti-folder"></i>
-                            My Web App
-                        </h3>
-                        <span class="badge badge-success">Active</span>
-                    </div>
-                </div>
-                <div class="project-details">
-                    <div class="detail-item">
-                        <span class="detail-label">Type:</span>
-                        <span class="detail-value">React Application</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Status:</span>
-                        <span class="detail-value">In Development</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Last Modified:</span>
-                        <span class="detail-value">2 hours ago</span>
-                    </div>
-                </div>
-                <div style="margin-top: var(--space-md); display: flex; gap: var(--space-sm);">
-                    <button class="btn btn-primary btn-sm">
-                        <i class="ti ti-code"></i>
-                        Open
-                    </button>
-                    <button class="btn btn-secondary btn-sm">
-                        <i class="ti ti-settings"></i>
-                        Settings
-                    </button>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h3 class="card-title">
-                            <i class="ti ti-folder"></i>
-                            API Service
-                        </h3>
-                        <span class="badge badge-secondary">Paused</span>
-                    </div>
-                </div>
-                <div class="project-details">
-                    <div class="detail-item">
-                        <span class="detail-label">Type:</span>
-                        <span class="detail-value">Node.js API</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Status:</span>
-                        <span class="detail-value">Testing</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Last Modified:</span>
-                        <span class="detail-value">1 day ago</span>
-                    </div>
-                </div>
-                <div style="margin-top: var(--space-md); display: flex; gap: var(--space-sm);">
-                    <button class="btn btn-primary btn-sm">
-                        <i class="ti ti-code"></i>
-                        Open
-                    </button>
-                    <button class="btn btn-secondary btn-sm">
-                        <i class="ti ti-settings"></i>
-                        Settings
-                    </button>
-                </div>
+        <div class="grid grid-2" id="projects-container">
+            <!-- Projects will be loaded here -->
+            <div class="empty-state" id="empty-projects" style="grid-column: 1 / -1; text-align: center; padding: var(--space-2xl); color: var(--text-secondary);">
+                <i class="ti ti-folder-plus" style="font-size: 48px; margin-bottom: var(--space-md);"></i>
+                <h3>No Projects Found</h3>
+                <p>Create your first project to get started with Claude Code development.</p>
+                <button class="btn btn-primary" onclick="document.getElementById('create-project').click()">
+                    <i class="ti ti-plus"></i>
+                    Create First Project
+                </button>
             </div>
         </div>
     </div>
@@ -159,7 +98,7 @@ const pageDescription = 'Create, manage, and monitor your development projects w
         </div>
         <div class="grid grid-4">
             <div class="template-card">
-                <div class="template-icon">
+                <div class="template-icon" style="background: linear-gradient(135deg, #61dafb, #21d4fd);">
                     <i class="ti ti-brand-react"></i>
                 </div>
                 <h4>React App</h4>
@@ -167,7 +106,7 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 <button class="btn btn-primary btn-sm">Use Template</button>
             </div>
             <div class="template-card">
-                <div class="template-icon">
+                <div class="template-icon" style="background: linear-gradient(135deg, #68a063, #3c873a);">
                     <i class="ti ti-brand-nodejs"></i>
                 </div>
                 <h4>Node.js API</h4>
@@ -175,7 +114,7 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 <button class="btn btn-primary btn-sm">Use Template</button>
             </div>
             <div class="template-card">
-                <div class="template-icon">
+                <div class="template-icon" style="background: linear-gradient(135deg, #3776ab, #ffd343);">
                     <i class="ti ti-brand-python"></i>
                 </div>
                 <h4>Python App</h4>
@@ -183,7 +122,7 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 <button class="btn btn-primary btn-sm">Use Template</button>
             </div>
             <div class="template-card">
-                <div class="template-icon">
+                <div class="template-icon" style="background: linear-gradient(135deg, #e34c26, #f06529);">
                     <i class="ti ti-code"></i>
                 </div>
                 <h4>Static Site</h4>
@@ -323,6 +262,207 @@ const pageDescription = 'Create, manage, and monitor your development projects w
             background: var(--bg-quaternary);
             color: var(--text-secondary);
         }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--space-md);
+        }
     </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProjects();
+            loadProjectStats();
+        });
+
+        function loadProjects() {
+            fetch('/api/projects')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        displayProjects(result.data);
+                        updateProjectStats(result.data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading projects:', error);
+                    showEmptyState();
+                });
+        }
+
+        function loadProjectStats() {
+            fetch('/api/projects/stats')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        updateStats(result.data);
+                    }
+                })
+                .catch(error => console.error('Error loading project stats:', error));
+        }
+
+        function displayProjects(projects) {
+            const container = document.getElementById('projects-container');
+            const emptyState = document.getElementById('empty-projects');
+
+            if (projects.length === 0) {
+                emptyState.style.display = 'flex';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            container.innerHTML = '';
+
+            projects.forEach(project => {
+                const projectCard = createProjectCard(project);
+                container.appendChild(projectCard);
+            });
+        }
+
+        function createProjectCard(project) {
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            const statusBadge = getStatusBadge(project.status);
+            const lastActivity = project.last_activity ? new Date(project.last_activity).toLocaleDateString() : 'Never';
+
+            card.innerHTML = \`
+                <div class="card-header">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="card-title">
+                            <i class="ti ti-folder"></i>
+                            \${project.name}
+                        </h3>
+                        <span class="badge \${statusBadge.class}">\${statusBadge.text}</span>
+                    </div>
+                </div>
+                <div class="project-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Type:</span>
+                        <span class="detail-value">\${project.type || 'Unknown'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value">\${project.status || 'Unknown'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Last Activity:</span>
+                        <span class="detail-value">\${lastActivity}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Path:</span>
+                        <span class="detail-value" title="\${project.path}">\${truncatePath(project.path)}</span>
+                    </div>
+                </div>
+                <div style="margin-top: var(--space-md); display: flex; gap: var(--space-sm);">
+                    <button class="btn btn-primary btn-sm" onclick="openProject('\${project.id}')">
+                        <i class="ti ti-code"></i>
+                        Open
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="editProject('\${project.id}')">
+                        <i class="ti ti-settings"></i>
+                        Settings
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="deleteProject('\${project.id}')">
+                        <i class="ti ti-trash"></i>
+                        Delete
+                    </button>
+                </div>
+            \`;
+
+            return card;
+        }
+
+        function getStatusBadge(status) {
+            switch (status) {
+                case 'active':
+                    return { class: 'badge-success', text: 'Active' };
+                case 'paused':
+                    return { class: 'badge-secondary', text: 'Paused' };
+                case 'completed':
+                    return { class: 'badge-success', text: 'Completed' };
+                case 'archived':
+                    return { class: 'badge-secondary', text: 'Archived' };
+                default:
+                    return { class: 'badge-secondary', text: 'Unknown' };
+            }
+        }
+
+        function truncatePath(path) {
+            if (!path) return 'No path set';
+            if (path.length > 40) {
+                return '...' + path.slice(-37);
+            }
+            return path;
+        }
+
+        function updateProjectStats(projects) {
+            document.getElementById('total-projects').textContent = projects.length;
+
+            const activeProjects = projects.filter(p => p.status === 'active').length;
+            document.getElementById('active-sessions').textContent = activeProjects;
+
+            const githubProjects = projects.filter(p => p.github_repo).length;
+            document.getElementById('github-repos').textContent = githubProjects;
+
+            const completedProjects = projects.filter(p => p.status === 'completed').length;
+            const successRate = projects.length > 0 ? Math.round((completedProjects / projects.length) * 100) : 0;
+            document.getElementById('success-rate').textContent = successRate + '%';
+        }
+
+        function updateStats(stats) {
+            if (stats.total_projects !== undefined) {
+                document.getElementById('total-projects').textContent = stats.total_projects;
+            }
+            if (stats.active_sessions !== undefined) {
+                document.getElementById('active-sessions').textContent = stats.active_sessions;
+            }
+            if (stats.github_repos !== undefined) {
+                document.getElementById('github-repos').textContent = stats.github_repos;
+            }
+            if (stats.success_rate !== undefined) {
+                document.getElementById('success-rate').textContent = stats.success_rate + '%';
+            }
+        }
+
+        function showEmptyState() {
+            const emptyState = document.getElementById('empty-projects');
+            emptyState.style.display = 'flex';
+        }
+
+        function openProject(projectId) {
+            window.location.href = \`/workspace-vscode?project=\${projectId}\`;
+        }
+
+        function editProject(projectId) {
+            // Implement edit functionality
+            alert('Edit project functionality not yet implemented');
+        }
+
+        function deleteProject(projectId) {
+            if (confirm('Are you sure you want to delete this project?')) {
+                fetch(\`/api/projects/\${projectId}\`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        loadProjects(); // Reload projects
+                    } else {
+                        alert('Failed to delete project: ' + result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting project:', error);
+                    alert('Failed to delete project');
+                });
+            }
+        }
+
+        // Refresh projects every 30 seconds
+        setInterval(loadProjects, 30000);
+    </script>
     `
 }) %>

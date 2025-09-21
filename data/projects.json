@@ -337,5 +337,154 @@
     "createdAt": "2025-09-21T04:38:49.145Z",
     "updatedAt": "2025-09-21T04:38:49.145Z",
     "status": "initialized"
+  },
+  {
+    "id": "proj-1758429885476-rw80snilf",
+    "name": "Simple Todo",
+    "description": "",
+    "targetFolder": "/tmp/s",
+    "template": null,
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022",
+      "maxTokens": 4000,
+      "temperature": 0.7,
+      "context": "Simple to"
+    },
+    "bmadConfig": {
+      "enabled": true,
+      "workflow": "agile",
+      "agents": [
+        "dev",
+        "qa",
+        "pm",
+        "design"
+      ]
+    },
+    "settings": {
+      "initGit": true,
+      "createReadme": true,
+      "createGitignore": true
+    },
+    "createdAt": "2025-09-21T04:44:45.476Z",
+    "updatedAt": "2025-09-21T04:44:45.476Z",
+    "status": "initialized"
+  },
+  {
+    "id": "proj-1758430027528-6safqcpue",
+    "name": "Simple Todo",
+    "description": "",
+    "targetFolder": "/tmp/simple-todo",
+    "template": null,
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022",
+      "maxTokens": 4000,
+      "temperature": 0.7,
+      "context": ""
+    },
+    "bmadConfig": {
+      "enabled": true,
+      "workflow": "agile",
+      "agents": [
+        "dev",
+        "qa"
+      ]
+    },
+    "settings": {
+      "initGit": true,
+      "createReadme": true,
+      "createGitignore": true
+    },
+    "createdAt": "2025-09-21T04:47:07.528Z",
+    "updatedAt": "2025-09-21T04:47:07.528Z",
+    "status": "initialized"
+  },
+  {
+    "id": "proj-1758430057382-qu4op3t0m",
+    "name": "Test Fix Project",
+    "description": "Testing fixed project display",
+    "targetFolder": "/tmp/test-fix-project",
+    "template": null,
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022"
+    },
+    "bmadConfig": {
+      "enabled": false
+    },
+    "settings": {
+      "initGit": true,
+      "createReadme": true,
+      "createGitignore": true
+    },
+    "createdAt": "2025-09-21T04:47:37.382Z",
+    "updatedAt": "2025-09-21T04:47:37.382Z",
+    "status": "initialized"
+  },
+  {
+    "id": "proj-1758430058206-bc2pfy1cu",
+    "name": "Simple Todo",
+    "description": "",
+    "targetFolder": "/tmp/simple-todo",
+    "template": null,
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022",
+      "maxTokens": 4000,
+      "temperature": 0.7,
+      "context": ""
+    },
+    "bmadConfig": {
+      "enabled": true,
+      "workflow": "agile",
+      "agents": [
+        "dev",
+        "qa"
+      ]
+    },
+    "settings": {
+      "initGit": true,
+      "createReadme": true,
+      "createGitignore": true
+    },
+    "createdAt": "2025-09-21T04:47:38.207Z",
+    "updatedAt": "2025-09-21T04:47:38.207Z",
+    "status": "initialized"
+  },
+  {
+    "id": "proj-1758430112821-xjvbpy9f7",
+    "name": "Simple Todo",
+    "description": "",
+    "targetFolder": "/tmp/simple-todo",
+    "template": null,
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022",
+      "maxTokens": 4000,
+      "temperature": 0.7,
+      "context": ""
+    },
+    "bmadConfig": {
+      "enabled": true,
+      "workflow": "agile",
+      "agents": [
+        "dev",
+        "qa"
+      ]
+    },
+    "settings": {
+      "initGit": true,
+      "createReadme": true,
+      "createGitignore": true
+    },
+    "createdAt": "2025-09-21T04:48:32.821Z",
+    "updatedAt": "2025-09-21T04:48:32.821Z",
+    "status": "initialized"
   }
 ]

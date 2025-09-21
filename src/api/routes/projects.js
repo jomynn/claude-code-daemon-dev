@@ -284,6 +284,58 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Get project statistics
+router.get('/stats', async (req, res) => {
+    try {
+        const projectsArray = Array.from(projects.values());
+
+        // Calculate statistics
+        const totalProjects = projectsArray.length;
+        const activeSessions = projectsArray.filter(p => p.status === 'running' || p.status === 'active').length;
+        const githubRepos = projectsArray.filter(p => p.githubRepo).length;
+
+        // Calculate success rate (projects that are not failed)
+        const successfulProjects = projectsArray.filter(p => p.status !== 'failed' && p.status !== 'error').length;
+        const successRate = totalProjects > 0 ? Math.round((successfulProjects / totalProjects) * 100) : 0;
+
+        // Template distribution
+        const templates = {};
+        projectsArray.forEach(p => {
+            const template = p.template || 'custom';
+            templates[template] = (templates[template] || 0) + 1;
+        });
+
+        // BMAD enabled projects
+        const bmadEnabled = projectsArray.filter(p => p.bmadConfig?.enabled).length;
+
+        res.json({
+            success: true,
+            data: {
+                totalProjects,
+                activeSessions,
+                githubRepos,
+                successRate: `${successRate}%`,
+                bmadEnabled,
+                templates,
+                recentActivity: projectsArray
+                    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+                    .slice(0, 5)
+                    .map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        updatedAt: p.updatedAt,
+                        status: p.status
+                    }))
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Create new project
 router.post('/', async (req, res) => {
     try {

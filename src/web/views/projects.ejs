@@ -63,7 +63,19 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 <i class="ti ti-folders"></i>
                 Active Projects
             </h2>
-            <div style="display: flex; gap: var(--space-sm);">
+            <div style="display: flex; gap: var(--space-sm); align-items: center;">
+                <!-- View Mode Toggle -->
+                <div class="view-toggle" style="display: flex; gap: 4px; margin-right: 12px; align-items: center;">
+                    <button class="btn btn-sm view-btn active" id="grid-view" data-view="grid" title="Grid View" style="display: flex; align-items: center; justify-content: center; min-width: 40px; height: 32px; padding: 6px 8px; font-size: 16px;">
+                        📊
+                    </button>
+                    <button class="btn btn-sm view-btn" id="list-view" data-view="list" title="List View" style="display: flex; align-items: center; justify-content: center; min-width: 40px; height: 32px; padding: 6px 8px; font-size: 16px;">
+                        📋
+                    </button>
+                    <button class="btn btn-sm view-btn" id="detail-view" data-view="detail" title="Detail View" style="display: flex; align-items: center; justify-content: center; min-width: 40px; height: 32px; padding: 6px 8px; font-size: 16px;">
+                        📄
+                    </button>
+                </div>
                 <button class="btn btn-secondary btn-sm" id="refresh-projects">
                     <i class="ti ti-refresh"></i>
                     Refresh
@@ -74,9 +86,9 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 </a>
             </div>
         </div>
-        <div class="grid grid-2" id="projects-container">
+        <div class="projects-grid" id="projects-container">
             <!-- Projects will be loaded here -->
-            <div class="empty-state" id="empty-projects" style="grid-column: 1 / -1; text-align: center; padding: var(--space-2xl); color: var(--text-secondary);">
+            <div class="empty-state" id="empty-projects" style="display: none; text-align: center; padding: 40px; color: #6c757d;">
                 <i class="ti ti-folder-plus" style="font-size: 48px; margin-bottom: var(--space-md);"></i>
                 <h3>No Projects Found</h3>
                 <p>Create your first project to get started with Claude Code development.</p>
@@ -299,14 +311,155 @@ const pageDescription = 'Create, manage, and monitor your development projects w
             font-size: var(--font-size-sm);
             line-height: 1.4;
         }
+
+        /* View Mode Styles */
+        .view-toggle .view-btn {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            min-width: 40px !important;
+            height: 32px !important;
+            padding: 6px 8px !important;
+            background: #f8f9fa !important;
+            border: 1px solid #dee2e6 !important;
+            border-radius: 6px !important;
+            color: #6c757d !important;
+            font-size: 16px !important;
+            line-height: 1 !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer !important;
+            text-decoration: none !important;
+            box-shadow: none !important;
+        }
+
+        .view-toggle .view-btn:hover {
+            background: #e9ecef !important;
+            color: #495057 !important;
+            border-color: #2196F3 !important;
+            transform: translateY(-1px) !important;
+        }
+
+        .view-toggle .view-btn.active {
+            background: #2196F3 !important;
+            color: white !important;
+            border-color: #2196F3 !important;
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3) !important;
+        }
+
+        .view-toggle .view-btn:active {
+            transform: translateY(0) !important;
+        }
+
+        /* Grid View - Default */
+        .projects-grid-view {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)) !important;
+            gap: 20px !important;
+        }
+
+        /* List View */
+        .projects-list-view {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 8px !important;
+        }
+
+        .projects-list-view .project-card {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            padding: 16px 20px !important;
+            min-height: auto !important;
+            max-height: 80px !important;
+            border-radius: 8px !important;
+        }
+
+        .projects-list-view .project-header {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 0;
+        }
+
+        .projects-list-view .project-details,
+        .projects-list-view .project-description {
+            display: none;
+        }
+
+        .projects-list-view .project-actions {
+            margin: 0;
+            gap: 6px;
+        }
+
+        .projects-list-view .project-actions .btn {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        /* Detail View */
+        .projects-detail-view {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 16px !important;
+        }
+
+        .projects-detail-view .project-card {
+            display: flex !important;
+            flex-direction: column !important;
+            padding: 24px !important;
+            min-height: auto !important;
+            border-radius: 12px !important;
+        }
+
+        .projects-detail-view .project-header {
+            margin-bottom: 16px;
+        }
+
+        .projects-detail-view .project-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+            padding: 16px;
+            background: var(--bg-quaternary, #f8f9fa);
+            border-radius: 8px;
+        }
+
+        .projects-detail-view .project-description {
+            margin-bottom: 16px;
+            padding: 16px;
+            background: var(--bg-quaternary, #f8f9fa);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-primary, #2196F3);
+        }
+
+        .projects-detail-view .project-meta {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .projects-detail-view .meta-item {
+            background: var(--bg-tertiary, #e9ecef);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
     </style>
 
     <script>
+        // Global view mode state
+        let currentViewMode = localStorage.getItem('projectsViewMode') || 'grid';
+
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, loading projects...');
             loadProjects();
             loadProjectStats();
             setupActionHandlers();
+            setupViewModeHandlers();
+            setActiveViewMode(currentViewMode);
         });
 
         function setupActionHandlers() {
@@ -397,6 +550,64 @@ const pageDescription = 'Create, manage, and monitor your development projects w
             console.log('All action handlers set up successfully');
         }
 
+        function setupViewModeHandlers() {
+            console.log('Setting up view mode handlers...');
+
+            const viewButtons = document.querySelectorAll('.view-btn');
+            viewButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const viewMode = this.getAttribute('data-view');
+                    switchViewMode(viewMode);
+                });
+            });
+        }
+
+        function switchViewMode(mode) {
+            console.log('Switching to view mode:', mode);
+            currentViewMode = mode;
+            localStorage.setItem('projectsViewMode', mode);
+
+            // Update button states
+            setActiveViewMode(mode);
+
+            // Update container layout
+            updateContainerLayout(mode);
+        }
+
+        function setActiveViewMode(mode) {
+            const viewButtons = document.querySelectorAll('.view-btn');
+            viewButtons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-view') === mode) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        function updateContainerLayout(mode) {
+            const container = document.getElementById('projects-container');
+            if (!container) return;
+
+            // Remove all view mode classes
+            container.classList.remove('projects-grid-view', 'projects-list-view', 'projects-detail-view');
+
+            // Add the appropriate class
+            switch (mode) {
+                case 'grid':
+                    container.classList.add('projects-grid-view');
+                    container.style.cssText = 'display: grid !important; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)) !important; gap: 20px !important; visibility: visible !important; opacity: 1 !important; height: auto !important; min-height: 400px !important; overflow: visible !important; width: 100% !important; position: relative !important; z-index: 1 !important;';
+                    break;
+                case 'list':
+                    container.classList.add('projects-list-view');
+                    container.style.cssText = 'display: flex !important; flex-direction: column !important; gap: 8px !important; visibility: visible !important; opacity: 1 !important; height: auto !important; min-height: 400px !important; overflow: visible !important; width: 100% !important; position: relative !important; z-index: 1 !important;';
+                    break;
+                case 'detail':
+                    container.classList.add('projects-detail-view');
+                    container.style.cssText = 'display: flex !important; flex-direction: column !important; gap: 16px !important; visibility: visible !important; opacity: 1 !important; height: auto !important; min-height: 400px !important; overflow: visible !important; width: 100% !important; position: relative !important; z-index: 1 !important;';
+                    break;
+            }
+        }
+
         function loadProjects() {
             console.log('loadProjects() called');
             fetch('/api/projects')
@@ -433,11 +644,20 @@ const pageDescription = 'Create, manage, and monitor your development projects w
         }
 
         function displayProjects(projects) {
+            console.log('displayProjects called with', projects.length, 'projects');
             const container = document.getElementById('projects-container');
             const emptyState = document.getElementById('empty-projects');
 
+            if (!container) {
+                console.error('projects-container element not found');
+                return;
+            }
+
             if (projects.length === 0) {
-                emptyState.style.display = 'flex';
+                console.log('No projects found, showing empty state');
+                if (emptyState) {
+                    emptyState.style.display = 'flex';
+                }
                 // Re-setup the create first project button handler since it's now visible
                 setTimeout(() => {
                     const createFirstBtn = document.getElementById('create-first-project');
@@ -454,90 +674,177 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 return;
             }
 
-            emptyState.style.display = 'none';
-            container.innerHTML = '';
+            console.log('Projects found, hiding empty state and displaying projects');
 
-            projects.forEach(project => {
-                const projectCard = createProjectCard(project);
-                container.appendChild(projectCard);
-            });
+            // Remove the empty state element completely to prevent interference
+            if (emptyState) {
+                emptyState.remove();
+                console.log('Empty state element removed');
+            }
+
+            // Clear container and add projects
+            container.innerHTML = '';
+            console.log('Container cleared, adding', projects.length, 'project cards');
+
+            // Apply current view mode layout
+            updateContainerLayout(currentViewMode);
+
+
+            try {
+                projects.forEach((project, index) => {
+                    console.log('Creating card for project', index + 1, ':', project.name);
+
+                    try {
+                        const projectCard = createProjectCard(project);
+                        console.log('Project card created successfully for:', project.name);
+
+
+                        container.appendChild(projectCard);
+                        console.log('Card added to container successfully:', project.name);
+                    } catch (error) {
+                        console.error('Error creating card for project', project.name, ':', error);
+
+                        // Create a simple fallback card
+                        const fallbackCard = document.createElement('div');
+                        fallbackCard.innerHTML = '<h3>ERROR: ' + project.name + '</h3>';
+                        fallbackCard.style.border = '3px solid red';
+                        fallbackCard.style.backgroundColor = 'rgba(255,0,0,0.2)';
+                        fallbackCard.style.padding = '15px';
+                        container.appendChild(fallbackCard);
+                    }
+                });
+            } catch (error) {
+                console.error('Error in projects forEach loop:', error);
+            }
+
+            console.log('All project cards added to container');
+            console.log('Container final state:', container);
+            console.log('Container children count:', container.children.length);
+
+            // Add event delegation for project buttons
+            setupProjectButtonListeners();
+        }
+
+        // Helper functions for text truncation
+        function truncateText(text, maxLength) {
+            if (!text) return '';
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
+        }
+
+        function truncatePath(path) {
+            if (!path) return 'No path set';
+            if (path.length > 40) {
+                return '...' + path.slice(-37);
+            }
+            return path;
         }
 
         function createProjectCard(project) {
-            const card = document.createElement('div');
-            card.className = 'card';
+            console.log('createProjectCard called for:', project.name);
 
-            const statusBadge = getStatusBadge(project.projectStatus || project.status);
-            const priorityBadge = getPriorityBadge(project.priority);
-            const lastActivity = project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : 'Never';
-            const projectPath = project.targetFolder || project.path || 'No path set';
+            try {
+                const card = document.createElement('div');
+                card.className = 'project-card';
 
-            card.innerHTML =
-                '<div class="card-header">' +
-                    '<div style="display: flex; justify-content: space-between; align-items: center;">' +
-                        '<h3 class="card-title">' +
-                            '<i class="ti ti-folder"></i>' +
-                            project.name +
-                        '</h3>' +
-                        '<div style="display: flex; gap: var(--space-xs);">' +
-                            '<span class="badge ' + priorityBadge.class + '">' + priorityBadge.text + '</span>' +
-                            '<span class="badge ' + statusBadge.class + '">' + statusBadge.text + '</span>' +
+                // Force visibility with important overrides
+                card.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; background: #fff !important; border: 1px solid #ddd !important; border-radius: 12px !important; padding: 24px !important; margin-bottom: 20px !important; transition: all 0.3s ease !important; cursor: pointer !important; overflow: visible !important; height: auto !important; min-height: 200px !important; width: auto !important; max-width: none !important; z-index: 1 !important; box-sizing: border-box !important;';
+
+                // Get data for card
+                const statusBadge = getStatusBadge(project.projectStatus || project.status);
+                const priorityBadge = getPriorityBadge(project.priority);
+                const lastActivity = project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : 'Never';
+                const projectPath = project.targetFolder || project.path || 'No path set';
+
+                // Create different layouts based on view mode
+                if (currentViewMode === 'list') {
+                    card.innerHTML = createListViewCard(project, statusBadge, priorityBadge);
+                } else if (currentViewMode === 'detail') {
+                    card.innerHTML = createDetailViewCard(project, statusBadge, priorityBadge, lastActivity, projectPath);
+                } else {
+                    // Default grid view
+                    card.innerHTML = createGridViewCard(project, statusBadge, priorityBadge, lastActivity, projectPath);
+                }
+
+                console.log('Card created successfully for:', project.name);
+                return card;
+            } catch (error) {
+                console.error('Error in createProjectCard for', project.name, ':', error);
+
+                // Ultimate fallback
+                const errorCard = document.createElement('div');
+                errorCard.innerHTML = 'ERROR CARD: ' + project.name;
+                errorCard.style.cssText = 'border: 5px solid red; background: yellow; padding: 20px; display: block !important;';
+                return errorCard;
+            }
+        }
+
+        function createGridViewCard(project, statusBadge, priorityBadge, lastActivity, projectPath) {
+            return '<div class="project-header" style="margin-bottom: 12px;">' +
+                        '<div style="display: flex; justify-content: space-between; align-items: center;">' +
+                            '<h3 style="margin: 0; font-size: 18px; color: #333;">' + project.name + '</h3>' +
+                            '<div style="display: flex; gap: 8px;">' +
+                                '<span class="badge ' + statusBadge.class + '" style="padding: 4px 8px; border-radius: 4px; font-size: 12px;">' + statusBadge.text + '</span>' +
+                                '<span class="badge ' + priorityBadge.class + '" style="padding: 4px 8px; border-radius: 4px; font-size: 12px;">' + priorityBadge.text + '</span>' +
+                            '</div>' +
                         '</div>' +
                     '</div>' +
-                '</div>' +
-                '<div class="project-details">' +
-                    '<div class="detail-item">' +
-                        '<span class="detail-label">Type:</span>' +
-                        '<span class="detail-value">' + (project.type || 'Web App') + '</span>' +
+                    '<div class="project-details" style="margin-bottom: 12px;">' +
+                        '<div style="margin-bottom: 8px;"><span style="font-weight: bold; margin-right: 8px;">Type:</span><span>' + (project.type || 'Web App') + '</span></div>' +
+                        '<div style="margin-bottom: 8px;"><span style="font-weight: bold; margin-right: 8px;">Last Modified:</span><span>' + lastActivity + '</span></div>' +
+                        '<div style="margin-bottom: 8px;"><span style="font-weight: bold; margin-right: 8px;">Path:</span><span title="' + projectPath + '">' + truncatePath(projectPath) + '</span></div>' +
                     '</div>' +
-                    '<div class="detail-item">' +
-                        '<span class="detail-label">Priority:</span>' +
-                        '<span class="detail-value">' + (project.priority || 'Medium') + '</span>' +
-                    '</div>' +
-                    '<div class="detail-item">' +
-                        '<span class="detail-label">Last Modified:</span>' +
-                        '<span class="detail-value">' + lastActivity + '</span>' +
-                    '</div>' +
-                    '<div class="detail-item">' +
-                        '<span class="detail-label">Path:</span>' +
-                        '<span class="detail-value" title="' + projectPath + '">' + truncatePath(projectPath) + '</span>' +
-                    '</div>' +
-                    '<div class="detail-item">' +
-                        '<span class="detail-label">Claude:</span>' +
-                        '<span class="detail-value">' + (project.claudeConfig?.enabled ? 'Enabled' : 'Disabled') + '</span>' +
-                    '</div>' +
-                    '<div class="detail-item">' +
-                        '<span class="detail-label">BMAD:</span>' +
-                        '<span class="detail-value">' + (project.bmadConfig?.enabled ? 'Enabled' : 'Disabled') + '</span>' +
-                    '</div>' +
-                '</div>' +
-                (project.description ?
-                    '<div class="project-description">' +
-                        '<p>' + truncateText(project.description, 120) + '</p>' +
-                    '</div>' : ''
-                ) +
-                '<div style="margin-top: var(--space-md); display: flex; gap: var(--space-sm); flex-wrap: wrap;">' +
-                    '<button class="btn btn-primary btn-sm" onclick="openProject(\'' + project.id + '\')">' +
-                        '<i class="ti ti-code"></i>' +
-                        'Open' +
-                    '</button>' +
-                    '<button class="btn btn-secondary btn-sm" onclick="editProject(\'' + project.id + '\')">' +
-                        '<i class="ti ti-settings"></i>' +
-                        'Edit' +
-                    '</button>' +
-                    (project.bmadConfig?.enabled ?
-                        '<button class="btn btn-info btn-sm" onclick="startBmad(\'' + project.id + '\')">' +
-                            '<i class="ti ti-robot"></i>' +
-                            'BMAD' +
-                        '</button>' : ''
-                    ) +
-                    '<button class="btn btn-secondary btn-sm" onclick="deleteProject(\'' + project.id + '\')">' +
-                        '<i class="ti ti-trash"></i>' +
-                        'Delete' +
-                    '</button>' +
-                '</div>';
+                    (project.description ? '<div class="project-description" style="margin-bottom: 12px; color: #666; font-size: 14px;"><p style="margin: 0;">' + truncateText(project.description, 120) + '</p></div>' : '') +
+                    '<div class="project-actions" style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">' +
+                        '<button class="btn btn-primary btn-sm" data-action="open" data-project-id="' + project.id + '" style="padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; background: #007bff; color: white;">Open</button>' +
+                        '<button class="btn btn-secondary btn-sm" data-action="edit" data-project-id="' + project.id + '" style="padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; background: #6c757d; color: white;">Edit</button>' +
+                        '<button class="btn btn-secondary btn-sm" data-action="delete" data-project-id="' + project.id + '" style="padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; background: #dc3545; color: white;">Delete</button>' +
+                    '</div>';
+        }
 
-            return card;
+        function createListViewCard(project, statusBadge, priorityBadge) {
+            return '<div class="project-header" style="display: flex; align-items: center; justify-content: space-between; margin: 0; width: 100%;">' +
+                        '<div style="display: flex; align-items: center; gap: 16px;">' +
+                            '<h3 style="margin: 0; font-size: 16px; color: #333;">' + project.name + '</h3>' +
+                            '<span class="badge ' + statusBadge.class + '" style="padding: 2px 6px; border-radius: 4px; font-size: 11px;">' + statusBadge.text + '</span>' +
+                            '<span class="badge ' + priorityBadge.class + '" style="padding: 2px 6px; border-radius: 4px; font-size: 11px;">' + priorityBadge.text + '</span>' +
+                            '<span style="color: #666; font-size: 13px;">' + (project.type || 'Web App') + '</span>' +
+                        '</div>' +
+                        '<div class="project-actions" style="display: flex; gap: 6px;">' +
+                            '<button class="btn btn-primary btn-sm" data-action="open" data-project-id="' + project.id + '" style="padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; background: #007bff; color: white;">Open</button>' +
+                            '<button class="btn btn-secondary btn-sm" data-action="edit" data-project-id="' + project.id + '" style="padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; background: #6c757d; color: white;">Edit</button>' +
+                            '<button class="btn btn-secondary btn-sm" data-action="delete" data-project-id="' + project.id + '" style="padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; background: #dc3545; color: white;">Delete</button>' +
+                        '</div>' +
+                    '</div>';
+        }
+
+        function createDetailViewCard(project, statusBadge, priorityBadge, lastActivity, projectPath) {
+            return '<div class="project-header" style="margin-bottom: 16px;">' +
+                        '<div style="display: flex; justify-content: space-between; align-items: center;">' +
+                            '<h3 style="margin: 0; font-size: 20px; color: #333;">' + project.name + '</h3>' +
+                            '<div style="display: flex; gap: 8px;">' +
+                                '<span class="badge ' + statusBadge.class + '" style="padding: 6px 12px; border-radius: 6px; font-size: 13px;">' + statusBadge.text + '</span>' +
+                                '<span class="badge ' + priorityBadge.class + '" style="padding: 6px 12px; border-radius: 6px; font-size: 13px;">' + priorityBadge.text + '</span>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    (project.description ? '<div class="project-description" style="margin-bottom: 16px; padding: 16px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #2196F3;"><p style="margin: 0; color: #666; font-size: 14px;">' + project.description + '</p></div>' : '') +
+                    '<div class="project-details" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; padding: 16px; background: #f8f9fa; border-radius: 8px;">' +
+                        '<div><span style="font-weight: bold; color: #333;">Type:</span><br><span style="color: #666;">' + (project.type || 'Web App') + '</span></div>' +
+                        '<div><span style="font-weight: bold; color: #333;">Priority:</span><br><span style="color: #666;">' + (project.priority || 'Medium') + '</span></div>' +
+                        '<div><span style="font-weight: bold; color: #333;">Last Modified:</span><br><span style="color: #666;">' + lastActivity + '</span></div>' +
+                        '<div><span style="font-weight: bold; color: #333;">Project Path:</span><br><span style="color: #666; word-break: break-all;" title="' + projectPath + '">' + projectPath + '</span></div>' +
+                    '</div>' +
+                    '<div class="project-meta" style="display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap;">' +
+                        '<div class="meta-item" style="background: #e9ecef; padding: 8px 12px; border-radius: 6px; font-size: 14px;"><i class="ti ti-calendar"></i> Created: ' + (project.createdAt ? new Date(project.createdAt).toLocaleDateString() : 'Unknown') + '</div>' +
+                        (project.githubRepo ? '<div class="meta-item" style="background: #e9ecef; padding: 8px 12px; border-radius: 6px; font-size: 14px;"><i class="ti ti-brand-github"></i> GitHub</div>' : '') +
+                        (project.hasClaudeConfig ? '<div class="meta-item" style="background: #e9ecef; padding: 8px 12px; border-radius: 6px; font-size: 14px;"><i class="ti ti-robot"></i> Claude Enabled</div>' : '') +
+                    '</div>' +
+                    '<div class="project-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">' +
+                        '<button class="btn btn-primary btn-sm" data-action="open" data-project-id="' + project.id + '" style="padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; background: #007bff; color: white;">Open Project</button>' +
+                        '<button class="btn btn-secondary btn-sm" data-action="edit" data-project-id="' + project.id + '" style="padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; background: #6c757d; color: white;">Edit Settings</button>' +
+                        '<button class="btn btn-secondary btn-sm" data-action="delete" data-project-id="' + project.id + '" style="padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; background: #dc3545; color: white;">Delete</button>' +
+                    '</div>';
         }
 
         function getStatusBadge(status) {
@@ -572,20 +879,6 @@ const pageDescription = 'Create, manage, and monitor your development projects w
             }
         }
 
-        function truncateText(text, maxLength) {
-            if (!text) return '';
-            if (text.length <= maxLength) return text;
-            return text.substring(0, maxLength) + '...';
-        }
-
-        function truncatePath(path) {
-            if (!path) return 'No path set';
-            if (path.length > 40) {
-                return '...' + path.slice(-37);
-            }
-            return path;
-        }
-
         function updateProjectStats(projects) {
             document.getElementById('total-projects').textContent = projects.length;
 
@@ -617,11 +910,15 @@ const pageDescription = 'Create, manage, and monitor your development projects w
 
         function showEmptyState() {
             const emptyState = document.getElementById('empty-projects');
-            emptyState.style.display = 'flex';
+            if (emptyState) {
+                emptyState.style.display = 'flex';
+            } else {
+                console.error('empty-projects element not found');
+            }
         }
 
         function openProject(projectId) {
-            window.location.href = '/workspace-vscode?project=' + projectId;
+            window.location.href = '/workspace?project=' + projectId;
         }
 
         function editProject(projectId) {
@@ -667,6 +964,39 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                     alert('Failed to start BMAD workflow');
                 });
             }
+        }
+
+        function setupProjectButtonListeners() {
+            console.log('Setting up project button listeners');
+            const container = document.getElementById('projects-container');
+
+            // Use event delegation for dynamically created buttons
+            container.addEventListener('click', function(event) {
+                const button = event.target.closest('button[data-action]');
+                if (!button) return;
+
+                const action = button.getAttribute('data-action');
+                const projectId = button.getAttribute('data-project-id');
+
+                console.log('Project button clicked:', action, projectId);
+
+                switch (action) {
+                    case 'open':
+                        openProject(projectId);
+                        break;
+                    case 'edit':
+                        editProject(projectId);
+                        break;
+                    case 'bmad':
+                        startBmad(projectId);
+                        break;
+                    case 'delete':
+                        deleteProject(projectId);
+                        break;
+                    default:
+                        console.warn('Unknown action:', action);
+                }
+            });
         }
 
         // Refresh projects every 30 seconds

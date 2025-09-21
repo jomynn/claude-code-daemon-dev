@@ -196,6 +196,16 @@ class ApiServer {
             });
         });
 
+        // VS Code themed workspace
+        this.app.get('/workspace-vscode', (req, res) => {
+            res.render('workspace-vscode', {
+                title: 'Claude Code Workspace - VS Code Edition',
+                env: process.env.NODE_ENV,
+                currentPage: 'workspace-vscode',
+                project: req.query.project || null
+            });
+        });
+
         // Health check endpoint
         this.app.get('/health', (req, res) => {
             res.json({

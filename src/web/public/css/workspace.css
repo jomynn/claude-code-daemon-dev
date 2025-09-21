@@ -369,6 +369,154 @@
     margin-left: 5px;
 }
 
+/* Session Recovery Notification */
+.session-recovery-notification {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    padding: 15px 20px;
+    margin: 10px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3);
+    border-left: 4px solid #388e3c;
+}
+
+.recovery-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+}
+
+.recovery-icon {
+    font-size: 24px;
+    animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.recovery-info h4 {
+    margin: 0 0 5px 0;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.recovery-info p {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.recovery-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.recovery-actions .btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.recovery-actions .btn-primary {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.recovery-actions .btn-primary:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.recovery-actions .btn-secondary {
+    background: transparent;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.recovery-actions .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-close {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Auto-save Status Indicator */
+.auto-save-status {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 999;
+    transition: all 0.3s;
+}
+
+.auto-save-status:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.auto-save-status.saving {
+    background: var(--success-color);
+    color: white;
+    border-color: var(--success-color);
+}
+
+.auto-save-status.saving .save-icon {
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.save-icon {
+    font-size: 14px;
+}
+
+.save-text {
+    font-weight: 500;
+}
+
+.save-time {
+    opacity: 0.7;
+    font-size: 11px;
+}
+
 /* Workspace Tabs */
 .workspace-tabs {
     background: var(--card-bg);

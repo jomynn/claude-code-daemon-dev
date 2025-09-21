@@ -39,6 +39,29 @@
         </header>
 
         <main class="workspace-main">
+            <!-- Session Recovery Notification -->
+            <div class="session-recovery-notification" id="session-recovery-notification" style="display: none;">
+                <div class="recovery-content">
+                    <div class="recovery-icon">🔄</div>
+                    <div class="recovery-info">
+                        <h4>Session Recovery Available</h4>
+                        <p>We found a previous session from <span id="recovery-time"></span> with project <span id="recovery-project"></span></p>
+                        <div class="recovery-actions">
+                            <button id="recover-session-btn" class="btn btn-primary btn-small">Restore Session</button>
+                            <button id="dismiss-recovery-btn" class="btn btn-secondary btn-small">Start Fresh</button>
+                        </div>
+                    </div>
+                    <button id="close-recovery-btn" class="btn-close">×</button>
+                </div>
+            </div>
+
+            <!-- Auto-save Status Indicator -->
+            <div class="auto-save-status" id="auto-save-status">
+                <span class="save-icon">💾</span>
+                <span class="save-text">Auto-save enabled</span>
+                <span class="save-time" id="last-save-time"></span>
+            </div>
+
             <!-- Project Info Bar -->
             <div class="project-info-bar" id="project-info-bar" style="display: none;">
                 <div class="project-details">

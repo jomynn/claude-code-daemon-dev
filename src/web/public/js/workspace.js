@@ -20,8 +20,16 @@ class WorkspaceManager {
             filesModified: 0,
             terminalCommands: 0,
             activity: [],
-            history: []
+            history: [],
+            lastSaved: null,
+            autoSaveEnabled: true,
+            sessionId: this.generateSessionId()
         };
+
+        // Auto-save settings
+        this.autoSaveInterval = null;
+        this.autoSaveFrequency = 30000; // 30 seconds
+        this.sessionStorageKey = 'workspace-session-data';
 
         this.init();
     }
@@ -35,7 +43,13 @@ class WorkspaceManager {
             this.setupSocketConnection();
             console.log('Step 3: About to load projects...');
             await this.loadProjects();
-            console.log('Step 3.5: Restoring last session...');
+            console.log('Step 3.5: Auto-recovering session data...');
+            this.autoRecoverSessionData();
+            console.log('Step 3.7: Checking for dashboard project data...');
+            this.handleDashboardProjectData();
+            console.log('Step 4: Starting auto-save...');
+            this.startAutoSave();
+            console.log('Step 5: Restoring last session...');
             this.restoreLastSession();
             console.log('Step 4: Initializing tabs...');
             this.initializeTabs();
@@ -4190,6 +4204,16 @@ ${phase.deliverables.map(deliverable => `- [ ] ${deliverable}`).join('\n')}
         }
 
         this.updateActivityTimeline();
+
+        // Trigger auto-save for important activities
+        const autoSaveTriggers = ['project', 'claude', 'terminal', 'system'];
+        if (autoSaveTriggers.includes(type) && this.sessionData.autoSaveEnabled) {
+            // Debounce auto-save to avoid too frequent saves
+            clearTimeout(this.activityAutoSaveTimeout);
+            this.activityAutoSaveTimeout = setTimeout(() => {
+                this.saveSessionData(true);
+            }, 2000); // 2 second delay
+        }
     }
 
     updateActivityTimeline() {
@@ -4444,6 +4468,466 @@ ${phase.deliverables.map(deliverable => `- [ ] ${deliverable}`).join('\n')}
         if (this.statusTimer) {
             clearInterval(this.statusTimer);
             this.statusTimer = null;
+        }
+    }
+
+    // Handle project data shared from dashboard
+    handleDashboardProjectData() {
+        try {
+            // Check URL parameters for project info
+            const urlParams = new URLSearchParams(window.location.search);
+            const projectId = urlParams.get('project');
+            const fromDashboard = urlParams.get('from');
+
+            if (projectId && fromDashboard && fromDashboard.includes('dashboard')) {
+                console.log('📊 Received project data from dashboard:', projectId);
+
+                // Get shared project data from localStorage
+                const sharedData = localStorage.getItem('dashboard-current-project');
+                if (sharedData) {
+                    try {
+                        const projectData = JSON.parse(sharedData);
+                        console.log('📋 Shared project data:', projectData);
+
+                        // Auto-select the project
+                        setTimeout(() => {
+                            const selector = document.getElementById('project-selector');
+                            if (selector) {
+                                selector.value = projectId;
+                                this.loadProject(projectId);
+
+                                // Show a notification that project was loaded from dashboard
+                                this.addActivity('system', `Opened project from dashboard: ${projectData.project.name}`);
+
+                                // Update session data with shared info
+                                if (projectData.claudeStatus) {
+                                    this.addActivity('claude', `Claude status: ${projectData.claudeStatus}`);
+                                }
+                                if (projectData.bmadStatus) {
+                                    this.addActivity('bmad', `BMAD status: ${projectData.bmadStatus}`);
+                                }
+                            }
+                        }, 1000);
+
+                        // Clean up localStorage after use
+                        localStorage.removeItem('dashboard-current-project');
+
+                        // Clean up URL parameters
+                        const newUrl = window.location.pathname;
+                        window.history.replaceState({}, document.title, newUrl);
+
+                    } catch (parseError) {
+                        console.error('Error parsing shared project data:', parseError);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error handling dashboard project data:', error);
+        }
+    }
+
+    // Generate unique session ID
+    generateSessionId() {
+        return 'ws_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // Auto-save session data
+    startAutoSave() {
+        if (this.autoSaveInterval) {
+            clearInterval(this.autoSaveInterval);
+        }
+
+        if (this.sessionData.autoSaveEnabled) {
+            this.autoSaveInterval = setInterval(() => {
+                this.saveSessionData(true); // true = auto-save
+            }, this.autoSaveFrequency);
+
+            console.log(`🔄 Auto-save started with ${this.autoSaveFrequency / 1000}s interval`);
+            this.updateAutoSaveStatus();
+        }
+    }
+
+    // Stop auto-save
+    stopAutoSave() {
+        if (this.autoSaveInterval) {
+            clearInterval(this.autoSaveInterval);
+            this.autoSaveInterval = null;
+            console.log('🛑 Auto-save stopped');
+            this.updateAutoSaveStatus();
+        }
+    }
+
+    // Update auto-save status indicator
+    updateAutoSaveStatus() {
+        const statusElement = document.getElementById('auto-save-status');
+        if (!statusElement) return;
+
+        const statusIcon = statusElement.querySelector('.auto-save-icon');
+        const statusText = statusElement.querySelector('.auto-save-text');
+        const statusTime = statusElement.querySelector('.auto-save-time');
+
+        if (this.autoSaveInterval) {
+            // Auto-save is active
+            statusElement.classList.remove('auto-save-disabled');
+            statusElement.classList.add('auto-save-enabled');
+
+            if (statusIcon) statusIcon.textContent = '💾';
+            if (statusText) statusText.textContent = 'Auto-save ON';
+
+            if (statusTime && this.sessionData.lastSaved) {
+                const lastSaved = new Date(this.sessionData.lastSaved);
+                const timeAgo = this.formatTimeAgo(lastSaved);
+                statusTime.textContent = `Last saved: ${timeAgo}`;
+                statusTime.style.display = 'block';
+            } else if (statusTime) {
+                statusTime.textContent = 'Waiting for first save...';
+                statusTime.style.display = 'block';
+            }
+        } else {
+            // Auto-save is disabled
+            statusElement.classList.remove('auto-save-enabled');
+            statusElement.classList.add('auto-save-disabled');
+
+            if (statusIcon) statusIcon.textContent = '💾';
+            if (statusText) statusText.textContent = 'Auto-save OFF';
+            if (statusTime) statusTime.style.display = 'none';
+        }
+    }
+
+    // Format time ago helper function
+    formatTimeAgo(date) {
+        const now = new Date();
+        const diff = now - date;
+        const seconds = Math.floor(diff / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+
+        if (seconds < 60) {
+            return `${seconds}s ago`;
+        } else if (minutes < 60) {
+            return `${minutes}m ago`;
+        } else if (hours < 24) {
+            return `${hours}h ago`;
+        } else {
+            return date.toLocaleDateString();
+        }
+    }
+
+    // Enhanced save session data with auto-save support
+    saveSessionData(isAutoSave = false) {
+        try {
+            const sessionToSave = {
+                ...this.sessionData,
+                currentProject: this.currentProject ? {
+                    id: this.currentProject.id,
+                    name: this.currentProject.name,
+                    targetFolder: this.currentProject.targetFolder
+                } : null,
+                claudeSession: this.claudeSession ? {
+                    status: this.claudeSession.status,
+                    startTime: this.claudeSession.startTime
+                } : null,
+                terminals: Array.from(this.terminals.keys()),
+                activeTab: this.activeTab,
+                lastSaved: new Date().toISOString(),
+                isAutoSave: isAutoSave
+            };
+
+            // Save to localStorage
+            localStorage.setItem(this.sessionStorageKey, JSON.stringify(sessionToSave));
+
+            // Save to IndexedDB for larger data
+            this.saveToIndexedDB(sessionToSave);
+
+            if (!isAutoSave) {
+                this.addActivity('system', 'Session data saved manually');
+                console.log('💾 Session data saved manually');
+            } else {
+                console.log('🔄 Session data auto-saved');
+            }
+
+            this.sessionData.lastSaved = new Date();
+
+            // Update auto-save status indicator
+            this.updateAutoSaveStatus();
+
+        } catch (error) {
+            console.error('❌ Error saving session data:', error);
+            this.addActivity('system', 'Error saving session data: ' + error.message);
+        }
+    }
+
+    // Auto-recover session data on page load
+    autoRecoverSessionData() {
+        try {
+            console.log('🔍 Attempting to recover session data...');
+
+            // First try localStorage
+            const savedSession = localStorage.getItem(this.sessionStorageKey);
+            if (savedSession) {
+                const sessionData = JSON.parse(savedSession);
+
+                // Check if session is recent enough (within 24 hours)
+                const lastSaved = new Date(sessionData.lastSaved);
+                const hoursSinceLastSave = (new Date() - lastSaved) / (1000 * 60 * 60);
+
+                if (hoursSinceLastSave <= 24) {
+                    this.showSessionRecoveryUI(sessionData);
+                    console.log('💡 Session recovery UI shown for recent session');
+                } else {
+                    console.log('⏰ Session too old, skipping recovery');
+                    localStorage.removeItem(this.sessionStorageKey);
+                }
+                return;
+            }
+
+            // If not found, try to get from URL or other sources
+            console.log('ℹ️ No session data found for auto-recovery');
+
+        } catch (error) {
+            console.error('❌ Error during auto-recovery:', error);
+        }
+    }
+
+    // Show session recovery UI
+    showSessionRecoveryUI(sessionData) {
+        const recoveryNotification = document.getElementById('session-recovery-notification');
+        const recoveryTime = document.getElementById('recovery-time');
+        const recoveryProject = document.getElementById('recovery-project');
+
+        if (recoveryNotification && recoveryTime && recoveryProject) {
+            // Format time
+            const lastSaved = new Date(sessionData.lastSaved);
+            const timeAgo = this.formatTimeAgo(lastSaved);
+            recoveryTime.textContent = timeAgo;
+
+            // Show project info
+            const projectName = sessionData.currentProject ? sessionData.currentProject.name : 'No project';
+            recoveryProject.textContent = projectName;
+
+            // Show notification
+            recoveryNotification.style.display = 'block';
+
+            // Add event listeners
+            this.setupRecoveryEventListeners(sessionData);
+        }
+    }
+
+    // Setup event listeners for recovery UI
+    setupRecoveryEventListeners(sessionData) {
+        const recoverBtn = document.getElementById('recover-session-btn');
+        const dismissBtn = document.getElementById('dismiss-recovery-btn');
+        const closeBtn = document.getElementById('close-recovery-btn');
+        const notification = document.getElementById('session-recovery-notification');
+
+        if (recoverBtn) {
+            recoverBtn.addEventListener('click', () => {
+                this.restoreSessionData(sessionData);
+                notification.style.display = 'none';
+                this.addActivity('system', '🔄 Session restored from recovery UI');
+            });
+        }
+
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', () => {
+                localStorage.removeItem(this.sessionStorageKey);
+                notification.style.display = 'none';
+                this.addActivity('system', '🆕 Started fresh session (recovery dismissed)');
+            });
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                notification.style.display = 'none';
+            });
+        }
+    }
+
+    // Restore session data
+    restoreSessionData(sessionData) {
+        try {
+            if (!sessionData) return;
+
+            // Restore session metadata
+            if (sessionData.sessionId) {
+                this.sessionData.sessionId = sessionData.sessionId;
+            }
+
+            if (sessionData.startTime) {
+                this.sessionData.startTime = new Date(sessionData.startTime);
+            }
+
+            if (sessionData.activity && Array.isArray(sessionData.activity)) {
+                this.sessionData.activity = sessionData.activity.map(activity => ({
+                    ...activity,
+                    timestamp: new Date(activity.timestamp)
+                }));
+            }
+
+            // Restore counters
+            if (sessionData.commandsSent) this.sessionData.commandsSent = sessionData.commandsSent;
+            if (sessionData.filesModified) this.sessionData.filesModified = sessionData.filesModified;
+            if (sessionData.terminalCommands) this.sessionData.terminalCommands = sessionData.terminalCommands;
+
+            // Restore active tab
+            if (sessionData.activeTab) {
+                this.activeTab = sessionData.activeTab;
+            }
+
+            // Add recovery activity
+            this.addActivity('system', `Session recovered (ID: ${sessionData.sessionId})`);
+
+            // If there was a current project, try to restore it
+            if (sessionData.currentProject && sessionData.currentProject.id) {
+                setTimeout(() => {
+                    const selector = document.getElementById('project-selector');
+                    if (selector) {
+                        selector.value = sessionData.currentProject.id;
+                        this.loadProject(sessionData.currentProject.id);
+                        this.addActivity('project', `Auto-restored project: ${sessionData.currentProject.name}`);
+                    }
+                }, 1500);
+            }
+
+            // Update UI
+            this.updateActivityTimeline();
+            this.updateStatistics();
+
+            console.log('✅ Session data restored successfully');
+
+        } catch (error) {
+            console.error('❌ Error restoring session data:', error);
+            this.addActivity('system', 'Error restoring session: ' + error.message);
+        }
+    }
+
+    // Save to IndexedDB for larger data storage
+    async saveToIndexedDB(sessionData) {
+        try {
+            if (!window.indexedDB) return;
+
+            const request = indexedDB.open('WorkspaceSessionDB', 1);
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('sessions')) {
+                    db.createObjectStore('sessions', { keyPath: 'sessionId' });
+                }
+            };
+
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                const transaction = db.transaction(['sessions'], 'readwrite');
+                const store = transaction.objectStore('sessions');
+                store.put(sessionData);
+            };
+
+        } catch (error) {
+            console.warn('⚠️ IndexedDB save failed:', error);
+        }
+    }
+
+    // Load from IndexedDB
+    async loadFromIndexedDB(sessionId) {
+        try {
+            if (!window.indexedDB) return null;
+
+            return new Promise((resolve) => {
+                const request = indexedDB.open('WorkspaceSessionDB', 1);
+
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('sessions')) {
+                        resolve(null);
+                        return;
+                    }
+
+                    const transaction = db.transaction(['sessions'], 'readonly');
+                    const store = transaction.objectStore('sessions');
+                    const getRequest = store.get(sessionId);
+
+                    getRequest.onsuccess = () => {
+                        resolve(getRequest.result);
+                    };
+
+                    getRequest.onerror = () => {
+                        resolve(null);
+                    };
+                };
+
+                request.onerror = () => {
+                    resolve(null);
+                };
+            });
+
+        } catch (error) {
+            console.warn('⚠️ IndexedDB load failed:', error);
+            return null;
+        }
+    }
+
+    // Clean up old sessions
+    async cleanupOldSessions() {
+        try {
+            const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+            const cutoff = new Date(Date.now() - maxAge);
+
+            // Clean localStorage
+            const saved = localStorage.getItem(this.sessionStorageKey);
+            if (saved) {
+                const sessionData = JSON.parse(saved);
+                if (new Date(sessionData.lastSaved) < cutoff) {
+                    localStorage.removeItem(this.sessionStorageKey);
+                    console.log('🧹 Cleaned up old localStorage session');
+                }
+            }
+
+            // Clean IndexedDB
+            if (window.indexedDB) {
+                const request = indexedDB.open('WorkspaceSessionDB', 1);
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    if (db.objectStoreNames.contains('sessions')) {
+                        const transaction = db.transaction(['sessions'], 'readwrite');
+                        const store = transaction.objectStore('sessions');
+
+                        store.openCursor().onsuccess = (event) => {
+                            const cursor = event.target.result;
+                            if (cursor) {
+                                const session = cursor.value;
+                                if (new Date(session.lastSaved) < cutoff) {
+                                    cursor.delete();
+                                }
+                                cursor.continue();
+                            }
+                        };
+                    }
+                };
+            }
+
+        } catch (error) {
+            console.warn('⚠️ Cleanup failed:', error);
+        }
+    }
+
+    // Get session recovery options for UI
+    getSessionRecoveryOptions() {
+        try {
+            const saved = localStorage.getItem(this.sessionStorageKey);
+            if (saved) {
+                const sessionData = JSON.parse(saved);
+                return {
+                    available: true,
+                    lastSaved: new Date(sessionData.lastSaved),
+                    project: sessionData.currentProject,
+                    sessionId: sessionData.sessionId,
+                    activityCount: sessionData.activity ? sessionData.activity.length : 0
+                };
+            }
+            return { available: false };
+        } catch (error) {
+            console.error('❌ Error getting recovery options:', error);
+            return { available: false };
         }
     }
 }

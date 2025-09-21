@@ -1,0 +1,745 @@
+<%
+// Set layout variables
+const pageTitle = 'Clone Repository';
+const pageDescription = 'Clone a Git repository and configure it as a new Claude Code project.';
+%>
+
+<%- include('partials/layout', {
+    title,
+    env,
+    currentPage: 'projects',
+    pageTitle,
+    pageDescription,
+    body: `
+    <!-- Repository Clone Form -->
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="ti ti-git-branch"></i>
+                    Clone Repository
+                </h2>
+                <a href="/projects" class="btn btn-secondary">
+                    <i class="ti ti-arrow-left"></i>
+                    Back to Projects
+                </a>
+            </div>
+
+            <form id="clone-project-form" class="form">
+                <!-- Repository Information -->
+                <div class="form-section">
+                    <h3>Repository Information</h3>
+
+                    <div class="form-group">
+                        <label class="form-label" for="repo-url">Repository URL *</label>
+                        <input type="url" id="repo-url" name="repoUrl" class="form-input" required
+                               placeholder="https://github.com/username/repository.git">
+                        <small class="form-help">Supports GitHub, GitLab, Bitbucket, and other Git repositories</small>
+                    </div>
+
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="branch">Branch</label>
+                            <input type="text" id="branch" name="branch" class="form-input"
+                                   placeholder="main (default)">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="depth">Clone Depth</label>
+                            <select id="depth" name="depth" class="form-select">
+                                <option value="">Full history</option>
+                                <option value="1">Shallow (latest commit only)</option>
+                                <option value="10">Last 10 commits</option>
+                                <option value="50">Last 50 commits</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Repository Info Display -->
+                    <div id="repo-info" class="repo-info" style="display: none;">
+                        <h4>Repository Information</h4>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Owner:</span>
+                                <span class="info-value" id="repo-owner">Unknown</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Repository:</span>
+                                <span class="info-value" id="repo-name">Unknown</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Platform:</span>
+                                <span class="info-value" id="repo-platform">Unknown</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Default Branch:</span>
+                                <span class="info-value" id="repo-default-branch">main</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Language:</span>
+                                <span class="info-value" id="repo-language">Detecting...</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Size:</span>
+                                <span class="info-value" id="repo-size">Checking...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project Configuration -->
+                <div class="form-section">
+                    <h3>Project Configuration</h3>
+
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="project-name">Project Name *</label>
+                            <input type="text" id="project-name" name="name" class="form-input" required
+                                   placeholder="Auto-detected from repository">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="project-priority">Priority</label>
+                            <select id="project-priority" name="priority" class="form-select">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="target-folder">Target Folder *</label>
+                        <div class="input-group">
+                            <input type="text" id="target-folder" name="targetFolder" class="form-input" required
+                                   placeholder="/path/to/clone/location">
+                            <button type="button" class="btn btn-secondary" id="browse-folder">
+                                <i class="ti ti-folder"></i>
+                                Browse
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="project-description">Description</label>
+                        <textarea id="project-description" name="description" class="form-textarea"
+                                  placeholder="Auto-filled from repository description"></textarea>
+                    </div>
+                </div>
+
+                <!-- Clone Options -->
+                <div class="form-section">
+                    <h3>Clone Options</h3>
+
+                    <div class="grid grid-2">
+                        <label class="form-checkbox">
+                            <input type="checkbox" name="recursive" checked>
+                            <span class="checkmark"></span>
+                            Clone submodules recursively
+                        </label>
+
+                        <label class="form-checkbox">
+                            <input type="checkbox" name="lfs">
+                            <span class="checkmark"></span>
+                            Initialize Git LFS
+                        </label>
+
+                        <label class="form-checkbox">
+                            <input type="checkbox" name="installDependencies" checked>
+                            <span class="checkmark"></span>
+                            Install dependencies after clone
+                        </label>
+
+                        <label class="form-checkbox">
+                            <input type="checkbox" name="setupPreCommit">
+                            <span class="checkmark"></span>
+                            Setup pre-commit hooks
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Authentication (if needed) -->
+                <div class="form-section" id="auth-section" style="display: none;">
+                    <h3>Authentication</h3>
+
+                    <div class="form-group">
+                        <label class="form-label">Authentication Method</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="authMethod" value="none" checked>
+                                <span class="radio-text">Public Repository (No Auth)</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="authMethod" value="token">
+                                <span class="radio-text">Personal Access Token</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="authMethod" value="ssh">
+                                <span class="radio-text">SSH Key</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="token-auth" class="auth-config" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label" for="access-token">Personal Access Token</label>
+                            <input type="password" id="access-token" name="accessToken" class="form-input"
+                                   placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+                            <small class="form-help">Required for private repositories</small>
+                        </div>
+                    </div>
+
+                    <div id="ssh-auth" class="auth-config" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label" for="ssh-key-path">SSH Key Path</label>
+                            <input type="text" id="ssh-key-path" name="sshKeyPath" class="form-input"
+                                   placeholder="~/.ssh/id_rsa">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Claude Configuration -->
+                <div class="form-section">
+                    <h3>Claude Code Configuration</h3>
+
+                    <div class="form-group">
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="claude-enabled" name="claudeEnabled" checked>
+                            <span class="checkmark"></span>
+                            Enable Claude Code Assistant
+                        </label>
+                    </div>
+
+                    <div id="claude-config" class="claude-config">
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label class="form-label" for="claude-model">Model</label>
+                                <select id="claude-model" name="claudeModel" class="form-select">
+                                    <option value="claude-3-5-sonnet-20241022" selected>Claude 3.5 Sonnet</option>
+                                    <option value="claude-3-opus-20240229">Claude 3 Opus</option>
+                                    <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="max-tokens">Max Tokens</label>
+                                <input type="number" id="max-tokens" name="maxTokens" class="form-input"
+                                       value="4000" min="1000" max="8000">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="claude-context">Context</label>
+                            <textarea id="claude-context" name="claudeContext" class="form-textarea"
+                                      placeholder="Provide context about this repository for Claude..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BMAD Configuration -->
+                <div class="form-section">
+                    <h3>BMAD Multi-Agent Development</h3>
+
+                    <div class="form-group">
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="bmad-enabled" name="bmadEnabled" checked>
+                            <span class="checkmark"></span>
+                            Enable BMAD Multi-Agent Development
+                        </label>
+                    </div>
+
+                    <div id="bmad-config" class="bmad-config">
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label class="form-label" for="bmad-workflow">Workflow Type</label>
+                                <select id="bmad-workflow" name="bmadWorkflow" class="form-select">
+                                    <option value="agile" selected>Agile Development</option>
+                                    <option value="maintenance">Maintenance & Updates</option>
+                                    <option value="waterfall">Waterfall</option>
+                                    <option value="enterprise">Enterprise</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="bmad-agents">Agents</label>
+                                <div class="agent-selector">
+                                    <label class="agent-option">
+                                        <input type="checkbox" name="bmadAgents" value="dev" checked>
+                                        <span class="agent-badge">Developer</span>
+                                    </label>
+                                    <label class="agent-option">
+                                        <input type="checkbox" name="bmadAgents" value="qa" checked>
+                                        <span class="agent-badge">QA Engineer</span>
+                                    </label>
+                                    <label class="agent-option">
+                                        <input type="checkbox" name="bmadAgents" value="pm">
+                                        <span class="agent-badge">Project Manager</span>
+                                    </label>
+                                    <label class="agent-option">
+                                        <input type="checkbox" name="bmadAgents" value="devops">
+                                        <span class="agent-badge">DevOps</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-lg" id="clone-btn">
+                        <i class="ti ti-git-branch"></i>
+                        Clone Repository
+                    </button>
+                    <a href="/projects" class="btn btn-secondary btn-lg">
+                        <i class="ti ti-x"></i>
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <style>
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--space-lg);
+        }
+
+        .form-section {
+            margin-bottom: var(--space-2xl);
+            padding-bottom: var(--space-xl);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .form-section:last-child {
+            border-bottom: none;
+        }
+
+        .form-section h3 {
+            margin-bottom: var(--space-lg);
+            color: var(--text-primary);
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: var(--space-md);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: var(--space-xs);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: var(--space-sm);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: var(--font-size-base);
+            transition: var(--transition);
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-help {
+            color: var(--text-muted);
+            font-size: var(--font-size-sm);
+            margin-top: var(--space-xs);
+        }
+
+        .input-group {
+            display: flex;
+            gap: var(--space-sm);
+        }
+
+        .input-group .form-input {
+            flex: 1;
+        }
+
+        .repo-info {
+            margin-top: var(--space-lg);
+            padding: var(--space-lg);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+        }
+
+        .repo-info h4 {
+            margin-bottom: var(--space-md);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-md);
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-sm);
+            background: var(--bg-quaternary);
+            border-radius: var(--radius-sm);
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: var(--font-size-sm);
+        }
+
+        .info-value {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            cursor: pointer;
+            padding: var(--space-sm);
+            border-radius: var(--radius-md);
+            transition: var(--transition);
+        }
+
+        .radio-option:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .radio-text {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .auth-config {
+            margin-top: var(--space-md);
+            padding: var(--space-lg);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+        }
+
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        .form-checkbox input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .checkmark {
+            font-weight: 500;
+        }
+
+        .claude-config, .bmad-config {
+            margin-top: var(--space-md);
+            padding: var(--space-lg);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            transition: var(--transition);
+        }
+
+        .agent-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-sm);
+        }
+
+        .agent-option {
+            cursor: pointer;
+        }
+
+        .agent-badge {
+            display: inline-block;
+            padding: var(--space-xs) var(--space-sm);
+            background: var(--bg-quaternary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+
+        .agent-option input[type="checkbox"]:checked + .agent-badge {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        .agent-option input[type="checkbox"] {
+            display: none;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: var(--space-md);
+            padding-top: var(--space-xl);
+            border-top: 1px solid var(--border);
+        }
+
+        .btn-lg {
+            padding: var(--space-md) var(--space-xl);
+            font-size: var(--font-size-md);
+        }
+
+        /* Loading state */
+        .btn.loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .btn.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('clone-project-form');
+            const cloneBtn = document.getElementById('clone-btn');
+            const claudeEnabled = document.getElementById('claude-enabled');
+            const claudeConfig = document.getElementById('claude-config');
+            const bmadEnabled = document.getElementById('bmad-enabled');
+            const bmadConfig = document.getElementById('bmad-config');
+            const repoUrl = document.getElementById('repo-url');
+            const repoInfo = document.getElementById('repo-info');
+            const authSection = document.getElementById('auth-section');
+            const authMethods = document.querySelectorAll('input[name="authMethod"]');
+
+            // Handle Claude config visibility
+            claudeEnabled.addEventListener('change', function() {
+                claudeConfig.style.display = this.checked ? 'block' : 'none';
+            });
+
+            // Handle BMAD config visibility
+            bmadEnabled.addEventListener('change', function() {
+                bmadConfig.style.display = this.checked ? 'block' : 'none';
+            });
+
+            // Handle authentication method changes
+            authMethods.forEach(method => {
+                method.addEventListener('change', function() {
+                    document.querySelectorAll('.auth-config').forEach(config => {
+                        config.style.display = 'none';
+                    });
+
+                    if (this.value === 'token') {
+                        document.getElementById('token-auth').style.display = 'block';
+                    } else if (this.value === 'ssh') {
+                        document.getElementById('ssh-auth').style.display = 'block';
+                    }
+                });
+            });
+
+            // Handle repository URL changes
+            repoUrl.addEventListener('input', function() {
+                const url = this.value.trim();
+                if (url) {
+                    parseRepositoryUrl(url);
+                } else {
+                    repoInfo.style.display = 'none';
+                }
+            });
+
+            function parseRepositoryUrl(url) {
+                try {
+                    const urlObj = new URL(url);
+                    const pathParts = urlObj.pathname.split('/').filter(p => p);
+
+                    if (pathParts.length >= 2) {
+                        const owner = pathParts[0];
+                        const repo = pathParts[1].replace(/\\.git$/, '');
+                        const platform = getPlatform(urlObj.hostname);
+
+                        // Auto-fill project name and folder
+                        const projectName = document.getElementById('project-name');
+                        const targetFolder = document.getElementById('target-folder');
+
+                        if (!projectName.value) {
+                            projectName.value = repo.replace(/[-_]/g, ' ');
+                        }
+
+                        if (!targetFolder.value) {
+                            targetFolder.value = '/tmp/' + repo;
+                        }
+
+                        // Show repository info
+                        repoInfo.style.display = 'block';
+                        document.getElementById('repo-owner').textContent = owner;
+                        document.getElementById('repo-name').textContent = repo;
+                        document.getElementById('repo-platform').textContent = platform;
+
+                        // Show auth section for private repos
+                        if (platform === 'GitHub' || platform === 'GitLab') {
+                            authSection.style.display = 'block';
+                        }
+
+                        // Auto-fill description
+                        const description = document.getElementById('project-description');
+                        if (!description.value) {
+                            description.value = 'Cloned from ' + url;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Invalid URL:', error);
+                }
+            }
+
+            function getPlatform(hostname) {
+                if (hostname.includes('github.com')) return 'GitHub';
+                if (hostname.includes('gitlab.com')) return 'GitLab';
+                if (hostname.includes('bitbucket.org')) return 'Bitbucket';
+                if (hostname.includes('azure.com') || hostname.includes('dev.azure.com')) return 'Azure DevOps';
+                return 'Git Repository';
+            }
+
+            // Handle form submission
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const repoUrlValue = repoUrl.value.trim();
+                if (!repoUrlValue) {
+                    alert('Please enter a repository URL');
+                    return;
+                }
+
+                // Disable submit button and show loading
+                cloneBtn.disabled = true;
+                cloneBtn.classList.add('loading');
+
+                try {
+                    const formData = new FormData(form);
+                    const data = {};
+
+                    // Basic fields
+                    data.repoUrl = repoUrlValue;
+                    data.projectName = formData.get('name');
+                    data.projectDescription = formData.get('description');
+                    data.targetFolder = formData.get('targetFolder');
+                    data.priority = formData.get('priority');
+                    data.branch = formData.get('branch') || 'main';
+                    data.depth = formData.get('depth') || '';
+
+                    // Clone options
+                    data.cloneOptions = {
+                        recursive: formData.get('recursive') === 'on',
+                        lfs: formData.get('lfs') === 'on',
+                        installDependencies: formData.get('installDependencies') === 'on',
+                        setupPreCommit: formData.get('setupPreCommit') === 'on'
+                    };
+
+                    // Authentication
+                    data.auth = {
+                        method: formData.get('authMethod'),
+                        token: formData.get('accessToken'),
+                        sshKeyPath: formData.get('sshKeyPath')
+                    };
+
+                    // Claude configuration
+                    data.claudeConfig = {
+                        enabled: formData.get('claudeEnabled') === 'on',
+                        model: formData.get('claudeModel'),
+                        maxTokens: parseInt(formData.get('maxTokens')),
+                        temperature: 0.7,
+                        context: formData.get('claudeContext')
+                    };
+
+                    // BMAD configuration
+                    const bmadAgents = formData.getAll('bmadAgents');
+                    data.bmadConfig = {
+                        enabled: formData.get('bmadEnabled') === 'on',
+                        workflow: formData.get('bmadWorkflow'),
+                        agents: bmadAgents
+                    };
+
+                    const response = await fetch('/api/projects/clone-github', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Show success message
+                        alert('Repository cloned successfully!');
+                        // Redirect to project details or projects list
+                        window.location.href = '/projects';
+                    } else {
+                        alert('Failed to clone repository: ' + result.error);
+                    }
+                } catch (error) {
+                    console.error('Error cloning repository:', error);
+                    alert('Failed to clone repository: ' + error.message);
+                } finally {
+                    // Re-enable submit button
+                    cloneBtn.disabled = false;
+                    cloneBtn.classList.remove('loading');
+                }
+            });
+
+            // Browse folder button (simplified)
+            document.getElementById('browse-folder').addEventListener('click', function() {
+                const repoName = document.getElementById('repo-name').textContent;
+                if (repoName && repoName !== 'Unknown') {
+                    const suggested = '/tmp/' + repoName.toLowerCase();
+                    document.getElementById('target-folder').value = suggested;
+                } else {
+                    const suggested = prompt('Enter the path where you want to clone the repository:');
+                    if (suggested) {
+                        document.getElementById('target-folder').value = suggested;
+                    }
+                }
+            });
+        });
+    </script>
+    `
+}) %>

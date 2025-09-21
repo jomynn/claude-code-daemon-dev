@@ -317,5 +317,33 @@ const pageDescription = 'Interactive development workspace with terminal access 
             color: white;
         }
     </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setupWorkspaceHandlers();
+        });
+
+        function setupWorkspaceHandlers() {
+            // Open Terminal
+            document.getElementById('open-terminal').addEventListener('click', function() {
+                window.location.href = '/workspace-vscode?tab=terminal';
+            });
+
+            // Claude Assistant
+            document.getElementById('claude-assistant').addEventListener('click', function() {
+                window.location.href = '/workspace-vscode?tab=claude';
+            });
+
+            // Tool cards
+            const toolCards = document.querySelectorAll('.tool-card');
+            toolCards.forEach((card, index) => {
+                card.addEventListener('click', function() {
+                    const tools = ['editor', 'git', 'packages', 'debug'];
+                    const tool = tools[index];
+                    window.location.href = '/workspace-vscode?tool=' + tool;
+                });
+            });
+        }
+    </script>
     `
 }) %>

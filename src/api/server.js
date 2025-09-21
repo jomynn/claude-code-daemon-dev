@@ -188,6 +188,40 @@ class ApiServer {
             });
         });
 
+        // Project management routes
+        this.app.get('/projects/create', (req, res) => {
+            res.render('project-create', {
+                title: 'Create New Project',
+                env: process.env.NODE_ENV,
+                currentPage: 'projects'
+            });
+        });
+
+        this.app.get('/projects/import', (req, res) => {
+            res.render('project-import', {
+                title: 'Import Existing Project',
+                env: process.env.NODE_ENV,
+                currentPage: 'projects'
+            });
+        });
+
+        this.app.get('/projects/clone', (req, res) => {
+            res.render('project-clone', {
+                title: 'Clone Repository',
+                env: process.env.NODE_ENV,
+                currentPage: 'projects'
+            });
+        });
+
+        this.app.get('/projects/:id/edit', (req, res) => {
+            res.render('project-edit', {
+                title: 'Edit Project',
+                env: process.env.NODE_ENV,
+                currentPage: 'projects',
+                projectId: req.params.id
+            });
+        });
+
         this.app.get('/workspace', (req, res) => {
             res.render('workspace', {
                 title: 'Claude Code Workspace',

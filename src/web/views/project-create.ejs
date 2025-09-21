@@ -1,0 +1,598 @@
+<%
+// Set layout variables
+const pageTitle = 'Create New Project';
+const pageDescription = 'Create a new development project with Claude Code and BMAD integration.';
+%>
+
+<%- include('partials/layout', {
+    title,
+    env,
+    currentPage: 'projects',
+    pageTitle,
+    pageDescription,
+    body: `
+    <!-- Project Creation Form -->
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="ti ti-folder-plus"></i>
+                    Create New Project
+                </h2>
+                <a href="/projects" class="btn btn-secondary">
+                    <i class="ti ti-arrow-left"></i>
+                    Back to Projects
+                </a>
+            </div>
+
+            <form id="create-project-form" class="form">
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <h3>Basic Information</h3>
+
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="project-name">Project Name *</label>
+                            <input type="text" id="project-name" name="name" class="form-input" required
+                                   placeholder="My Awesome Project">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="project-priority">Priority</label>
+                            <select id="project-priority" name="priority" class="form-select">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="project-description">Description</label>
+                        <textarea id="project-description" name="description" class="form-textarea"
+                                  placeholder="Describe your project..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="target-folder">Target Folder *</label>
+                        <div class="input-group">
+                            <input type="text" id="target-folder" name="targetFolder" class="form-input" required
+                                   placeholder="/path/to/your/project">
+                            <button type="button" class="btn btn-secondary" id="browse-folder">
+                                <i class="ti ti-folder"></i>
+                                Browse
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project Template -->
+                <div class="form-section">
+                    <h3>Project Template</h3>
+
+                    <div class="template-selector">
+                        <div class="grid grid-4">
+                            <label class="template-option">
+                                <input type="radio" name="template" value="react" class="template-radio">
+                                <div class="template-card">
+                                    <div class="template-icon" style="background: linear-gradient(135deg, #61dafb, #21d4fd);">
+                                        <i class="ti ti-brand-react"></i>
+                                    </div>
+                                    <h4>React App</h4>
+                                    <p>Modern React application with TypeScript</p>
+                                </div>
+                            </label>
+
+                            <label class="template-option">
+                                <input type="radio" name="template" value="nodejs" class="template-radio">
+                                <div class="template-card">
+                                    <div class="template-icon" style="background: linear-gradient(135deg, #68a063, #3c873a);">
+                                        <i class="ti ti-brand-nodejs"></i>
+                                    </div>
+                                    <h4>Node.js API</h4>
+                                    <p>RESTful API with Express and MongoDB</p>
+                                </div>
+                            </label>
+
+                            <label class="template-option">
+                                <input type="radio" name="template" value="python" class="template-radio">
+                                <div class="template-card">
+                                    <div class="template-icon" style="background: linear-gradient(135deg, #3776ab, #ffd343);">
+                                        <i class="ti ti-brand-python"></i>
+                                    </div>
+                                    <h4>Python App</h4>
+                                    <p>Flask application with SQLite database</p>
+                                </div>
+                            </label>
+
+                            <label class="template-option">
+                                <input type="radio" name="template" value="static" class="template-radio">
+                                <div class="template-card">
+                                    <div class="template-icon" style="background: linear-gradient(135deg, #e34c26, #f06529);">
+                                        <i class="ti ti-code"></i>
+                                    </div>
+                                    <h4>Static Site</h4>
+                                    <p>HTML, CSS, and JavaScript website</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <label class="template-option template-none">
+                            <input type="radio" name="template" value="" class="template-radio" checked>
+                            <div class="template-card">
+                                <div class="template-icon">
+                                    <i class="ti ti-package"></i>
+                                </div>
+                                <h4>Empty Project</h4>
+                                <p>Start with an empty project directory</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Claude Configuration -->
+                <div class="form-section">
+                    <h3>Claude Code Configuration</h3>
+
+                    <div class="form-group">
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="claude-enabled" name="claudeEnabled" checked>
+                            <span class="checkmark"></span>
+                            Enable Claude Code Assistant
+                        </label>
+                    </div>
+
+                    <div id="claude-config" class="claude-config">
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label class="form-label" for="claude-model">Model</label>
+                                <select id="claude-model" name="claudeModel" class="form-select">
+                                    <option value="claude-3-5-sonnet-20241022" selected>Claude 3.5 Sonnet</option>
+                                    <option value="claude-3-opus-20240229">Claude 3 Opus</option>
+                                    <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="max-tokens">Max Tokens</label>
+                                <input type="number" id="max-tokens" name="maxTokens" class="form-input"
+                                       value="4000" min="1000" max="8000">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="claude-context">Context</label>
+                            <textarea id="claude-context" name="claudeContext" class="form-textarea"
+                                      placeholder="Provide context about your project for Claude..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BMAD Configuration -->
+                <div class="form-section">
+                    <h3>BMAD Multi-Agent Development</h3>
+
+                    <div class="form-group">
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="bmad-enabled" name="bmadEnabled" checked>
+                            <span class="checkmark"></span>
+                            Enable BMAD Multi-Agent Development
+                        </label>
+                    </div>
+
+                    <div id="bmad-config" class="bmad-config">
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label class="form-label" for="bmad-workflow">Workflow Type</label>
+                                <select id="bmad-workflow" name="bmadWorkflow" class="form-select">
+                                    <option value="agile" selected>Agile Development</option>
+                                    <option value="waterfall">Waterfall</option>
+                                    <option value="startup">Startup MVP</option>
+                                    <option value="enterprise">Enterprise</option>
+                                    <option value="maintenance">Maintenance</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="bmad-agents">Agents</label>
+                                <div class="agent-selector">
+                                    <label class="agent-option">
+                                        <input type="checkbox" name="bmadAgents" value="dev" checked>
+                                        <span class="agent-badge">Developer</span>
+                                    </label>
+                                    <label class="agent-option">
+                                        <input type="checkbox" name="bmadAgents" value="qa" checked>
+                                        <span class="agent-badge">QA Engineer</span>
+                                    </label>
+                                    <label class="agent-option">
+                                        <input type="checkbox" name="bmadAgents" value="pm">
+                                        <span class="agent-badge">Project Manager</span>
+                                    </label>
+                                    <label class="agent-option">
+                                        <input type="checkbox" name="bmadAgents" value="design">
+                                        <span class="agent-badge">Designer</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project Settings -->
+                <div class="form-section">
+                    <h3>Project Settings</h3>
+
+                    <div class="grid grid-3">
+                        <label class="form-checkbox">
+                            <input type="checkbox" name="initGit" checked>
+                            <span class="checkmark"></span>
+                            Initialize Git Repository
+                        </label>
+
+                        <label class="form-checkbox">
+                            <input type="checkbox" name="createReadme" checked>
+                            <span class="checkmark"></span>
+                            Create README.md
+                        </label>
+
+                        <label class="form-checkbox">
+                            <input type="checkbox" name="createGitignore" checked>
+                            <span class="checkmark"></span>
+                            Create .gitignore
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-lg" id="create-btn">
+                        <i class="ti ti-plus"></i>
+                        Create Project
+                    </button>
+                    <a href="/projects" class="btn btn-secondary btn-lg">
+                        <i class="ti ti-x"></i>
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <style>
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--space-lg);
+        }
+
+        .form-section {
+            margin-bottom: var(--space-2xl);
+            padding-bottom: var(--space-xl);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .form-section:last-child {
+            border-bottom: none;
+        }
+
+        .form-section h3 {
+            margin-bottom: var(--space-lg);
+            color: var(--text-primary);
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: var(--space-md);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: var(--space-xs);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: var(--space-sm);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: var(--font-size-base);
+            transition: var(--transition);
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .input-group {
+            display: flex;
+            gap: var(--space-sm);
+        }
+
+        .input-group .form-input {
+            flex: 1;
+        }
+
+        .template-selector {
+            margin-top: var(--space-md);
+        }
+
+        .template-option {
+            cursor: pointer;
+            display: block;
+        }
+
+        .template-radio {
+            display: none;
+        }
+
+        .template-card {
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            text-align: center;
+            transition: var(--transition);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .template-radio:checked + .template-card {
+            border-color: var(--accent-primary);
+            background: var(--bg-quaternary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .template-card:hover {
+            border-color: var(--accent-secondary);
+            transform: translateY(-1px);
+        }
+
+        .template-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            margin-bottom: var(--space-md);
+        }
+
+        .template-card h4 {
+            margin-bottom: var(--space-sm);
+            color: var(--text-primary);
+            font-size: var(--font-size-md);
+        }
+
+        .template-card p {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            margin: 0;
+        }
+
+        .template-none {
+            grid-column: 1 / -1;
+            max-width: 300px;
+            margin: var(--space-lg) auto 0;
+        }
+
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        .form-checkbox input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .checkmark {
+            font-weight: 500;
+        }
+
+        .claude-config, .bmad-config {
+            margin-top: var(--space-md);
+            padding: var(--space-lg);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            transition: var(--transition);
+        }
+
+        .agent-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-sm);
+        }
+
+        .agent-option {
+            cursor: pointer;
+        }
+
+        .agent-badge {
+            display: inline-block;
+            padding: var(--space-xs) var(--space-sm);
+            background: var(--bg-quaternary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+
+        .agent-option input[type="checkbox"]:checked + .agent-badge {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        .agent-option input[type="checkbox"] {
+            display: none;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: var(--space-md);
+            padding-top: var(--space-xl);
+            border-top: 1px solid var(--border);
+        }
+
+        .btn-lg {
+            padding: var(--space-md) var(--space-xl);
+            font-size: var(--font-size-md);
+        }
+
+        /* Loading state */
+        .btn.loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .btn.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('create-project-form');
+            const createBtn = document.getElementById('create-btn');
+            const claudeEnabled = document.getElementById('claude-enabled');
+            const claudeConfig = document.getElementById('claude-config');
+            const bmadEnabled = document.getElementById('bmad-enabled');
+            const bmadConfig = document.getElementById('bmad-config');
+
+            // Handle Claude config visibility
+            claudeEnabled.addEventListener('change', function() {
+                claudeConfig.style.display = this.checked ? 'block' : 'none';
+            });
+
+            // Handle BMAD config visibility
+            bmadEnabled.addEventListener('change', function() {
+                bmadConfig.style.display = this.checked ? 'block' : 'none';
+            });
+
+            // Handle form submission
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                // Disable submit button and show loading
+                createBtn.disabled = true;
+                createBtn.classList.add('loading');
+
+                try {
+                    const formData = new FormData(form);
+                    const data = {};
+
+                    // Basic fields
+                    data.name = formData.get('name');
+                    data.description = formData.get('description');
+                    data.targetFolder = formData.get('targetFolder');
+                    data.template = formData.get('template');
+                    data.priority = formData.get('priority');
+
+                    // Claude configuration
+                    data.claudeConfig = {
+                        enabled: formData.get('claudeEnabled') === 'on',
+                        model: formData.get('claudeModel'),
+                        maxTokens: parseInt(formData.get('maxTokens')),
+                        temperature: 0.7,
+                        context: formData.get('claudeContext')
+                    };
+
+                    // BMAD configuration
+                    const bmadAgents = formData.getAll('bmadAgents');
+                    data.bmadConfig = {
+                        enabled: formData.get('bmadEnabled') === 'on',
+                        workflow: formData.get('bmadWorkflow'),
+                        agents: bmadAgents
+                    };
+
+                    // Project settings
+                    data.initGit = formData.get('initGit') === 'on';
+                    data.createReadme = formData.get('createReadme') === 'on';
+                    data.createGitignore = formData.get('createGitignore') === 'on';
+
+                    const response = await fetch('/api/projects', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Show success message
+                        alert('Project created successfully!');
+                        // Redirect to project details or projects list
+                        window.location.href = '/projects';
+                    } else {
+                        alert('Failed to create project: ' + result.error);
+                    }
+                } catch (error) {
+                    console.error('Error creating project:', error);
+                    alert('Failed to create project: ' + error.message);
+                } finally {
+                    // Re-enable submit button
+                    createBtn.disabled = false;
+                    createBtn.classList.remove('loading');
+                }
+            });
+
+            // Browse folder button (simplified - in a real app this would open a file dialog)
+            document.getElementById('browse-folder').addEventListener('click', function() {
+                const projectName = document.getElementById('project-name').value;
+                if (projectName) {
+                    const suggested = '/tmp/' + projectName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+                    document.getElementById('target-folder').value = suggested;
+                }
+            });
+
+            // Auto-suggest folder based on project name
+            document.getElementById('project-name').addEventListener('input', function() {
+                const targetFolder = document.getElementById('target-folder');
+                if (!targetFolder.value) {
+                    const suggested = '/tmp/' + this.value.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+                    targetFolder.value = suggested;
+                }
+            });
+        });
+    </script>
+    `
+}) %>

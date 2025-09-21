@@ -13,27 +13,27 @@ const pageDescription = 'Create, manage, and monitor your development projects w
     body: `
     <!-- Project Actions -->
     <div class="grid grid-3">
-        <button class="action-card" id="create-project">
+        <a href="/projects/create" class="action-card" id="create-project" style="text-decoration: none; color: inherit;">
             <div class="action-icon icon-projects">
                 <i class="ti ti-folder-plus"></i>
             </div>
             <div class="action-title">Create New Project</div>
             <div class="action-desc">Start a new development project</div>
-        </button>
-        <button class="action-card" id="import-project">
+        </a>
+        <a href="/projects/import" class="action-card" id="import-project" style="text-decoration: none; color: inherit;">
             <div class="action-icon icon-vscode">
                 <i class="ti ti-upload"></i>
             </div>
             <div class="action-title">Import Project</div>
             <div class="action-desc">Import existing project folder</div>
-        </button>
-        <button class="action-card" id="clone-project">
+        </a>
+        <a href="/projects/clone" class="action-card" id="clone-project" style="text-decoration: none; color: inherit;">
             <div class="action-icon icon-workspace">
                 <i class="ti ti-git-branch"></i>
             </div>
             <div class="action-title">Clone Repository</div>
             <div class="action-desc">Clone from Git repository</div>
-        </button>
+        </a>
     </div>
 
     <!-- Project Stats -->
@@ -64,14 +64,14 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 Active Projects
             </h2>
             <div style="display: flex; gap: var(--space-sm);">
-                <button class="btn btn-secondary btn-sm">
+                <button class="btn btn-secondary btn-sm" id="refresh-projects">
                     <i class="ti ti-refresh"></i>
                     Refresh
                 </button>
-                <button class="btn btn-primary btn-sm">
+                <a href="/projects/create" class="btn btn-primary btn-sm" id="new-project-header" style="text-decoration: none;">
                     <i class="ti ti-plus"></i>
                     New Project
-                </button>
+                </a>
             </div>
         </div>
         <div class="grid grid-2" id="projects-container">
@@ -80,10 +80,10 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 <i class="ti ti-folder-plus" style="font-size: 48px; margin-bottom: var(--space-md);"></i>
                 <h3>No Projects Found</h3>
                 <p>Create your first project to get started with Claude Code development.</p>
-                <button class="btn btn-primary" onclick="document.getElementById('create-project').click()">
+                <a href="/projects/create" class="btn btn-primary" id="create-first-project" style="text-decoration: none;">
                     <i class="ti ti-plus"></i>
                     Create First Project
-                </button>
+                </a>
             </div>
         </div>
     </div>
@@ -103,7 +103,7 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 </div>
                 <h4>React App</h4>
                 <p>Modern React application with TypeScript</p>
-                <button class="btn btn-primary btn-sm">Use Template</button>
+                <a href="/projects/create?template=react" class="btn btn-primary btn-sm" style="text-decoration: none;">Use Template</a>
             </div>
             <div class="template-card">
                 <div class="template-icon" style="background: linear-gradient(135deg, #68a063, #3c873a);">
@@ -111,7 +111,7 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 </div>
                 <h4>Node.js API</h4>
                 <p>RESTful API with Express and MongoDB</p>
-                <button class="btn btn-primary btn-sm">Use Template</button>
+                <a href="/projects/create?template=nodejs" class="btn btn-primary btn-sm" style="text-decoration: none;">Use Template</a>
             </div>
             <div class="template-card">
                 <div class="template-icon" style="background: linear-gradient(135deg, #3776ab, #ffd343);">
@@ -119,7 +119,7 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 </div>
                 <h4>Python App</h4>
                 <p>Flask application with SQLite database</p>
-                <button class="btn btn-primary btn-sm">Use Template</button>
+                <a href="/projects/create?template=python" class="btn btn-primary btn-sm" style="text-decoration: none;">Use Template</a>
             </div>
             <div class="template-card">
                 <div class="template-icon" style="background: linear-gradient(135deg, #e34c26, #f06529);">
@@ -127,7 +127,7 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 </div>
                 <h4>Static Site</h4>
                 <p>HTML, CSS, and JavaScript website</p>
-                <button class="btn btn-primary btn-sm">Use Template</button>
+                <a href="/projects/create?template=static" class="btn btn-primary btn-sm" style="text-decoration: none;">Use Template</a>
             </div>
         </div>
     </div>
@@ -263,27 +263,156 @@ const pageDescription = 'Create, manage, and monitor your development projects w
             color: var(--text-secondary);
         }
 
+        .badge-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .badge-error {
+            background: var(--error);
+            color: white;
+        }
+
+        .badge-info {
+            background: var(--info);
+            color: white;
+        }
+
         .empty-state {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: var(--space-md);
         }
+
+        .project-description {
+            margin-top: var(--space-md);
+            padding: var(--space-sm);
+            background: var(--bg-quaternary);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--accent-primary);
+        }
+
+        .project-description p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            line-height: 1.4;
+        }
     </style>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, loading projects...');
             loadProjects();
             loadProjectStats();
+            setupActionHandlers();
         });
 
+        function setupActionHandlers() {
+            console.log('Setting up action handlers...');
+
+            // Create Project
+            const createBtn = document.getElementById('create-project');
+            if (createBtn) {
+                console.log('Found create-project button, adding click handler');
+                createBtn.addEventListener('click', function(e) {
+                    console.log('Create project button clicked');
+                    e.preventDefault();
+                    window.location.href = '/projects/create';
+                });
+            } else {
+                console.error('create-project button not found');
+            }
+
+            // Import Project
+            const importBtn = document.getElementById('import-project');
+            if (importBtn) {
+                console.log('Found import-project button, adding click handler');
+                importBtn.addEventListener('click', function(e) {
+                    console.log('Import project button clicked');
+                    e.preventDefault();
+                    window.location.href = '/projects/import';
+                });
+            } else {
+                console.error('import-project button not found');
+            }
+
+            // Clone Repository
+            const cloneBtn = document.getElementById('clone-project');
+            if (cloneBtn) {
+                console.log('Found clone-project button, adding click handler');
+                cloneBtn.addEventListener('click', function(e) {
+                    console.log('Clone project button clicked');
+                    e.preventDefault();
+                    window.location.href = '/projects/clone';
+                });
+            } else {
+                console.error('clone-project button not found');
+            }
+
+            // New Project Header Button
+            const newProjectHeaderBtn = document.getElementById('new-project-header');
+            if (newProjectHeaderBtn) {
+                console.log('Found new-project-header button, adding click handler');
+                newProjectHeaderBtn.addEventListener('click', function(e) {
+                    console.log('New project header button clicked');
+                    e.preventDefault();
+                    window.location.href = '/projects/create';
+                });
+            } else {
+                console.error('new-project-header button not found');
+            }
+
+            // Refresh Projects Button
+            const refreshBtn = document.getElementById('refresh-projects');
+            if (refreshBtn) {
+                console.log('Found refresh-projects button, adding click handler');
+                refreshBtn.addEventListener('click', function(e) {
+                    console.log('Refresh projects button clicked');
+                    e.preventDefault();
+                    loadProjects();
+                });
+            } else {
+                console.error('refresh-projects button not found');
+            }
+
+            // Create First Project Button (in empty state)
+            const createFirstBtn = document.getElementById('create-first-project');
+            if (createFirstBtn) {
+                console.log('Found create-first-project button, adding click handler');
+                createFirstBtn.addEventListener('click', function(e) {
+                    console.log('Create first project button clicked');
+                    e.preventDefault();
+                    window.location.href = '/projects/create';
+                });
+            } else {
+                console.log('create-first-project button not found (this is normal if projects exist)');
+            }
+
+            // Template buttons - they're now anchor links, so they work by default
+            const templateButtons = document.querySelectorAll('.template-card .btn');
+            console.log('Found ' + templateButtons.length + ' template buttons (now as anchor links)');
+
+            console.log('All action handlers set up successfully');
+        }
+
         function loadProjects() {
+            console.log('loadProjects() called');
             fetch('/api/projects')
-                .then(response => response.json())
+                .then(response => {
+                    console.log('API response received:', response.status);
+                    return response.json();
+                })
                 .then(result => {
+                    console.log('API result:', result);
                     if (result.success) {
+                        console.log('Projects found:', result.data.length);
                         displayProjects(result.data);
                         updateProjectStats(result.data);
+                    } else {
+                        console.error('API returned error:', result.error);
+                        showEmptyState();
                     }
                 })
                 .catch(error => {
@@ -309,6 +438,19 @@ const pageDescription = 'Create, manage, and monitor your development projects w
 
             if (projects.length === 0) {
                 emptyState.style.display = 'flex';
+                // Re-setup the create first project button handler since it's now visible
+                setTimeout(() => {
+                    const createFirstBtn = document.getElementById('create-first-project');
+                    if (createFirstBtn && !createFirstBtn.hasAttribute('data-handler-added')) {
+                        console.log('Adding handler to create-first-project button');
+                        createFirstBtn.addEventListener('click', function(e) {
+                            console.log('Create first project button clicked');
+                            e.preventDefault();
+                            window.location.href = '/projects/create';
+                        });
+                        createFirstBtn.setAttribute('data-handler-added', 'true');
+                    }
+                }, 100);
                 return;
             }
 
@@ -325,52 +467,75 @@ const pageDescription = 'Create, manage, and monitor your development projects w
             const card = document.createElement('div');
             card.className = 'card';
 
-            const statusBadge = getStatusBadge(project.status);
-            const lastActivity = project.last_activity ? new Date(project.last_activity).toLocaleDateString() : 'Never';
+            const statusBadge = getStatusBadge(project.projectStatus || project.status);
+            const priorityBadge = getPriorityBadge(project.priority);
+            const lastActivity = project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : 'Never';
+            const projectPath = project.targetFolder || project.path || 'No path set';
 
-            card.innerHTML = \`
-                <div class="card-header">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h3 class="card-title">
-                            <i class="ti ti-folder"></i>
-                            \${project.name}
-                        </h3>
-                        <span class="badge \${statusBadge.class}">\${statusBadge.text}</span>
-                    </div>
-                </div>
-                <div class="project-details">
-                    <div class="detail-item">
-                        <span class="detail-label">Type:</span>
-                        <span class="detail-value">\${project.type || 'Unknown'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Status:</span>
-                        <span class="detail-value">\${project.status || 'Unknown'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Last Activity:</span>
-                        <span class="detail-value">\${lastActivity}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Path:</span>
-                        <span class="detail-value" title="\${project.path}">\${truncatePath(project.path)}</span>
-                    </div>
-                </div>
-                <div style="margin-top: var(--space-md); display: flex; gap: var(--space-sm);">
-                    <button class="btn btn-primary btn-sm" onclick="openProject('\${project.id}')">
-                        <i class="ti ti-code"></i>
-                        Open
-                    </button>
-                    <button class="btn btn-secondary btn-sm" onclick="editProject('\${project.id}')">
-                        <i class="ti ti-settings"></i>
-                        Settings
-                    </button>
-                    <button class="btn btn-secondary btn-sm" onclick="deleteProject('\${project.id}')">
-                        <i class="ti ti-trash"></i>
-                        Delete
-                    </button>
-                </div>
-            \`;
+            card.innerHTML =
+                '<div class="card-header">' +
+                    '<div style="display: flex; justify-content: space-between; align-items: center;">' +
+                        '<h3 class="card-title">' +
+                            '<i class="ti ti-folder"></i>' +
+                            project.name +
+                        '</h3>' +
+                        '<div style="display: flex; gap: var(--space-xs);">' +
+                            '<span class="badge ' + priorityBadge.class + '">' + priorityBadge.text + '</span>' +
+                            '<span class="badge ' + statusBadge.class + '">' + statusBadge.text + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="project-details">' +
+                    '<div class="detail-item">' +
+                        '<span class="detail-label">Type:</span>' +
+                        '<span class="detail-value">' + (project.type || 'Web App') + '</span>' +
+                    '</div>' +
+                    '<div class="detail-item">' +
+                        '<span class="detail-label">Priority:</span>' +
+                        '<span class="detail-value">' + (project.priority || 'Medium') + '</span>' +
+                    '</div>' +
+                    '<div class="detail-item">' +
+                        '<span class="detail-label">Last Modified:</span>' +
+                        '<span class="detail-value">' + lastActivity + '</span>' +
+                    '</div>' +
+                    '<div class="detail-item">' +
+                        '<span class="detail-label">Path:</span>' +
+                        '<span class="detail-value" title="' + projectPath + '">' + truncatePath(projectPath) + '</span>' +
+                    '</div>' +
+                    '<div class="detail-item">' +
+                        '<span class="detail-label">Claude:</span>' +
+                        '<span class="detail-value">' + (project.claudeConfig?.enabled ? 'Enabled' : 'Disabled') + '</span>' +
+                    '</div>' +
+                    '<div class="detail-item">' +
+                        '<span class="detail-label">BMAD:</span>' +
+                        '<span class="detail-value">' + (project.bmadConfig?.enabled ? 'Enabled' : 'Disabled') + '</span>' +
+                    '</div>' +
+                '</div>' +
+                (project.description ?
+                    '<div class="project-description">' +
+                        '<p>' + truncateText(project.description, 120) + '</p>' +
+                    '</div>' : ''
+                ) +
+                '<div style="margin-top: var(--space-md); display: flex; gap: var(--space-sm); flex-wrap: wrap;">' +
+                    '<button class="btn btn-primary btn-sm" onclick="openProject(\'' + project.id + '\')">' +
+                        '<i class="ti ti-code"></i>' +
+                        'Open' +
+                    '</button>' +
+                    '<button class="btn btn-secondary btn-sm" onclick="editProject(\'' + project.id + '\')">' +
+                        '<i class="ti ti-settings"></i>' +
+                        'Edit' +
+                    '</button>' +
+                    (project.bmadConfig?.enabled ?
+                        '<button class="btn btn-info btn-sm" onclick="startBmad(\'' + project.id + '\')">' +
+                            '<i class="ti ti-robot"></i>' +
+                            'BMAD' +
+                        '</button>' : ''
+                    ) +
+                    '<button class="btn btn-secondary btn-sm" onclick="deleteProject(\'' + project.id + '\')">' +
+                        '<i class="ti ti-trash"></i>' +
+                        'Delete' +
+                    '</button>' +
+                '</div>';
 
             return card;
         }
@@ -380,14 +545,37 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 case 'active':
                     return { class: 'badge-success', text: 'Active' };
                 case 'paused':
-                    return { class: 'badge-secondary', text: 'Paused' };
+                    return { class: 'badge-warning', text: 'Paused' };
                 case 'completed':
                     return { class: 'badge-success', text: 'Completed' };
                 case 'archived':
                     return { class: 'badge-secondary', text: 'Archived' };
+                case 'maintenance':
+                    return { class: 'badge-info', text: 'Maintenance' };
                 default:
                     return { class: 'badge-secondary', text: 'Unknown' };
             }
+        }
+
+        function getPriorityBadge(priority) {
+            switch (priority) {
+                case 'critical':
+                    return { class: 'badge-error', text: 'Critical' };
+                case 'high':
+                    return { class: 'badge-warning', text: 'High' };
+                case 'medium':
+                    return { class: 'badge-info', text: 'Medium' };
+                case 'low':
+                    return { class: 'badge-secondary', text: 'Low' };
+                default:
+                    return { class: 'badge-info', text: 'Medium' };
+            }
+        }
+
+        function truncateText(text, maxLength) {
+            if (!text) return '';
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
         }
 
         function truncatePath(path) {
@@ -433,17 +621,16 @@ const pageDescription = 'Create, manage, and monitor your development projects w
         }
 
         function openProject(projectId) {
-            window.location.href = \`/workspace-vscode?project=\${projectId}\`;
+            window.location.href = '/workspace-vscode?project=' + projectId;
         }
 
         function editProject(projectId) {
-            // Implement edit functionality
-            alert('Edit project functionality not yet implemented');
+            window.location.href = '/projects/' + projectId + '/edit';
         }
 
         function deleteProject(projectId) {
             if (confirm('Are you sure you want to delete this project?')) {
-                fetch(\`/api/projects/\${projectId}\`, {
+                fetch('/api/projects/' + projectId, {
                     method: 'DELETE'
                 })
                 .then(response => response.json())
@@ -457,6 +644,27 @@ const pageDescription = 'Create, manage, and monitor your development projects w
                 .catch(error => {
                     console.error('Error deleting project:', error);
                     alert('Failed to delete project');
+                });
+            }
+        }
+
+        function startBmad(projectId) {
+            if (confirm('Start BMAD workflow for this project?')) {
+                fetch('/api/projects/' + projectId + '/bmad/start', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        alert('BMAD workflow started successfully!');
+                        loadProjects(); // Reload to show updated status
+                    } else {
+                        alert('Failed to start BMAD workflow: ' + result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error starting BMAD workflow:', error);
+                    alert('Failed to start BMAD workflow');
                 });
             }
         }

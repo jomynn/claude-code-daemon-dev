@@ -281,5 +281,61 @@
     "updatedAt": "2025-09-20T15:24:02.898Z",
     "status": "initialized",
     "terminalSessions": {}
+  },
+  {
+    "id": "proj-1758428977540-3gi347745",
+    "name": "Simple Todo",
+    "description": "Simple todo project",
+    "targetFolder": "/tmp/simple-todo",
+    "template": null,
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022",
+      "maxTokens": 4000,
+      "temperature": 0.7,
+      "context": "demo todo project list"
+    },
+    "bmadConfig": {
+      "enabled": true,
+      "workflow": "agile",
+      "agents": [
+        "dev",
+        "qa",
+        "pm",
+        "design"
+      ]
+    },
+    "settings": {
+      "initGit": true,
+      "createReadme": true,
+      "createGitignore": true
+    },
+    "createdAt": "2025-09-21T04:29:37.540Z",
+    "updatedAt": "2025-09-21T04:29:37.540Z",
+    "status": "initialized"
+  },
+  {
+    "id": "proj-1758429529145-p0rrxpq3z",
+    "name": "Test API Project",
+    "description": "Testing API submission",
+    "targetFolder": "/tmp/api-test",
+    "template": null,
+    "githubRepo": null,
+    "claudeConfig": {
+      "enabled": true,
+      "model": "claude-3-5-sonnet-20241022"
+    },
+    "bmadConfig": {
+      "enabled": false
+    },
+    "settings": {
+      "initGit": true,
+      "createReadme": true,
+      "createGitignore": true
+    },
+    "createdAt": "2025-09-21T04:38:49.145Z",
+    "updatedAt": "2025-09-21T04:38:49.145Z",
+    "status": "initialized"
   }
 ]

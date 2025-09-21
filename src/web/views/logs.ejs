@@ -1,406 +1,224 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
-    <link rel="stylesheet" href="/static/css/dashboard.css">
-    <style>
-        .logs-container {
-            padding: 20px;
-        }
+<%
+// Set layout variables
+const pageTitle = 'System Logs';
+const pageDescription = 'Monitor real-time system logs, errors, and debug information from your Claude Code Daemon.';
+%>
 
-        .logs-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .logs-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .logs-viewer {
-            background: #1e1e1e;
-            color: #d4d4d4;
-            font-family: 'Monaco', 'Menlo', monospace;
-            font-size: 12px;
-            padding: 15px;
-            border-radius: 5px;
-            height: 500px;
-            overflow-y: auto;
-            border: 1px solid #333;
-        }
-
-        .log-line {
-            margin-bottom: 2px;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-
-        .log-line.error {
-            color: #f14c4c;
-        }
-
-        .log-line.warn {
-            color: #ffcc02;
-        }
-
-        .log-line.info {
-            color: #22aaff;
-        }
-
-        .log-line.debug {
-            color: #888;
-        }
-
-        .logs-stats {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 15px;
-        }
-
-        .stat-card {
-            background: #f8f9fa;
-            padding: 10px 15px;
-            border-radius: 5px;
-            border: 1px solid #dee2e6;
-            text-align: center;
-            min-width: 100px;
-        }
-
-        .stat-value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #495057;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #6c757d;
-            margin-top: 5px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-primary {
-            background: #007bff;
-            color: white;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-small {
-            padding: 5px 10px;
-            font-size: 12px;
-        }
-
-        .status-live {
-            color: #28a745;
-            font-weight: bold;
-        }
-
-        .status-stopped {
-            color: #dc3545;
-            font-weight: bold;
-        }
-
-        .filter-controls {
-            margin-bottom: 10px;
-        }
-
-        .filter-controls select,
-        .filter-controls input {
-            padding: 5px 10px;
-            margin-right: 10px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-        }
-    </style>
-</head>
-<body>
-    <div class="logs-container">
-        <header>
-            <div class="header-top">
-                <h1>Container Logs</h1>
-                <div class="status-indicator">
-                    <span id="connection-status" class="status-dot"></span>
-                    <span>Live</span>
-                </div>
-            </div>
-            <div class="header-nav">
-                <%- include('partials/navigation') %>
-            </div>
-            <div class="logs-controls">
-                <span id="stream-status" class="status-stopped">●</span>
-                <button id="toggle-stream" class="btn btn-primary">Start Live Stream</button>
-                <button id="refresh-logs" class="btn btn-secondary">Refresh</button>
-                <button id="clear-logs" class="btn btn-secondary btn-small">Clear</button>
-            </div>
-        </header>
-
-        <div class="logs-stats">
-            <div class="stat-card">
-                <div class="stat-value" id="container-status">Checking...</div>
-                <div class="stat-label">Container Status</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="log-count">0</div>
-                <div class="stat-label">Log Lines</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="error-count">0</div>
-                <div class="stat-label">Errors</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="last-update">Never</div>
-                <div class="stat-label">Last Update</div>
-            </div>
+<%- include('partials/layout', {
+    title,
+    env,
+    currentPage,
+    pageTitle,
+    pageDescription,
+    body: `
+    <!-- Log Controls -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="ti ti-settings"></i>
+                Log Controls
+            </h2>
         </div>
-
-        <div class="filter-controls">
-            <select id="log-level">
-                <option value="all">All Levels</option>
-                <option value="error">Errors Only</option>
-                <option value="warn">Warnings</option>
-                <option value="info">Info</option>
-                <option value="debug">Debug</option>
-            </select>
-            <input type="text" id="search-filter" placeholder="Search logs..." />
-            <select id="log-limit">
-                <option value="50">Last 50 lines</option>
-                <option value="100" selected>Last 100 lines</option>
-                <option value="500">Last 500 lines</option>
-                <option value="1000">Last 1000 lines</option>
-            </select>
-        </div>
-
-        <div class="logs-viewer" id="logs-viewer">
-            <div class="log-line">Loading logs...</div>
+        <div class="grid grid-4">
+            <div class="form-group">
+                <label class="form-label">Log Level</label>
+                <select class="form-input" id="log-level">
+                    <option value="all">All Levels</option>
+                    <option value="error">Error</option>
+                    <option value="warn">Warning</option>
+                    <option value="info">Info</option>
+                    <option value="debug">Debug</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Source</label>
+                <select class="form-input" id="log-source">
+                    <option value="all">All Sources</option>
+                    <option value="api">API Server</option>
+                    <option value="daemon">Daemon</option>
+                    <option value="claude">Claude Code</option>
+                    <option value="bmad">BMAD</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Auto Refresh</label>
+                <select class="form-input" id="auto-refresh">
+                    <option value="5">5 seconds</option>
+                    <option value="10">10 seconds</option>
+                    <option value="30">30 seconds</option>
+                    <option value="0">Manual</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: var(--space-sm); align-items: end;">
+                <button class="btn btn-primary">
+                    <i class="ti ti-refresh"></i>
+                    Refresh
+                </button>
+                <button class="btn btn-secondary">
+                    <i class="ti ti-trash"></i>
+                    Clear
+                </button>
+            </div>
         </div>
     </div>
 
-    <script>
-        class LogsViewer {
-            constructor() {
-                this.isStreaming = false;
-                this.eventSource = null;
-                this.logs = [];
-                this.filteredLogs = [];
-                this.init();
-            }
+    <!-- Live Logs -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="ti ti-file-text"></i>
+                Live Logs
+            </h2>
+            <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                <span class="status-dot status-online"></span>
+                <span style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+                    Auto-updating every 5 seconds
+                </span>
+            </div>
+        </div>
+        <div class="logs-container">
+            <div class="log-entry log-info">
+                <span class="log-time">14:32:15</span>
+                <span class="log-level">INFO</span>
+                <span class="log-source">API</span>
+                <span class="log-message">Server started on port 5000</span>
+            </div>
+            <div class="log-entry log-success">
+                <span class="log-time">14:32:16</span>
+                <span class="log-level">INFO</span>
+                <span class="log-source">Daemon</span>
+                <span class="log-message">Claude Code Daemon initialized successfully</span>
+            </div>
+            <div class="log-entry log-warning">
+                <span class="log-time">14:32:18</span>
+                <span class="log-level">WARN</span>
+                <span class="log-source">Claude</span>
+                <span class="log-message">Rate limit approaching, 85% usage detected</span>
+            </div>
+            <div class="log-entry log-error">
+                <span class="log-time">14:32:20</span>
+                <span class="log-level">ERROR</span>
+                <span class="log-source">BMAD</span>
+                <span class="log-message">Failed to connect to agent: Connection timeout</span>
+            </div>
+            <div class="log-entry log-info">
+                <span class="log-time">14:32:22</span>
+                <span class="log-level">INFO</span>
+                <span class="log-source">API</span>
+                <span class="log-message">WebSocket client connected: 192.168.1.100</span>
+            </div>
+        </div>
+    </div>
 
-            init() {
-                this.setupEventListeners();
-                this.loadLogs();
-                this.updateContainerStatus();
-            }
+    <!-- Log Statistics -->
+    <div class="grid grid-4">
+        <div class="stat-card">
+            <div class="stat-value" id="total-logs">1,247</div>
+            <div class="stat-label">Total Logs Today</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="error-logs">12</div>
+            <div class="stat-label">Errors</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="warning-logs">45</div>
+            <div class="stat-label">Warnings</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="log-rate">2.3/s</div>
+            <div class="stat-label">Current Rate</div>
+        </div>
+    </div>
 
-            setupEventListeners() {
-                document.getElementById('toggle-stream').addEventListener('click', () => {
-                    this.toggleStream();
-                });
-
-                document.getElementById('refresh-logs').addEventListener('click', () => {
-                    this.loadLogs();
-                });
-
-                document.getElementById('clear-logs').addEventListener('click', () => {
-                    this.clearLogs();
-                });
-
-                document.getElementById('log-level').addEventListener('change', () => {
-                    this.filterLogs();
-                });
-
-                document.getElementById('search-filter').addEventListener('input', () => {
-                    this.filterLogs();
-                });
-
-                document.getElementById('log-limit').addEventListener('change', () => {
-                    this.loadLogs();
-                });
-            }
-
-            async loadLogs() {
-                try {
-                    const limit = document.getElementById('log-limit').value;
-                    const response = await fetch(`/api/logs/container?limit=${limit}`);
-                    const result = await response.json();
-
-                    if (result.success) {
-                        this.logs = result.data.logs.map(log => this.parseLogLine(log));
-                        this.updateStats();
-                        this.filterLogs();
-                    } else {
-                        this.displayError('Failed to load logs: ' + result.error);
-                    }
-                } catch (error) {
-                    this.displayError('Error loading logs: ' + error.message);
-                }
-            }
-
-            parseLogLine(logText) {
-                const timestamp = new Date();
-                let level = 'info';
-                let message = logText;
-
-                // Try to parse JSON logs
-                try {
-                    const parsed = JSON.parse(logText);
-                    if (parsed.level) level = parsed.level;
-                    if (parsed.message) message = parsed.message;
-                    if (parsed.timestamp) timestamp = new Date(parsed.timestamp);
-                } catch (e) {
-                    // Not JSON, parse as plain text
-                    if (logText.includes('ERROR') || logText.includes('error')) level = 'error';
-                    else if (logText.includes('WARN') || logText.includes('warn')) level = 'warn';
-                    else if (logText.includes('DEBUG') || logText.includes('debug')) level = 'debug';
-                }
-
-                return { timestamp, level, message, raw: logText };
-            }
-
-            filterLogs() {
-                const levelFilter = document.getElementById('log-level').value;
-                const searchFilter = document.getElementById('search-filter').value.toLowerCase();
-
-                this.filteredLogs = this.logs.filter(log => {
-                    if (levelFilter !== 'all' && log.level !== levelFilter) return false;
-                    if (searchFilter && !log.message.toLowerCase().includes(searchFilter)) return false;
-                    return true;
-                });
-
-                this.displayLogs();
-            }
-
-            displayLogs() {
-                const viewer = document.getElementById('logs-viewer');
-
-                if (this.filteredLogs.length === 0) {
-                    viewer.innerHTML = '<div class="log-line">No logs to display</div>';
-                    return;
-                }
-
-                const html = this.filteredLogs.map(log => {
-                    const timeStr = log.timestamp.toLocaleTimeString();
-                    return `<div class="log-line ${log.level}">[${timeStr}] ${log.message}</div>`;
-                }).join('');
-
-                viewer.innerHTML = html;
-                viewer.scrollTop = viewer.scrollHeight;
-            }
-
-            displayError(message) {
-                const viewer = document.getElementById('logs-viewer');
-                viewer.innerHTML = `<div class="log-line error">${message}</div>`;
-            }
-
-            toggleStream() {
-                if (this.isStreaming) {
-                    this.stopStream();
-                } else {
-                    this.startStream();
-                }
-            }
-
-            startStream() {
-                this.eventSource = new EventSource('/api/logs/stream');
-                this.isStreaming = true;
-
-                document.getElementById('toggle-stream').textContent = 'Stop Stream';
-                document.getElementById('stream-status').className = 'status-live';
-
-                this.eventSource.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-                    const log = this.parseLogLine(data.message);
-                    this.logs.push(log);
-
-                    // Keep only last 1000 logs
-                    if (this.logs.length > 1000) {
-                        this.logs = this.logs.slice(-1000);
-                    }
-
-                    this.updateStats();
-                    this.filterLogs();
-                };
-
-                this.eventSource.onerror = () => {
-                    this.stopStream();
-                    this.displayError('Stream connection lost');
-                };
-            }
-
-            stopStream() {
-                if (this.eventSource) {
-                    this.eventSource.close();
-                    this.eventSource = null;
-                }
-
-                this.isStreaming = false;
-                document.getElementById('toggle-stream').textContent = 'Start Live Stream';
-                document.getElementById('stream-status').className = 'status-stopped';
-            }
-
-            clearLogs() {
-                this.logs = [];
-                this.filteredLogs = [];
-                this.displayLogs();
-                this.updateStats();
-            }
-
-            updateStats() {
-                document.getElementById('log-count').textContent = this.logs.length;
-                document.getElementById('error-count').textContent =
-                    this.logs.filter(log => log.level === 'error').length;
-                document.getElementById('last-update').textContent =
-                    new Date().toLocaleTimeString();
-            }
-
-            async updateContainerStatus() {
-                try {
-                    const response = await fetch('/api/system/status');
-                    const result = await response.json();
-
-                    if (result.success) {
-                        document.getElementById('container-status').textContent = 'Running';
-                        document.getElementById('container-status').style.color = '#28a745';
-                    } else {
-                        document.getElementById('container-status').textContent = 'Unknown';
-                        document.getElementById('container-status').style.color = '#ffc107';
-                    }
-                } catch (error) {
-                    document.getElementById('container-status').textContent = 'Error';
-                    document.getElementById('container-status').style.color = '#dc3545';
-                }
-            }
+    <style>
+        .logs-container {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+            font-family: var(--font-mono);
+            font-size: var(--font-size-sm);
+            max-height: 500px;
+            overflow-y: auto;
         }
 
-        // Initialize logs viewer when page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            new LogsViewer();
-        });
-    </script>
-</body>
-</html>
+        .log-entry {
+            display: grid;
+            grid-template-columns: 80px 60px 80px 1fr;
+            gap: var(--space-md);
+            padding: var(--space-xs) var(--space-sm);
+            margin-bottom: var(--space-xs);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid transparent;
+            transition: var(--transition);
+        }
+
+        .log-entry:hover {
+            background: var(--surface-hover);
+        }
+
+        .log-info {
+            border-left-color: var(--info);
+        }
+
+        .log-success {
+            border-left-color: var(--success);
+        }
+
+        .log-warning {
+            border-left-color: var(--warning);
+        }
+
+        .log-error {
+            border-left-color: var(--error);
+        }
+
+        .log-time {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .log-level {
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .log-info .log-level {
+            color: var(--info);
+        }
+
+        .log-success .log-level {
+            color: var(--success);
+        }
+
+        .log-warning .log-level {
+            color: var(--warning);
+        }
+
+        .log-error .log-level {
+            color: var(--error);
+        }
+
+        .log-source {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .log-message {
+            color: var(--text-primary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-online {
+            background: var(--success);
+        }
+    </style>
+    `
+}) %>

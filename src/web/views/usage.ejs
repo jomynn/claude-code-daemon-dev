@@ -1,29 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
-    <link rel="stylesheet" href="/static/css/dashboard.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-</head>
-<body>
-    <div class="container">
-        <header>
-            <div class="header-top">
-                <h1>Usage Analytics</h1>
-                <div class="status-indicator">
-                    <span id="connection-status" class="status-dot"></span>
-                    <span>Live</span>
-                </div>
-            </div>
-            <div class="header-nav">
-                <%- include('partials/navigation') %>
-            </div>
-        </header>
+<%
+// Set layout variables
+const pageTitle = 'Usage Analytics';
+const pageDescription = 'Monitor your API usage, token consumption, and performance metrics over time.';
+const includeCharts = true;
+%>
 
-        <main>
+<%- include('partials/layout', {
+    title,
+    env,
+    currentPage,
+    pageTitle,
+    pageDescription,
+    includeCharts,
+    body: `
             <div class="usage-controls">
                 <div class="control-group">
                     <label for="time-range">Time Range:</label>
@@ -131,16 +120,8 @@
                     </tbody>
                 </table>
             </div>
-        </main>
-
-        <footer>
-            <p>Claude Code Daemon &copy; 2024 | Environment: <%= env %></p>
-        </footer>
-    </div>
-
-    <script src="/static/js/usage.js"></script>
-</body>
-</html>
+    `
+}) %>
 
 <style>
 .usage-controls {

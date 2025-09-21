@@ -1,271 +1,634 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
-    <link rel="stylesheet" href="/static/css/dashboard.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-</head>
-<body>
-    <div class="container">
-        <header>
-            <div class="header-top">
-                <h1>Claude Code Daemon Dashboard</h1>
-                <div class="status-indicator">
-                    <span id="connection-status" class="status-dot"></span>
-                    <span>Live</span>
-                </div>
+<%
+// Set layout variables
+const pageTitle = 'Dashboard';
+const pageDescription = 'Monitor your Claude Code Daemon performance and system metrics in real-time.';
+const includeCharts = true;
+%>
+
+<%- include('partials/layout', {
+    title,
+    env,
+    currentPage,
+    pageTitle,
+    pageDescription,
+    includeCharts,
+    body: `
+    <!-- Stats Grid -->
+    <div class="grid grid-4">
+        <div class="stat-card">
+            <div class="stat-value" id="current-tokens">0</div>
+            <div class="stat-label">Current Tokens</div>
+            <div class="stat-change positive" id="tokens-change">+0%</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value" id="requests-hour">0</div>
+            <div class="stat-label">Requests/Hour</div>
+            <div class="stat-change positive" id="requests-change">+0%</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value" id="usage-percent">0%</div>
+            <div class="stat-label">Usage Limit</div>
+            <div class="progress" style="margin-top: var(--space-sm);">
+                <div class="progress-fill" id="usage-progress" style="width: 0%"></div>
             </div>
-            <div class="header-nav">
-                <%- include('partials/navigation') %>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value" id="time-remaining">--</div>
+            <div class="stat-label">Time Remaining</div>
+            <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-xs);">
+                At current rate
             </div>
-        </header>
-
-        <main>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Current Usage</h3>
-                    <div class="stat-value" id="current-tokens">0</div>
-                    <div class="stat-label">Tokens</div>
-                    <div class="stat-change" id="tokens-change">+0%</div>
-                </div>
-
-                <div class="stat-card">
-                    <h3>Requests/Hour</h3>
-                    <div class="stat-value" id="requests-hour">0</div>
-                    <div class="stat-label">Requests</div>
-                    <div class="stat-change" id="requests-change">+0%</div>
-                </div>
-
-                <div class="stat-card">
-                    <h3>Usage Limit</h3>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="usage-progress" style="width: 0%"></div>
-                    </div>
-                    <div class="stat-label"><span id="usage-percent">0</span>% Used</div>
-                </div>
-
-                <div class="stat-card">
-                    <h3>Time Remaining</h3>
-                    <div class="stat-value" id="time-remaining">--</div>
-                    <div class="stat-label">Hours</div>
-                    <div class="stat-subtitle" id="limit-prediction">At current rate</div>
-                </div>
-            </div>
-
-            <!-- Active Workspace Status -->
-            <div class="workspace-status-section">
-                <h3>Active Workspace Status</h3>
-                <div class="workspace-grid">
-                    <div class="workspace-card">
-                        <div class="workspace-header">
-                            <h4>🎯 Current Project</h4>
-                            <span class="status-badge" id="project-status-badge">No Project</span>
-                        </div>
-                        <div class="workspace-details">
-                            <div class="detail-item">
-                                <span class="detail-label">Project Name:</span>
-                                <span class="detail-value" id="active-project-name">None selected</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Project Path:</span>
-                                <span class="detail-value" id="active-project-path">--</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Priority:</span>
-                                <span class="detail-value" id="active-project-priority">--</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Last Activity:</span>
-                                <span class="detail-value" id="active-project-activity">--</span>
-                            </div>
-                        </div>
-                        <div class="workspace-actions">
-                            <button id="open-workspace-btn" class="btn btn-small" disabled>Open Workspace</button>
-                        </div>
-                    </div>
-
-                    <div class="workspace-card">
-                        <div class="workspace-header">
-                            <h4>🤖 Claude Code Status</h4>
-                            <span class="status-badge stopped" id="claude-status-indicator">Stopped</span>
-                        </div>
-                        <div class="workspace-details">
-                            <div class="detail-item">
-                                <span class="detail-label">Session Status:</span>
-                                <span class="detail-value" id="claude-session-status">Not running</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Uptime:</span>
-                                <span class="detail-value" id="claude-session-uptime">00:00:00</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Model:</span>
-                                <span class="detail-value" id="claude-current-model">claude-3-5-sonnet-20241022</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Messages:</span>
-                                <span class="detail-value" id="claude-message-count">0</span>
-                            </div>
-                        </div>
-                        <div class="workspace-actions">
-                            <button id="start-claude-dashboard-btn" class="btn btn-small btn-success">Start Claude</button>
-                            <button id="stop-claude-dashboard-btn" class="btn btn-small btn-danger" disabled>Stop</button>
-                        </div>
-                    </div>
-
-                    <div class="workspace-card">
-                        <div class="workspace-header">
-                            <h4>⚡ BMAD Workflow</h4>
-                            <span class="status-badge stopped" id="bmad-status-indicator">Inactive</span>
-                        </div>
-                        <div class="workspace-details">
-                            <div class="detail-item">
-                                <span class="detail-label">Workflow Type:</span>
-                                <span class="detail-value" id="bmad-workflow-type">None</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Active Agents:</span>
-                                <span class="detail-value" id="bmad-active-agents">0</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Current Phase:</span>
-                                <span class="detail-value" id="bmad-current-phase">--</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Progress:</span>
-                                <span class="detail-value" id="bmad-progress">0%</span>
-                            </div>
-                        </div>
-                        <div class="workspace-actions">
-                            <button id="start-bmad-dashboard-btn" class="btn btn-small btn-primary" disabled>Start BMAD</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slack Connection Status -->
-            <div class="slack-connection-section">
-                <h3>Slack Integration Status</h3>
-                <div class="slack-connection-card">
-                    <div class="connection-header">
-                        <div class="connection-info">
-                            <h4>🔗 Slack Connection</h4>
-                            <span class="slack-status-badge disconnected" id="slack-connection-badge">Disconnected</span>
-                        </div>
-                        <div class="connection-actions">
-                            <button id="test-slack-connection" class="btn btn-small btn-secondary" disabled>Test Connection</button>
-                            <button id="configure-slack" class="btn btn-small btn-primary">Configure</button>
-                        </div>
-                    </div>
-                    <div class="connection-details">
-                        <div class="detail-grid">
-                            <div class="detail-item">
-                                <span class="detail-label">Bot Status:</span>
-                                <span class="detail-value" id="slack-bot-status">Not Connected</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Workspace:</span>
-                                <span class="detail-value" id="slack-workspace">--</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Channels:</span>
-                                <span class="detail-value" id="slack-channels-count">0</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Last Activity:</span>
-                                <span class="detail-value" id="slack-last-activity">Never</span>
-                            </div>
-                        </div>
-                        <div class="slack-features">
-                            <h5>Available Features:</h5>
-                            <div class="features-list">
-                                <span class="feature-item" data-feature="alerts">🚨 Alerts</span>
-                                <span class="feature-item" data-feature="status">📊 Status Updates</span>
-                                <span class="feature-item" data-feature="commands">⚡ Slash Commands</span>
-                                <span class="feature-item" data-feature="notifications">📢 Notifications</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions Panel -->
-            <div class="quick-actions-section">
-                <h3>Quick Actions</h3>
-                <div class="actions-grid">
-                    <button class="action-btn" id="create-project-action">
-                        <div class="action-icon">📁</div>
-                        <div class="action-title">New Project</div>
-                        <div class="action-desc">Create a new project</div>
-                    </button>
-                    <button class="action-btn" id="open-workspace-action">
-                        <div class="action-icon">🚀</div>
-                        <div class="action-title">Open Workspace</div>
-                        <div class="action-desc">Launch workspace interface</div>
-                    </button>
-                    <button class="action-btn" id="view-projects-action">
-                        <div class="action-icon">📊</div>
-                        <div class="action-title">Manage Projects</div>
-                        <div class="action-desc">View and manage all projects</div>
-                    </button>
-                    <button class="action-btn" id="view-logs-action">
-                        <div class="action-icon">📋</div>
-                        <div class="action-title">View Logs</div>
-                        <div class="action-desc">Check system logs</div>
-                    </button>
-                </div>
-            </div>
-
-            <div class="charts-grid">
-                <div class="chart-container">
-                    <h3>Usage Trend (24 Hours)</h3>
-                    <canvas id="usage-chart"></canvas>
-                </div>
-
-                <div class="chart-container">
-                    <h3>Request Rate</h3>
-                    <canvas id="request-chart"></canvas>
-                </div>
-            </div>
-
-            <div class="alerts-section">
-                <h3>Recent Alerts</h3>
-                <div id="alerts-list" class="alerts-list">
-                    <!-- Alerts will be populated here -->
-                </div>
-            </div>
-
-            <div class="system-info">
-                <h3>System Status</h3>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">Daemon Status:</span>
-                        <span class="info-value" id="daemon-status">Running</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Uptime:</span>
-                        <span class="info-value" id="uptime">0h 0m</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Memory Usage:</span>
-                        <span class="info-value" id="memory-usage">0 MB</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Version:</span>
-                        <span class="info-value">1.0.0</span>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <footer>
-            <p>Claude Code Daemon &copy; 2024 | Environment: <%= env %></p>
-        </footer>
+        </div>
     </div>
 
-    <script src="/static/js/dashboard.js"></script>
-</body>
-</html>
+    <!-- Active Workspace Status -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="ti ti-layout-dashboard"></i>
+                Active Workspace Status
+            </h2>
+        </div>
+        <div class="grid grid-3">
+            <div class="card">
+                <div class="card-header">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="card-title">
+                            <i class="ti ti-target"></i>
+                            Current Project
+                        </h3>
+                        <span class="badge badge-secondary" id="project-status-badge">No Project</span>
+                    </div>
+                </div>
+                <div class="workspace-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Project Name:</span>
+                        <span class="detail-value" id="active-project-name">None selected</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Project Path:</span>
+                        <span class="detail-value" id="active-project-path">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Priority:</span>
+                        <span class="detail-value" id="active-project-priority">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Last Activity:</span>
+                        <span class="detail-value" id="active-project-activity">--</span>
+                    </div>
+                </div>
+                <div style="margin-top: var(--space-md);">
+                    <button id="open-workspace-btn" class="btn btn-primary btn-sm" disabled>
+                        <i class="ti ti-external-link"></i>
+                        Open Workspace
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="card-title">
+                            <i class="ti ti-robot"></i>
+                            Claude Code Status
+                        </h3>
+                        <span class="badge badge-error" id="claude-status-indicator">Stopped</span>
+                    </div>
+                </div>
+                <div class="workspace-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Session Status:</span>
+                        <span class="detail-value" id="claude-session-status">Not running</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Uptime:</span>
+                        <span class="detail-value" id="claude-session-uptime">00:00:00</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Model:</span>
+                        <span class="detail-value" id="claude-current-model">claude-3-5-sonnet</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Messages:</span>
+                        <span class="detail-value" id="claude-message-count">0</span>
+                    </div>
+                </div>
+                <div style="margin-top: var(--space-md); display: flex; gap: var(--space-sm);">
+                    <button id="start-claude-dashboard-btn" class="btn btn-primary btn-sm">
+                        <i class="ti ti-play"></i>
+                        Start
+                    </button>
+                    <button id="stop-claude-dashboard-btn" class="btn btn-secondary btn-sm" disabled>
+                        <i class="ti ti-stop"></i>
+                        Stop
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="card-title">
+                            <i class="ti ti-bolt"></i>
+                            BMAD Workflow
+                        </h3>
+                        <span class="badge badge-secondary" id="bmad-status-indicator">Inactive</span>
+                    </div>
+                </div>
+                <div class="workspace-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Workflow Type:</span>
+                        <span class="detail-value" id="bmad-workflow-type">None</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Active Agents:</span>
+                        <span class="detail-value" id="bmad-active-agents">0</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Current Phase:</span>
+                        <span class="detail-value" id="bmad-current-phase">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Progress:</span>
+                        <span class="detail-value" id="bmad-progress">0%</span>
+                    </div>
+                </div>
+                <div style="margin-top: var(--space-md);">
+                    <button id="start-bmad-dashboard-btn" class="btn btn-primary btn-sm" disabled>
+                        <i class="ti ti-play"></i>
+                        Start BMAD
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slack Integration -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="ti ti-brand-slack"></i>
+                Slack Integration Status
+            </h2>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg);">
+            <div style="display: flex; align-items: center; gap: var(--space-md);">
+                <span class="badge badge-error" id="slack-connection-badge">Disconnected</span>
+                <span id="slack-workspace" style="color: var(--text-secondary);">No workspace connected</span>
+            </div>
+            <div style="display: flex; gap: var(--space-sm);">
+                <button id="test-slack-connection" class="btn btn-secondary btn-sm" disabled>
+                    <i class="ti ti-wifi"></i>
+                    Test Connection
+                </button>
+                <button id="configure-slack" class="btn btn-primary btn-sm">
+                    <i class="ti ti-settings"></i>
+                    Configure
+                </button>
+            </div>
+        </div>
+        <div class="grid grid-4">
+            <div class="detail-item">
+                <span class="detail-label">Bot Status:</span>
+                <span class="detail-value" id="slack-bot-status">Not Connected</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Channels:</span>
+                <span class="detail-value" id="slack-channels-count">0</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Last Activity:</span>
+                <span class="detail-value" id="slack-last-activity">Never</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Features:</span>
+                <span class="detail-value">Alerts, Status, Commands</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="ti ti-zap"></i>
+                Quick Actions
+            </h2>
+        </div>
+        <div class="grid grid-4">
+            <button class="action-card" id="create-project-action">
+                <div class="action-icon">
+                    <i class="ti ti-folder-plus"></i>
+                </div>
+                <div class="action-title">New Project</div>
+                <div class="action-desc">Create a new project</div>
+            </button>
+            <button class="action-card" id="open-workspace-action">
+                <div class="action-icon">
+                    <i class="ti ti-rocket"></i>
+                </div>
+                <div class="action-title">Open Workspace</div>
+                <div class="action-desc">Launch workspace interface</div>
+            </button>
+            <button class="action-card" id="view-projects-action">
+                <div class="action-icon">
+                    <i class="ti ti-folders"></i>
+                </div>
+                <div class="action-title">Manage Projects</div>
+                <div class="action-desc">View and manage all projects</div>
+            </button>
+            <button class="action-card" id="view-logs-action">
+                <div class="action-icon">
+                    <i class="ti ti-file-text"></i>
+                </div>
+                <div class="action-title">View Logs</div>
+                <div class="action-desc">Check system logs</div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-2">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="ti ti-chart-line"></i>
+                    Usage Trend (24 Hours)
+                </h3>
+            </div>
+            <div style="position: relative; height: 300px;">
+                <canvas id="usage-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="ti ti-activity"></i>
+                    Request Rate
+                </h3>
+            </div>
+            <div style="position: relative; height: 300px;">
+                <canvas id="request-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Alerts -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="ti ti-bell"></i>
+                Recent Alerts
+            </h2>
+        </div>
+        <div id="alerts-list" class="alerts-list">
+            <div class="alert alert-info">
+                <i class="ti ti-info-circle"></i>
+                System initialized successfully
+            </div>
+        </div>
+    </div>
+
+    <!-- System Status -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="ti ti-server"></i>
+                System Status
+            </h2>
+        </div>
+        <div class="grid grid-4">
+            <div class="detail-item">
+                <span class="detail-label">Daemon Status:</span>
+                <span class="detail-value success" id="daemon-status">Running</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Uptime:</span>
+                <span class="detail-value" id="uptime">0h 0m</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Memory Usage:</span>
+                <span class="detail-value" id="memory-usage">0 MB</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Version:</span>
+                <span class="detail-value">1.0.0</span>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Dashboard-specific styles */
+        .workspace-details {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-xs) 0;
+            border-bottom: 1px solid var(--border-muted);
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+        }
+
+        .detail-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .detail-value.success {
+            color: var(--success);
+        }
+
+        .badge {
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .badge-secondary {
+            background: var(--bg-quaternary);
+            color: var(--text-secondary);
+        }
+
+        .badge-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .badge-error {
+            background: var(--error);
+            color: white;
+        }
+
+        .action-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+            align-items: center;
+        }
+
+        .action-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .action-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        }
+
+        .action-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .action-desc {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .alerts-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+        }
+
+        @media (max-width: 768px) {
+            .grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .grid-4 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script>
+        // Dashboard-specific JavaScript
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            loadDashboardData();
+            setupEventListeners();
+            startRealTimeUpdates();
+        });
+
+        function initializeCharts() {
+            // Usage Chart
+            const usageCtx = document.getElementById('usage-chart').getContext('2d');
+            window.usageChart = new Chart(usageCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Token Usage',
+                        data: [],
+                        borderColor: '#2f81f7',
+                        backgroundColor: 'rgba(47, 129, 247, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#30363d'
+                            },
+                            ticks: {
+                                color: '#7d8590'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: '#30363d'
+                            },
+                            ticks: {
+                                color: '#7d8590'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Request Chart
+            const requestCtx = document.getElementById('request-chart').getContext('2d');
+            window.requestChart = new Chart(requestCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Requests',
+                        data: [],
+                        backgroundColor: 'rgba(47, 129, 247, 0.8)',
+                        borderColor: '#2f81f7',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#30363d'
+                            },
+                            ticks: {
+                                color: '#7d8590'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: '#30363d'
+                            },
+                            ticks: {
+                                color: '#7d8590'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function loadDashboardData() {
+            // Load initial data
+            fetch('/api/usage/current')
+                .then(response => response.json())
+                .then(data => updateUsageStats(data))
+                .catch(error => console.error('Error loading usage data:', error));
+        }
+
+        function updateUsageStats(data) {
+            document.getElementById('current-tokens').textContent = data.tokens || 0;
+            document.getElementById('requests-hour').textContent = data.requestsPerHour || 0;
+            document.getElementById('usage-percent').textContent = data.usagePercent || 0;
+
+            const progressBar = document.getElementById('usage-progress');
+            progressBar.style.width = (data.usagePercent || 0) + '%';
+        }
+
+        function setupEventListeners() {
+            // Quick action buttons
+            document.getElementById('create-project-action').addEventListener('click', () => {
+                window.location.href = '/projects?action=create';
+            });
+
+            document.getElementById('open-workspace-action').addEventListener('click', () => {
+                window.location.href = '/workspace-vscode';
+            });
+
+            document.getElementById('view-projects-action').addEventListener('click', () => {
+                window.location.href = '/projects';
+            });
+
+            document.getElementById('view-logs-action').addEventListener('click', () => {
+                window.location.href = '/logs';
+            });
+
+            document.getElementById('configure-slack').addEventListener('click', () => {
+                window.location.href = '/slack-config';
+            });
+        }
+
+        function startRealTimeUpdates() {
+            // Update every 30 seconds
+            setInterval(loadDashboardData, 30000);
+        }
+
+        // Socket.IO event listeners
+        if (window.socket) {
+            socket.on('usage-update', updateUsageStats);
+
+            socket.on('alert', (alert) => {
+                addAlert(alert);
+            });
+        }
+
+        function addAlert(alert) {
+            const alertsList = document.getElementById('alerts-list');
+            const alertElement = document.createElement('div');
+            alertElement.className = \`alert alert-\${alert.type || 'info'}\`;
+            alertElement.innerHTML = \`
+                <i class="ti ti-\${getAlertIcon(alert.type)}"></i>
+                \${alert.message}
+            \`;
+            alertsList.insertBefore(alertElement, alertsList.firstChild);
+
+            // Remove old alerts if more than 5
+            while (alertsList.children.length > 5) {
+                alertsList.removeChild(alertsList.lastChild);
+            }
+        }
+
+        function getAlertIcon(type) {
+            switch (type) {
+                case 'success': return 'check-circle';
+                case 'warning': return 'alert-triangle';
+                case 'error': return 'x-circle';
+                default: return 'info-circle';
+            }
+        }
+    </script>
+    `
+}) %>

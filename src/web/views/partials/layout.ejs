@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons@latest/icons.min.css">
+
+    <!-- Global Modern Theme -->
+    <link rel="stylesheet" href="/static/css/modern-theme.css">
+
+    <!-- Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <!-- Chart.js if needed -->
+    <% if (typeof includeCharts !== 'undefined' && includeCharts) { %>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <% } %>
+
+    <!-- Page-specific CSS -->
+    <% if (typeof customCSS !== 'undefined') { %>
+    <link rel="stylesheet" href="/static/css/<%= customCSS %>">
+    <% } %>
+</head>
+<body>
+    <div class="page-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="container">
+                <div class="header-content">
+                    <div class="header-title">
+                        <div class="logo">
+                            <i class="ti ti-code icon-animated"></i>
+                        </div>
+                        <h1>Claude Code Daemon</h1>
+                    </div>
+                    <div class="header-actions">
+                        <div class="status-indicator">
+                            <span id="connection-status" class="status-dot status-online"></span>
+                            <span id="connection-text">Connected</span>
+                        </div>
+                        <a href="/workspace-vscode" class="btn btn-primary btn-sm">
+                            <i class="ti ti-code-plus"></i>
+                            Open VS Code
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav">
+            <div class="container">
+                <div class="nav-content">
+                    <a href="/" class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>">
+                        <i class="ti ti-dashboard <%= currentPage === 'dashboard' ? 'icon-animated' : '' %>"></i>
+                        Dashboard
+                    </a>
+                    <a href="/usage" class="nav-link <%= currentPage === 'usage' ? 'active' : '' %>">
+                        <i class="ti ti-chart-line <%= currentPage === 'usage' ? 'icon-animated' : '' %>"></i>
+                        Usage Analytics
+                    </a>
+                    <a href="/alerts" class="nav-link <%= currentPage === 'alerts' ? 'active' : '' %>">
+                        <i class="ti ti-bell <%= currentPage === 'alerts' ? 'icon-animated' : '' %>"></i>
+                        Alerts
+                    </a>
+                    <a href="/projects" class="nav-link <%= currentPage === 'projects' ? 'active' : '' %>">
+                        <i class="ti ti-folder <%= currentPage === 'projects' ? 'icon-animated' : '' %>"></i>
+                        Projects
+                    </a>
+                    <a href="/workspace" class="nav-link <%= currentPage === 'workspace' ? 'active' : '' %>">
+                        <i class="ti ti-layout-dashboard <%= currentPage === 'workspace' ? 'icon-animated' : '' %>"></i>
+                        Workspace
+                    </a>
+                    <a href="/logs" class="nav-link <%= currentPage === 'logs' ? 'active' : '' %>">
+                        <i class="ti ti-file-text <%= currentPage === 'logs' ? 'icon-animated' : '' %>"></i>
+                        Logs
+                    </a>
+                    <a href="/slack-config" class="nav-link <%= currentPage === 'slack-config' ? 'active' : '' %>">
+                        <i class="ti ti-brand-slack <%= currentPage === 'slack-config' ? 'icon-animated' : '' %>"></i>
+                        Slack Config
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main">
+            <div class="container">
+                <!-- Page Header -->
+                <% if (typeof pageTitle !== 'undefined' || typeof pageDescription !== 'undefined') { %>
+                <div class="page-header fade-in">
+                    <% if (typeof pageTitle !== 'undefined') { %>
+                    <h1 class="page-title"><%= pageTitle %></h1>
+                    <% } %>
+                    <% if (typeof pageDescription !== 'undefined') { %>
+                    <p class="page-description"><%= pageDescription %></p>
+                    <% } %>
+                </div>
+                <% } %>
+
+                <!-- Page Content -->
+                <div class="page-content">
+                    <%- body %>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                <div class="footer-content">
+                    <p>&copy; 2024 Claude Code Daemon. Built with ❤️ and AI.</p>
+                    <div class="footer-links">
+                        <span>Version 1.0.0</span>
+                        <span>•</span>
+                        <span>Environment: <%= env %></span>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Global JavaScript -->
+    <script>
+        // Initialize socket connection
+        const socket = io();
+        let isConnected = false;
+
+        // Connection status
+        socket.on('connect', () => {
+            isConnected = true;
+            updateConnectionStatus(true);
+        });
+
+        socket.on('disconnect', () => {
+            isConnected = false;
+            updateConnectionStatus(false);
+        });
+
+        function updateConnectionStatus(connected) {
+            const statusDot = document.getElementById('connection-status');
+            const statusText = document.getElementById('connection-text');
+
+            if (connected) {
+                statusDot.className = 'status-dot status-online';
+                statusText.textContent = 'Connected';
+            } else {
+                statusDot.className = 'status-dot status-offline';
+                statusText.textContent = 'Disconnected';
+            }
+        }
+
+        // Add fade-in animation to cards
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.card, .stat-card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.classList.add('fade-in');
+                }, index * 100);
+            });
+        });
+
+        // Global error handler
+        window.addEventListener('error', (e) => {
+            console.error('Global error:', e.error);
+        });
+    </script>
+
+    <!-- Page-specific JavaScript -->
+    <% if (typeof customJS !== 'undefined') { %>
+    <script src="/static/js/<%= customJS %>"></script>
+    <% } %>
+
+    <style>
+        /* Footer Styles */
+        .footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: var(--space-lg) 0;
+            margin-top: auto;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+        }
+
+        .footer-links {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .logo {
+            width: 32px;
+            height: 32px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+
+        /* Page content spacing */
+        .page-content > * {
+            margin-bottom: var(--space-lg);
+        }
+
+        .page-content > *:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Enhanced animations */
+        .card {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: var(--transition);
+        }
+
+        .card.fade-in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            .footer-content {
+                flex-direction: column;
+                gap: var(--space-sm);
+                text-align: center;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: var(--space-md);
+            }
+        }
+    </style>
+</body>
+</html>

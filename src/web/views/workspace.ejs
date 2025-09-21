@@ -1,1249 +1,321 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
-    <link rel="stylesheet" href="/static/css/dashboard.css">
-    <link rel="stylesheet" href="/static/css/workspace.css">
-    <script src="https://cdn.jsdelivr.net/npm/xterm@4.19.0/lib/xterm.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@4.19.0/css/xterm.css" />
-    <script src="/socket.io/socket.io.js"></script>
-</head>
-<body>
-    <div class="workspace-container">
-        <header>
-            <div class="header-top">
-                <h1>Claude Code Workspace</h1>
-                <div class="status-indicator">
-                    <span id="connection-status" class="status-dot"></span>
-                    <span>Live</span>
-                </div>
+<%
+// Set layout variables
+const pageTitle = 'Workspace';
+const pageDescription = 'Interactive development workspace with terminal access and real-time collaboration.';
+%>
+
+<%- include('partials/layout', {
+    title,
+    env,
+    currentPage,
+    pageTitle,
+    pageDescription,
+    body: `
+    <!-- Workspace Actions -->
+    <div class="grid grid-3">
+        <button class="action-card" onclick="window.location.href='/workspace-vscode'">
+            <div class="action-icon icon-vscode">
+                <i class="ti ti-brand-vscode"></i>
             </div>
-            <div class="header-nav">
-                <%- include('partials/navigation') %>
+            <div class="action-title">VS Code Interface</div>
+            <div class="action-desc">Full-featured VS Code-like environment</div>
+        </button>
+        <button class="action-card" id="open-terminal">
+            <div class="action-icon icon-terminal">
+                <i class="ti ti-terminal"></i>
             </div>
-            <div class="workspace-controls">
-                <div class="project-selector-container">
-                    <select id="project-selector">
-                        <option value="">Select Project...</option>
-                    </select>
-                    <div class="project-selector-loading"></div>
-                    <span id="project-count-badge" class="project-count-badge" title="Total projects available" style="display: none;">0</span>
-                </div>
-                <button id="reload-projects-btn" class="btn btn-small btn-reload" title="Reload projects if dropdown is not showing all projects">🔄 Reload</button>
-                <button id="new-project-btn" class="btn">New Project</button>
-                <button id="bmad-quick-start-btn" class="btn btn-bmad">🚀 BMAD Quick Start</button>
-                <button id="brainstorm-btn" class="btn btn-brainstorm">💡 Brainstorm Project</button>
+            <div class="action-title">Terminal Access</div>
+            <div class="action-desc">Direct terminal access to your system</div>
+        </button>
+        <button class="action-card" id="claude-assistant">
+            <div class="action-icon icon-claude">
+                <i class="ti ti-robot"></i>
             </div>
-        </header>
-
-        <main class="workspace-main">
-            <!-- Session Recovery Notification -->
-            <div class="session-recovery-notification" id="session-recovery-notification" style="display: none;">
-                <div class="recovery-content">
-                    <div class="recovery-icon">🔄</div>
-                    <div class="recovery-info">
-                        <h4>Session Recovery Available</h4>
-                        <p>We found a previous session from <span id="recovery-time"></span> with project <span id="recovery-project"></span></p>
-                        <div class="recovery-actions">
-                            <button id="recover-session-btn" class="btn btn-primary btn-small">Restore Session</button>
-                            <button id="dismiss-recovery-btn" class="btn btn-secondary btn-small">Start Fresh</button>
-                        </div>
-                    </div>
-                    <button id="close-recovery-btn" class="btn-close">×</button>
-                </div>
-            </div>
-
-            <!-- Auto-save Status Indicator -->
-            <div class="auto-save-status" id="auto-save-status">
-                <span class="save-icon">💾</span>
-                <span class="save-text">Auto-save enabled</span>
-                <span class="save-time" id="last-save-time"></span>
-            </div>
-
-            <!-- Project Info Bar -->
-            <div class="project-info-bar" id="project-info-bar" style="display: none;">
-                <div class="project-details">
-                    <h3 id="current-project-name">No Project Selected</h3>
-                    <span id="current-project-path"></span>
-                    <div class="project-meta">
-                        <span id="project-created-at" class="project-meta-item"></span>
-                        <span id="project-last-activity" class="project-meta-item"></span>
-                    </div>
-                </div>
-                <div class="project-stats">
-                    <div class="stat-item">
-                        <span class="stat-label">Claude Status:</span>
-                        <span id="claude-status" class="status-badge">Stopped</span>
-                        <span id="claude-uptime" class="status-uptime" style="display: none;"></span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Terminals:</span>
-                        <span id="terminal-count">0</span>
-                        <span id="terminal-sessions" class="session-info"></span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">BMAD Agents:</span>
-                        <span id="bmad-agent-count">0</span>
-                        <span id="bmad-status" class="session-info"></span>
-                    </div>
-                </div>
-                <div class="session-actions">
-                    <button id="save-session-btn" class="btn-small" title="Save current session">💾 Save Session</button>
-                    <button id="export-session-btn" class="btn-small" title="Export session data">📤 Export</button>
-                    <button id="workspace-settings-btn" class="btn-small" title="Workspace settings">⚙️ Settings</button>
-                </div>
-            </div>
-
-            <!-- Session Data Panel -->
-            <div class="session-panel" id="session-panel" style="display: none;">
-                <div class="session-header">
-                    <h4>📊 Session Data</h4>
-                    <button id="close-session-panel" class="btn-close">×</button>
-                </div>
-                <div class="session-tabs">
-                    <button class="session-tab-btn active" data-tab="activity">Activity</button>
-                    <button class="session-tab-btn" data-tab="statistics">Statistics</button>
-                    <button class="session-tab-btn" data-tab="history">History</button>
-                </div>
-                <div class="session-content">
-                    <div class="session-tab-content active" id="session-activity">
-                        <div class="activity-timeline" id="activity-timeline">
-                            <div class="timeline-item">
-                                <span class="timeline-time">No activity yet</span>
-                                <span class="timeline-event">Start working on your project to see activity</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="session-tab-content" id="session-statistics">
-                        <div class="stats-grid">
-                            <div class="stat-card">
-                                <div class="stat-value" id="commands-sent">0</div>
-                                <div class="stat-label">Commands Sent</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-value" id="session-duration">0m</div>
-                                <div class="stat-label">Session Duration</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-value" id="files-modified">0</div>
-                                <div class="stat-label">Files Modified</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-value" id="terminal-commands">0</div>
-                                <div class="stat-label">Terminal Commands</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="session-tab-content" id="session-history">
-                        <div class="history-list" id="history-list">
-                            <div class="history-item">
-                                <div class="history-timestamp">Start your session to see history</div>
-                                <div class="history-action">Commands and actions will appear here</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Workspace Tabs -->
-            <div class="workspace-tabs">
-                <div class="tab-list">
-                    <button class="tab-btn active" data-tab="overview">Overview</button>
-                    <button class="tab-btn" data-tab="terminal">Terminal</button>
-                    <button class="tab-btn" data-tab="claude">Claude Code</button>
-                    <button class="tab-btn" data-tab="bmad">BMAD Method</button>
-                    <button class="tab-btn" data-tab="files">File Explorer</button>
-                </div>
-                <div class="tab-actions">
-                    <button id="session-data-btn" class="btn-small">📊 Session Data</button>
-                    <button id="split-view-btn" class="btn-small">Split View</button>
-                    <button id="fullscreen-btn" class="btn-small">Fullscreen</button>
-                </div>
-            </div>
-
-            <!-- Tab Content -->
-            <div class="workspace-content">
-                <!-- Overview Tab -->
-                <div class="tab-content active" id="overview-tab">
-                    <div class="overview-grid">
-                        <div class="overview-card">
-                            <h4>Quick Actions</h4>
-                            <div class="quick-actions">
-                                <button class="action-btn" onclick="workspaceManager.startClaude()">
-                                    <span class="icon">🤖</span>
-                                    Start Claude Code
-                                </button>
-                                <button class="action-btn" onclick="workspaceManager.openTerminal()">
-                                    <span class="icon">💻</span>
-                                    New Terminal
-                                </button>
-                                <button class="action-btn" onclick="workspaceManager.startBmad()">
-                                    <span class="icon">👥</span>
-                                    Start BMAD
-                                </button>
-                                <button class="action-btn" onclick="workspaceManager.openFiles()">
-                                    <span class="icon">📁</span>
-                                    Browse Files
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="overview-card">
-                            <h4>Recent Activity</h4>
-                            <div class="activity-feed" id="activity-feed">
-                                <div class="activity-item">
-                                    <span class="activity-time">Just now</span>
-                                    <span class="activity-text">Workspace loaded</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="overview-card">
-                            <h4>System Resources</h4>
-                            <div class="resource-monitor" id="resource-monitor">
-                                <div class="resource-item">
-                                    <span>CPU Usage:</span>
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" style="width: 25%"></div>
-                                    </div>
-                                    <span>25%</span>
-                                </div>
-                                <div class="resource-item">
-                                    <span>Memory:</span>
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" style="width: 60%"></div>
-                                    </div>
-                                    <span>60%</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="overview-card">
-                            <h4>BMAD Workflow Status</h4>
-                            <div class="workflow-status" id="workflow-status">
-                                <div class="phase-indicator">
-                                    <span class="phase active">Planning</span>
-                                    <span class="phase">Development</span>
-                                    <span class="phase">Testing</span>
-                                    <span class="phase">Review</span>
-                                    <span class="phase">Deployment</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Terminal Tab -->
-                <div class="tab-content" id="terminal-tab">
-                    <div class="terminal-workspace">
-                        <div class="terminal-sidebar">
-                            <h4>Terminal Sessions</h4>
-                            <button class="btn" onclick="workspaceManager.createNewTerminal()">+ New Terminal</button>
-                            <div class="terminal-list" id="terminal-list">
-                                <!-- Terminal sessions will be listed here -->
-                            </div>
-                        </div>
-                        <div class="terminal-main">
-                            <div class="terminal-tabs" id="terminal-tabs">
-                                <!-- Terminal tabs will be created here -->
-                            </div>
-                            <div class="terminal-container" id="terminal-container">
-                                <div class="no-terminal">
-                                    <h3>No Terminal Selected</h3>
-                                    <p>Create a new terminal or select an existing one</p>
-                                    <button class="btn" onclick="workspaceManager.createNewTerminal()">Create Terminal</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Claude Code Tab -->
-                <div class="tab-content" id="claude-tab">
-                    <div class="claude-workspace">
-                        <div class="claude-sidebar">
-                            <h4>Claude Code Control</h4>
-                            <div class="claude-status" id="claude-status-panel">
-                                <div class="status-item">
-                                    <span>Status:</span>
-                                    <span id="claude-running-status">Stopped</span>
-                                </div>
-                                <div class="status-item">
-                                    <span>Model:</span>
-                                    <span id="claude-model">claude-3-5-sonnet-20241022</span>
-                                </div>
-                                <div class="status-item">
-                                    <span>Uptime:</span>
-                                    <span id="claude-uptime">0:00:00</span>
-                                </div>
-                            </div>
-                            <div class="claude-controls">
-                                <button id="start-claude-btn" class="btn" title="Start Claude">🚀</button>
-                                <button id="hold-claude-btn" class="btn warning" disabled title="Hold">⏸️</button>
-                                <button id="resume-claude-btn" class="btn success" disabled style="display: none;" title="Resume">▶️</button>
-                                <button id="stop-claude-btn" class="btn danger" disabled title="Stop">🛑</button>
-                                <button id="restart-claude-btn" class="btn" disabled title="Restart">🔄</button>
-                            </div>
-                            <div class="claude-status-bar">
-                                <div class="status-indicator">
-                                    <span id="claude-status-badge" class="status-badge stopped">Stopped</span>
-                                    <span id="claude-uptime-display" class="uptime-display">00:00:00</span>
-                                </div>
-                                <div class="session-info">
-                                    <span id="claude-session-id" class="session-id"></span>
-                                    <span id="claude-last-activity" class="last-activity"></span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="claude-main">
-                            <div class="claude-chat" id="claude-chat">
-                                <div class="chat-messages" id="claude-messages">
-                                    <div class="welcome-message">
-                                        <h3>Welcome to Claude Code</h3>
-                                        <p>Start Claude Code to begin interactive development assistance</p>
-                                    </div>
-                                </div>
-                                <div class="chat-input">
-                                    <input type="text" id="claude-input" placeholder="Ask Claude anything..." disabled>
-                                    <button id="send-claude-btn" class="btn" disabled>📤</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- BMAD Method Tab -->
-                <div class="tab-content" id="bmad-tab">
-                    <div class="bmad-workspace">
-                        <div class="bmad-sidebar">
-                            <h4>BMAD Agents</h4>
-                            <button class="btn" onclick="workspaceManager.addBmadAgent()">+ Add Agent</button>
-                            <div class="agent-list" id="agent-list">
-                                <!-- BMAD agents will be listed here -->
-                            </div>
-                        </div>
-                        <div class="bmad-main">
-                            <div class="bmad-header">
-                                <h4>Multi-Agent Development</h4>
-                                <div class="workflow-controls">
-                                    <select id="bmad-workflow-select">
-                                        <option value="agile">Agile Development</option>
-                                        <option value="waterfall">Waterfall</option>
-                                        <option value="startup">Startup MVP</option>
-                                        <option value="enterprise">Enterprise</option>
-                                        <option value="maintenance">Maintenance</option>
-                                    </select>
-                                    <button class="btn" onclick="workspaceManager.startBmadWorkflow()">Start Workflow</button>
-                                </div>
-                            </div>
-                            <div class="bmad-content">
-                                <div class="agent-terminals" id="agent-terminals">
-                                    <!-- Agent-specific terminals will be created here -->
-                                </div>
-                                <div class="collaboration-panel">
-                                    <h5>Agent Collaboration</h5>
-                                    <div class="collaboration-feed" id="collaboration-feed">
-                                        <div class="collab-message">
-                                            <span class="agent-name">System</span>
-                                            <span class="message">BMAD workspace ready</span>
-                                            <span class="timestamp">Now</span>
-                                        </div>
-                                    </div>
-                                    <div class="collaboration-input">
-                                        <input type="text" placeholder="Coordinate with agents..." id="collab-input">
-                                        <button class="btn" onclick="workspaceManager.sendCollabMessage()">Send</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- File Explorer Tab -->
-                <div class="tab-content" id="files-tab">
-                    <div class="file-workspace">
-                        <div class="file-sidebar">
-                            <h4>File Explorer</h4>
-                            <div class="file-tree" id="file-tree">
-                                <!-- File tree will be populated here -->
-                            </div>
-                        </div>
-                        <div class="file-main">
-                            <div class="file-editor" id="file-editor">
-                                <div class="no-file-selected">
-                                    <h3>No File Selected</h3>
-                                    <p>Select a file from the explorer to view its contents</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
+            <div class="action-title">Claude Assistant</div>
+            <div class="action-desc">AI-powered coding assistance</div>
+        </button>
     </div>
 
-    <!-- New Project Creation Modal -->
-    <div id="new-project-modal" class="modal project-creation-modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Create New Project</h3>
-                <button class="modal-close" onclick="document.getElementById('new-project-modal').style.display='none'">&times;</button>
+    <!-- Active Workspace -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="ti ti-layout-dashboard"></i>
+                Active Workspace
+            </h2>
+            <div style="display: flex; gap: var(--space-sm);">
+                <span class="badge badge-success">Running</span>
+                <button class="btn btn-secondary btn-sm">
+                    <i class="ti ti-settings"></i>
+                    Configure
+                </button>
             </div>
-            <div class="modal-body">
-                <form id="new-project-form">
-                    <!-- Step 1: Basic Information -->
-                    <div class="step-section active" id="step-basic">
-                        <h4>Project Information</h4>
-                        <div class="form-group">
-                            <label for="project-name">Project Name *</label>
-                            <input type="text" id="project-name" name="name" required placeholder="My Awesome Project">
-                        </div>
-                        <div class="form-group">
-                            <label for="project-description">Description</label>
-                            <textarea id="project-description" name="description" placeholder="Brief description of your project"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="project-path">Project Directory *</label>
-                            <div class="path-input-group">
-                                <input type="text" id="project-path" name="targetFolder" required placeholder="/path/to/your/project">
-                                <button type="button" class="btn btn-small" onclick="workspaceManager.browseDirectory()">Browse</button>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="project-template">Project Template</label>
-                            <select id="project-template" name="template">
-                                <option value="">None (Empty Project)</option>
-                                <option value="node-express">Node.js + Express</option>
-                                <option value="react-app">React Application</option>
-                                <option value="vue-app">Vue.js Application</option>
-                                <option value="python-flask">Python + Flask</option>
-                                <option value="python-django">Python + Django</option>
-                                <option value="static-html">Static HTML/CSS/JS</option>
-                                <option value="typescript-node">TypeScript + Node.js</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Step 2: Claude Code Configuration -->
-                    <div class="step-section" id="step-claude">
-                        <h4>Claude Code Configuration</h4>
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="enable-claude" name="claudeEnabled" checked>
-                                Enable Claude Code Assistant
-                            </label>
-                        </div>
-                        <div id="claude-config" class="config-panel">
-                            <div class="form-group">
-                                <label for="claude-model">Claude Model</label>
-                                <select id="claude-model" name="claudeModel">
-                                    <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Recommended)</option>
-                                    <option value="claude-3-opus-20240229">Claude 3 Opus</option>
-                                    <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="claude-temperature">Temperature</label>
-                                <input type="range" id="claude-temperature" name="claudeTemperature" min="0" max="1" step="0.1" value="0.7">
-                                <span class="range-value">0.7</span>
-                            </div>
-                            <div class="form-group">
-                                <label for="claude-max-tokens">Max Tokens</label>
-                                <input type="number" id="claude-max-tokens" name="claudeMaxTokens" value="4000" min="1000" max="8000">
-                            </div>
-                            <div class="form-group">
-                                <label for="claude-context">Initial Context</label>
-                                <textarea id="claude-context" name="claudeContext" placeholder="Provide initial context about your project..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 3: BMAD Method Configuration -->
-                    <div class="step-section" id="step-bmad">
-                        <h4>BMAD Multi-Agent Development</h4>
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="enable-bmad" name="bmadEnabled">
-                                Enable BMAD Method
-                            </label>
-                        </div>
-                        <div id="bmad-config" class="config-panel" style="display: none;">
-                            <div class="form-group">
-                                <label for="bmad-workflow">Development Workflow</label>
-                                <select id="bmad-workflow" name="bmadWorkflow">
-                                    <option value="agile">Agile Development</option>
-                                    <option value="waterfall">Waterfall</option>
-                                    <option value="startup">Startup MVP</option>
-                                    <option value="enterprise">Enterprise</option>
-                                    <option value="maintenance">Maintenance</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Select Agents</label>
-                                <div class="agent-selection-grid">
-                                    <label class="checkbox-label agent-checkbox">
-                                        <input type="checkbox" name="bmadAgents" value="dev" checked>
-                                        <div class="agent-card">
-                                            <h5>Developer Agent</h5>
-                                            <p>Code writing, debugging, optimization</p>
-                                        </div>
-                                    </label>
-                                    <label class="checkbox-label agent-checkbox">
-                                        <input type="checkbox" name="bmadAgents" value="qa">
-                                        <div class="agent-card">
-                                            <h5>QA Agent</h5>
-                                            <p>Testing, validation, bug reporting</p>
-                                        </div>
-                                    </label>
-                                    <label class="checkbox-label agent-checkbox">
-                                        <input type="checkbox" name="bmadAgents" value="pm">
-                                        <div class="agent-card">
-                                            <h5>Project Manager</h5>
-                                            <p>Task coordination, timeline management</p>
-                                        </div>
-                                    </label>
-                                    <label class="checkbox-label agent-checkbox">
-                                        <input type="checkbox" name="bmadAgents" value="devops">
-                                        <div class="agent-card">
-                                            <h5>DevOps Agent</h5>
-                                            <p>Infrastructure, CI/CD, deployment</p>
-                                        </div>
-                                    </label>
-                                    <label class="checkbox-label agent-checkbox">
-                                        <input type="checkbox" name="bmadAgents" value="architect">
-                                        <div class="agent-card">
-                                            <h5>System Architect</h5>
-                                            <p>System design, technical decisions</p>
-                                        </div>
-                                    </label>
-                                    <label class="checkbox-label agent-checkbox">
-                                        <input type="checkbox" name="bmadAgents" value="security">
-                                        <div class="agent-card">
-                                            <h5>Security Agent</h5>
-                                            <p>Security assessment, compliance</p>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 4: Additional Settings -->
-                    <div class="step-section" id="step-settings">
-                        <h4>Additional Settings</h4>
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="init-git" name="initGit" checked>
-                                Initialize Git Repository
-                            </label>
-                        </div>
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="create-readme" name="createReadme" checked>
-                                Create README.md
-                            </label>
-                        </div>
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="create-gitignore" name="createGitignore" checked>
-                                Create .gitignore
-                            </label>
-                        </div>
-                        <div class="form-group">
-                            <label for="github-repo">GitHub Repository (Optional)</label>
-                            <input type="url" id="github-repo" name="githubRepo" placeholder="https://github.com/username/repo">
-                        </div>
-                    </div>
-                </form>
-
-                <!-- Progress Steps -->
-                <div class="progress-steps">
-                    <div class="step active" data-step="basic">
-                        <span class="step-number">1</span>
-                        <span class="step-label">Basic Info</span>
-                    </div>
-                    <div class="step" data-step="claude">
-                        <span class="step-number">2</span>
-                        <span class="step-label">Claude Code</span>
-                    </div>
-                    <div class="step" data-step="bmad">
-                        <span class="step-number">3</span>
-                        <span class="step-label">BMAD Method</span>
-                    </div>
-                    <div class="step" data-step="settings">
-                        <span class="step-number">4</span>
-                        <span class="step-label">Settings</span>
-                    </div>
+        </div>
+        <div class="workspace-info">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Current Project:</span>
+                    <span class="info-value">My Web Application</span>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="prev-step-btn" style="display: none;">Previous</button>
-                <button type="button" class="btn" id="next-step-btn">Next</button>
-                <button type="button" class="btn btn-primary" id="create-project-btn" style="display: none;">Create Project</button>
-                <button type="button" class="btn btn-secondary" onclick="document.getElementById('new-project-modal').style.display='none'">Cancel</button>
+                <div class="info-item">
+                    <span class="info-label">Working Directory:</span>
+                    <span class="info-value">/home/user/projects/webapp</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Git Branch:</span>
+                    <span class="info-value">main</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Session Duration:</span>
+                    <span class="info-value">2h 34m</span>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- BMAD Quick Start Modal -->
-    <div id="bmad-quick-start-modal" class="modal bmad-quick-start-modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>🚀 BMAD Quick Start</h3>
-                <button class="modal-close" onclick="workspaceManager.closeBmadQuickStartModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p>Choose a BMAD project template to get started quickly with multi-agent development:</p>
+    <!-- Quick Tools -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="ti ti-tools"></i>
+                Quick Tools
+            </h2>
+        </div>
+        <div class="grid grid-4">
+            <button class="tool-card">
+                <i class="ti ti-file-code icon-hover-scale" style="background: var(--gradient-info); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
+                <h4>Code Editor</h4>
+                <p>Open file editor</p>
+            </button>
+            <button class="tool-card">
+                <i class="ti ti-git-branch icon-hover-scale" style="background: var(--gradient-warning); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
+                <h4>Git Manager</h4>
+                <p>Version control</p>
+            </button>
+            <button class="tool-card">
+                <i class="ti ti-package icon-hover-scale" style="background: var(--gradient-success); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
+                <h4>Package Manager</h4>
+                <p>Manage dependencies</p>
+            </button>
+            <button class="tool-card">
+                <i class="ti ti-bug icon-hover-scale" style="background: var(--gradient-error); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
+                <h4>Debugger</h4>
+                <p>Debug your code</p>
+            </button>
+        </div>
+    </div>
 
-                <div class="bmad-templates-grid">
-                    <div class="bmad-template-card" data-template="startup-mvp">
-                        <div class="template-icon">🚀</div>
-                        <h4>Startup MVP</h4>
-                        <p>Rapid prototyping with lean development team</p>
-                        <div class="template-details">
-                            <div class="agents-preview">
-                                <span class="agent-badge">Product Manager</span>
-                                <span class="agent-badge">Fullstack Dev</span>
-                                <span class="agent-badge">UX Designer</span>
-                            </div>
-                            <div class="workflow-info">3-week MVP cycle</div>
-                        </div>
-                    </div>
-
-                    <div class="bmad-template-card" data-template="enterprise-app">
-                        <div class="template-icon">🏢</div>
-                        <h4>Enterprise Application</h4>
-                        <p>Large-scale development with full team structure</p>
-                        <div class="template-details">
-                            <div class="agents-preview">
-                                <span class="agent-badge">Tech Lead</span>
-                                <span class="agent-badge">Senior Dev</span>
-                                <span class="agent-badge">DevOps</span>
-                                <span class="agent-badge">Security</span>
-                                <span class="agent-badge">QA Lead</span>
-                            </div>
-                            <div class="workflow-info">Enterprise waterfall</div>
-                        </div>
-                    </div>
-
-                    <div class="bmad-template-card" data-template="agile-team">
-                        <div class="template-icon">⚡</div>
-                        <h4>Agile Development Team</h4>
-                        <p>Balanced team for iterative development</p>
-                        <div class="template-details">
-                            <div class="agents-preview">
-                                <span class="agent-badge">Scrum Master</span>
-                                <span class="agent-badge">Developer</span>
-                                <span class="agent-badge">QA Engineer</span>
-                                <span class="agent-badge">DevOps</span>
-                            </div>
-                            <div class="workflow-info">2-week sprints</div>
-                        </div>
-                    </div>
-
-                    <div class="bmad-template-card" data-template="data-science">
-                        <div class="template-icon">📊</div>
-                        <h4>Data Science Project</h4>
-                        <p>ML/AI project with specialized data team</p>
-                        <div class="template-details">
-                            <div class="agents-preview">
-                                <span class="agent-badge">Data Scientist</span>
-                                <span class="agent-badge">ML Engineer</span>
-                                <span class="agent-badge">Data Engineer</span>
-                            </div>
-                            <div class="workflow-info">Research & development</div>
-                        </div>
-                    </div>
-
-                    <div class="bmad-template-card" data-template="maintenance-team">
-                        <div class="template-icon">🔧</div>
-                        <h4>Maintenance & Support</h4>
-                        <p>Ongoing support and incremental improvements</p>
-                        <div class="template-details">
-                            <div class="agents-preview">
-                                <span class="agent-badge">Developer</span>
-                                <span class="agent-badge">Support Engineer</span>
-                                <span class="agent-badge">QA</span>
-                            </div>
-                            <div class="workflow-info">Issue-driven workflow</div>
-                        </div>
-                    </div>
-
-                    <div class="bmad-template-card" data-template="custom">
-                        <div class="template-icon">⚙️</div>
-                        <h4>Custom Setup</h4>
-                        <p>Configure your own team and workflow</p>
-                        <div class="template-details">
-                            <div class="agents-preview">
-                                <span class="agent-badge custom">Choose agents...</span>
-                            </div>
-                            <div class="workflow-info">Custom workflow</div>
-                        </div>
-                    </div>
+    <!-- Recent Activity -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="ti ti-clock"></i>
+                Recent Activity
+            </h2>
+        </div>
+        <div class="activity-list">
+            <div class="activity-item">
+                <div class="activity-icon status-icon-success">
+                    <i class="ti ti-file-plus"></i>
                 </div>
-
-                <div class="template-preview" id="template-preview" style="display: none;">
-                    <h4>Project Preview</h4>
-                    <div class="preview-content">
-                        <div class="project-info">
-                            <div class="form-group">
-                                <label for="bmad-project-name">Project Name</label>
-                                <input type="text" id="bmad-project-name" placeholder="My BMAD Project">
-                            </div>
-                            <div class="form-group">
-                                <label for="bmad-project-path">Project Directory</label>
-                                <input type="text" id="bmad-project-path" placeholder="/path/to/project">
-                            </div>
-                        </div>
-                        <div class="workflow-preview">
-                            <h5>Workflow Configuration</h5>
-                            <div id="workflow-details"></div>
-                        </div>
-                        <div class="agents-preview-detail">
-                            <h5>Team Members</h5>
-                            <div id="agents-details"></div>
-                        </div>
-                    </div>
+                <div class="activity-content">
+                    <div class="activity-title">Created new component: UserProfile.jsx</div>
+                    <div class="activity-time">2 minutes ago</div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="workspaceManager.closeBmadQuickStartModal()">Cancel</button>
-                <button type="button" class="btn btn-primary" id="create-bmad-project-btn" style="display: none;">Create BMAD Project</button>
+            <div class="activity-item">
+                <div class="activity-icon status-icon-info">
+                    <i class="ti ti-git-commit"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Committed changes: "Add user authentication"</div>
+                    <div class="activity-time">15 minutes ago</div>
+                </div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-icon status-icon-warning">
+                    <i class="ti ti-bug"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Fixed bug in authentication middleware</div>
+                    <div class="activity-time">1 hour ago</div>
+                </div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-icon status-icon-purple">
+                    <i class="ti ti-package"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Installed package: react-router-dom</div>
+                    <div class="activity-time">2 hours ago</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Project Brainstorming Modal -->
-    <div id="brainstorm-modal" class="modal" style="display: none;">
-        <div class="modal-content brainstorm-modal-content">
-            <div class="modal-header">
-                <h3>💡 Project Brainstorming</h3>
-                <span class="close-modal" onclick="workspaceManager.closeBrainstormModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="brainstorm-progress">
-                    <div class="progress-steps">
-                        <div class="step active" data-step="ideation">
-                            <span class="step-number">1</span>
-                            <span class="step-label">Ideation</span>
-                        </div>
-                        <div class="step" data-step="analysis">
-                            <span class="step-number">2</span>
-                            <span class="step-label">Analysis</span>
-                        </div>
-                        <div class="step" data-step="brief">
-                            <span class="step-number">3</span>
-                            <span class="step-label">Project Brief</span>
-                        </div>
-                        <div class="step" data-step="setup">
-                            <span class="step-number">4</span>
-                            <span class="step-label">Setup</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 1: Ideation -->
-                <div id="step-ideation" class="step-section active">
-                    <h4>💭 What's your project idea?</h4>
-                    <div class="ideation-section">
-                        <div class="idea-input-group">
-                            <label for="project-idea">Describe your project idea:</label>
-                            <textarea id="project-idea" placeholder="I want to build a web application that helps users track their fitness goals..." rows="4"></textarea>
-                        </div>
-
-                        <div class="idea-categories">
-                            <h5>Project Category (optional):</h5>
-                            <div class="category-tags">
-                                <div class="tag" data-category="web-app">🌐 Web App</div>
-                                <div class="tag" data-category="mobile-app">📱 Mobile App</div>
-                                <div class="tag" data-category="api">🔌 API Service</div>
-                                <div class="tag" data-category="data-science">📊 Data Science</div>
-                                <div class="tag" data-category="automation">🤖 Automation</div>
-                                <div class="tag" data-category="game">🎮 Game</div>
-                                <div class="tag" data-category="tool">🛠️ Tool/Utility</div>
-                                <div class="tag" data-category="other">❓ Other</div>
-                            </div>
-                        </div>
-
-                        <div class="idea-inspiration">
-                            <h5>Need inspiration? Try these prompts:</h5>
-                            <div class="inspiration-prompts">
-                                <button class="prompt-btn" onclick="workspaceManager.fillIdeaPrompt('A social platform for local communities to share resources')">🏘️ Community Platform</button>
-                                <button class="prompt-btn" onclick="workspaceManager.fillIdeaPrompt('An AI-powered productivity assistant for remote workers')">🤖 AI Assistant</button>
-                                <button class="prompt-btn" onclick="workspaceManager.fillIdeaPrompt('A marketplace for freelance services with integrated project management')">💼 Freelance Marketplace</button>
-                                <button class="prompt-btn" onclick="workspaceManager.fillIdeaPrompt('A fitness tracking app with social challenges and rewards')">💪 Fitness Tracker</button>
-                                <button class="prompt-btn" onclick="workspaceManager.fillIdeaPrompt('A sustainable living app that tracks carbon footprint and suggests eco-friendly alternatives')">🌱 Sustainability App</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 2: Analysis -->
-                <div id="step-analysis" class="step-section">
-                    <h4>🔍 Project Analysis</h4>
-                    <div class="analysis-section">
-                        <div class="analysis-results">
-                            <div class="analysis-card">
-                                <h5>💡 Enhanced Project Concept</h5>
-                                <div id="enhanced-concept" class="analysis-content">
-                                    <p>AI-generated enhanced description will appear here...</p>
-                                </div>
-                            </div>
-
-                            <div class="analysis-card">
-                                <h5>🎯 Target Audience</h5>
-                                <div id="target-audience" class="analysis-content">
-                                    <p>AI-identified target users and personas...</p>
-                                </div>
-                            </div>
-
-                            <div class="analysis-card">
-                                <h5>⚡ Key Features</h5>
-                                <div id="key-features" class="analysis-content">
-                                    <ul id="features-list">
-                                        <li>Feature suggestions will appear here...</li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <div class="analysis-card">
-                                <h5>🛠️ Technology Stack</h5>
-                                <div id="tech-stack" class="analysis-content">
-                                    <div class="tech-recommendations">
-                                        <div class="tech-category">
-                                            <strong>Frontend:</strong> <span id="frontend-tech">React, Vue.js</span>
-                                        </div>
-                                        <div class="tech-category">
-                                            <strong>Backend:</strong> <span id="backend-tech">Node.js, Python</span>
-                                        </div>
-                                        <div class="tech-category">
-                                            <strong>Database:</strong> <span id="database-tech">PostgreSQL, MongoDB</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="analysis-actions">
-                            <button class="btn btn-secondary" onclick="workspaceManager.regenerateAnalysis()">🔄 Regenerate Analysis</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 3: Project Brief -->
-                <div id="step-brief" class="step-section">
-                    <h4>📋 Generated Project Brief</h4>
-                    <div class="brief-section">
-                        <div class="brief-content">
-                            <div class="brief-document" id="project-brief-document">
-                                <h5>Project Overview</h5>
-                                <p id="brief-overview">Generated project overview...</p>
-
-                                <h5>Objectives</h5>
-                                <ul id="brief-objectives">
-                                    <li>Primary objective 1</li>
-                                    <li>Primary objective 2</li>
-                                </ul>
-
-                                <h5>Scope & Features</h5>
-                                <div id="brief-features">Feature list...</div>
-
-                                <h5>Technical Requirements</h5>
-                                <div id="brief-tech-requirements">Technical specifications...</div>
-
-                                <h5>Timeline Estimate</h5>
-                                <div id="brief-timeline">
-                                    <div class="timeline-phases">
-                                        <div class="timeline-phase">
-                                            <strong>Phase 1: Planning & Setup</strong> - 1 week
-                                        </div>
-                                        <div class="timeline-phase">
-                                            <strong>Phase 2: Core Development</strong> - 4-6 weeks
-                                        </div>
-                                        <div class="timeline-phase">
-                                            <strong>Phase 3: Testing & Deployment</strong> - 2 weeks
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="brief-actions">
-                            <button class="btn btn-secondary" onclick="workspaceManager.editBrief()">✏️ Edit Brief</button>
-                            <button class="btn btn-secondary" onclick="workspaceManager.exportBrief()">📄 Export Brief</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 4: Project Setup -->
-                <div id="step-setup" class="step-section">
-                    <h4>🚀 Ready to Start Development</h4>
-                    <div class="setup-section">
-                        <div class="setup-summary">
-                            <h5>Project Summary</h5>
-                            <div class="summary-card">
-                                <div class="summary-item">
-                                    <strong>Project Name:</strong> <span id="setup-project-name">Generated from idea</span>
-                                </div>
-                                <div class="summary-item">
-                                    <strong>Type:</strong> <span id="setup-project-type">Web Application</span>
-                                </div>
-                                <div class="summary-item">
-                                    <strong>Tech Stack:</strong> <span id="setup-tech-stack">React + Node.js</span>
-                                </div>
-                                <div class="summary-item">
-                                    <strong>Estimated Duration:</strong> <span id="setup-duration">6-8 weeks</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="setup-options">
-                            <h5>Development Approach</h5>
-                            <div class="approach-cards">
-                                <div class="approach-card" data-approach="night">
-                                    <h6>🌙 Night Mode Development</h6>
-                                    <p>Automatic development while you sleep</p>
-                                    <ul>
-                                        <li>Queue for overnight development</li>
-                                        <li>Wake up to completed project</li>
-                                        <li>Morning progress summary</li>
-                                    </ul>
-                                    <button class="btn btn-night" onclick="workspaceManager.queueForNightMode()">Queue for Night</button>
-                                </div>
-
-                                <div class="approach-card" data-approach="bmad">
-                                    <h6>🚀 BMAD Quick Start</h6>
-                                    <p>Multi-agent development with automated workflows</p>
-                                    <ul>
-                                        <li>AI-powered development team</li>
-                                        <li>Automated code generation</li>
-                                        <li>Built-in project management</li>
-                                    </ul>
-                                    <button class="btn btn-primary">Start with BMAD</button>
-                                </div>
-
-                                <div class="approach-card" data-approach="standard">
-                                    <h6>⚙️ Standard Setup</h6>
-                                    <p>Traditional project setup with your preferred tools</p>
-                                    <ul>
-                                        <li>Custom configuration</li>
-                                        <li>Choose your own tools</li>
-                                        <li>Manual development process</li>
-                                    </ul>
-                                    <button class="btn btn-secondary">Standard Setup</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="development-workflow">
-                            <!-- Development workflow will be populated by JavaScript -->
-                        </div>
-
-                        <div class="final-settings">
-                            <div class="setting-group">
-                                <label for="final-project-name">Project Name:</label>
-                                <input type="text" id="final-project-name" placeholder="Enter project name">
-                            </div>
-                            <div class="setting-group">
-                                <label for="final-project-path">Project Location:</label>
-                                <input type="text" id="final-project-path" placeholder="/Volumes/Extreme SSD/Workspace/my-project">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="workspaceManager.closeBrainstormModal()">Cancel</button>
-                <button type="button" class="btn btn-secondary" id="prev-brainstorm-step" onclick="workspaceManager.prevBrainstormStep()">Previous</button>
-                <button type="button" class="btn btn-primary" id="next-brainstorm-step" onclick="workspaceManager.nextBrainstormStep()">Analyze Idea</button>
-                <button type="button" class="btn btn-primary" id="create-from-brainstorm" onclick="workspaceManager.createProjectFromBrainstorm()" style="display: none;">Create Project</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Backup project loader in case main workspace.js fails
-        async function backupLoadProjects() {
-            console.log('🔧 Backup project loader executing...');
-            const selector = document.getElementById('project-selector');
-            if (!selector) {
-                console.log('❌ No project selector found');
-                return;
-            }
-
-            try {
-                selector.innerHTML = '<option value="">Loading projects...</option>';
-                const response = await fetch('/api/projects');
-                const result = await response.json();
-                console.log('✅ Backup loader got', result.data ? result.data.length : 0, 'projects');
-
-                if (result.success && result.data) {
-                    selector.innerHTML = '<option value="">Select Project...</option>';
-
-                    // Filter to only show active projects
-                    const activeProjects = result.data.filter(project => {
-                        const status = project.projectStatus || 'active';
-                        return status === 'active';
-                    });
-                    console.log(`🔍 Backup loader filtered to ${activeProjects.length} active projects (from ${result.data.length} total)`);
-
-                    if (activeProjects.length === 0) {
-                        const noProjectsOption = document.createElement('option');
-                        noProjectsOption.value = '';
-                        noProjectsOption.textContent = 'No active projects found';
-                        noProjectsOption.disabled = true;
-                        selector.appendChild(noProjectsOption);
-                    } else {
-                        activeProjects.forEach(project => {
-                            const option = document.createElement('option');
-                            option.value = project.id;
-                            const projectName = project.name.length > 30 ? project.name.substring(0, 27) + '...' : project.name;
-                            const folderName = project.targetFolder.split('/').pop() || project.targetFolder;
-                            option.textContent = `${projectName} — ${folderName}`;
-                            option.title = `${project.name} - ${project.targetFolder}`;
-                            selector.appendChild(option);
-                        });
-                    }
-                    console.log('✅ Backup loader populated dropdown with active projects only');
-                }
-            } catch (error) {
-                console.error('❌ Backup loader failed:', error);
-                selector.innerHTML = '<option value="">Error loading projects</option>';
-            }
+    <style>
+        .action-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+            align-items: center;
         }
 
-        // Backup tab and button functionality
-        function setupBackupEventListeners() {
-            console.log('🔧 Setting up backup event listeners...');
-
-            // Tab switching
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const tabName = e.target.dataset.tab;
-                    if (tabName) {
-                        // Remove active class from all tabs and content
-                        document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
-                        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-
-                        // Add active class to clicked tab and corresponding content
-                        e.target.classList.add('active');
-                        const tabContent = document.getElementById(tabName + '-tab');
-                        if (tabContent) {
-                            tabContent.classList.add('active');
-                        }
-                        console.log('✅ Switched to tab:', tabName);
-                    }
-                });
-            });
-
-            // Direct modal handler (immediate, doesn't wait for WorkspaceManager)
-            const newProjectBtn = document.getElementById('new-project-btn');
-            if (newProjectBtn) {
-                // Remove any existing listeners first
-                const newBtn = newProjectBtn.cloneNode(true);
-                newProjectBtn.parentNode.replaceChild(newBtn, newProjectBtn);
-
-                newBtn.addEventListener('click', () => {
-                    console.log('🔘 New Project button clicked');
-                    const modal = document.getElementById('new-project-modal');
-                    if (modal) {
-                        console.log('✅ Modal found, displaying...');
-                        modal.style.display = 'flex';
-
-                        // Reset to first step
-                        currentStep = 0;
-                        showStep(0);
-
-                        // Clear form
-                        const form = document.getElementById('new-project-form');
-                        if (form) form.reset();
-                    } else {
-                        console.error('❌ Modal not found, using fallback prompt');
-                        const projectName = prompt('Enter project name:');
-                        if (projectName) {
-                            alert(`Project "${projectName}" creation will be implemented`);
-                        }
-                    }
-                });
-                console.log('✅ New Project button handler attached directly');
-            }
-
-            // Add navigation for modal steps
-            let currentStep = 0;
-            const steps = ['basic', 'claude', 'bmad', 'settings'];
-
-            function showStep(stepIndex) {
-                const stepSections = document.querySelectorAll('.step-section');
-                stepSections.forEach((section, index) => {
-                    section.classList.toggle('active', index === stepIndex);
-                });
-
-                // Update navigation buttons
-                const prevBtn = document.getElementById('prev-step-btn');
-                const nextBtn = document.getElementById('next-step-btn');
-                const createBtn = document.getElementById('create-project-btn');
-
-                if (prevBtn) prevBtn.style.display = stepIndex > 0 ? 'inline-block' : 'none';
-                if (nextBtn) nextBtn.style.display = stepIndex < steps.length - 1 ? 'inline-block' : 'none';
-                if (createBtn) createBtn.style.display = stepIndex === steps.length - 1 ? 'inline-block' : 'none';
-            }
-
-            // Next button handler
-            const nextStepBtn = document.getElementById('next-step-btn');
-            if (nextStepBtn) {
-                const newNextBtn = nextStepBtn.cloneNode(true);
-                nextStepBtn.parentNode.replaceChild(newNextBtn, nextStepBtn);
-
-                newNextBtn.addEventListener('click', () => {
-                    if (currentStep < steps.length - 1) {
-                        currentStep++;
-                        showStep(currentStep);
-                    }
-                });
-            }
-
-            // Previous button handler
-            const prevStepBtn = document.getElementById('prev-step-btn');
-            if (prevStepBtn) {
-                const newPrevBtn = prevStepBtn.cloneNode(true);
-                prevStepBtn.parentNode.replaceChild(newPrevBtn, prevStepBtn);
-
-                newPrevBtn.addEventListener('click', () => {
-                    if (currentStep > 0) {
-                        currentStep--;
-                        showStep(currentStep);
-                    }
-                });
-            }
-
-            // Create Project button handler
-            const createProjectBtn = document.getElementById('create-project-btn');
-            if (createProjectBtn) {
-                const newCreateBtn = createProjectBtn.cloneNode(true);
-                createProjectBtn.parentNode.replaceChild(newCreateBtn, createProjectBtn);
-
-                newCreateBtn.addEventListener('click', () => {
-                    const projectName = document.getElementById('project-name')?.value || '';
-                    const projectPath = document.getElementById('project-path')?.value || '';
-
-                    if (!projectName || !projectPath) {
-                        alert('Please fill in project name and path');
-                        return;
-                    }
-
-                    // Submit the project
-                    fetch('/api/projects', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            name: projectName,
-                            targetFolder: projectPath,
-                            description: document.getElementById('project-description')?.value || '',
-                            initGit: document.getElementById('init-git')?.checked || true,
-                            createReadme: document.getElementById('create-readme')?.checked || true,
-                            createGitignore: document.getElementById('create-gitignore')?.checked || true
-                        })
-                    }).then(response => response.json())
-                    .then(result => {
-                        if (result.success) {
-                            alert('Project created successfully!');
-                            document.getElementById('new-project-modal').style.display = 'none';
-                            backupLoadProjects(); // Refresh projects list
-                        } else {
-                            alert('Failed to create project: ' + (result.error || 'Unknown error'));
-                        }
-                    }).catch(error => {
-                        alert('Error creating project: ' + error.message);
-                    });
-                });
-            }
-
-            const bmadBtn = document.getElementById('bmad-quick-start-btn');
-            if (bmadBtn) {
-                bmadBtn.addEventListener('click', () => {
-                    console.log('🚀 BMAD Quick Start button clicked (backup handler)');
-                    alert('BMAD Quick Start functionality requires the full WorkspaceManager. Please refresh the page or check console for errors.');
-                });
-            }
-
-            const brainstormBtn = document.getElementById('brainstorm-btn');
-            if (brainstormBtn) {
-                brainstormBtn.addEventListener('click', () => {
-                    console.log('💡 Brainstorm button clicked (backup handler)');
-                    alert('Brainstorm functionality requires the full WorkspaceManager. Please refresh the page or check console for errors.');
-                });
-            }
-
-            console.log('✅ Backup event listeners set up');
+        .action-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
         }
 
-        // Create a safe workspaceManager placeholder to prevent errors
-        window.workspaceManager = window.workspaceManager || {};
+        .action-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        }
 
-        // Create placeholder methods for all common workspaceManager methods
-        const placeholderMethods = [
-            'startClaude', 'openTerminal', 'startBmad', 'openFiles', 'createNewTerminal',
-            'addBmadAgent', 'startBmadWorkflow', 'sendCollabMessage', 'closeNewProjectModal',
-            'closeBmadQuickStartModal', 'closeBrainstormModal', 'nextStep', 'prevStep',
-            'createProject', 'nextBrainstormStep', 'prevBrainstormStep', 'createProjectFromBrainstorm'
-        ];
+        .action-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
 
-        placeholderMethods.forEach(methodName => {
-            if (!window.workspaceManager[methodName]) {
-                window.workspaceManager[methodName] = function(...args) {
-                    console.warn(`workspaceManager.${methodName} called but not ready`);
-                    alert(`Feature "${methodName}" is not ready yet. Please wait a moment or refresh the page.`);
-                };
-            }
-        });
+        .action-desc {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
 
-        // Set up reload button and backup loading
-        document.addEventListener('DOMContentLoaded', () => {
-            // Add click handler to reload button
-            const reloadBtn = document.getElementById('reload-projects-btn');
-            if (reloadBtn) {
-                reloadBtn.addEventListener('click', backupLoadProjects);
-                console.log('✅ Reload button handler added');
-            }
+        .workspace-info {
+            padding: var(--space-lg) 0;
+        }
 
-            // Set up backup event listeners after a delay to see if main WorkspaceManager works
-            setTimeout(() => {
-                // Check if main WorkspaceManager is working by looking for its event listeners
-                const testTab = document.querySelector('.tab-btn');
-                if (testTab && !testTab.hasAttribute('data-backup-listener')) {
-                    // Test if clicking works
-                    const testEvent = new Event('click');
-                    let clicked = false;
-                    const testHandler = () => { clicked = true; };
-                    testTab.addEventListener('click', testHandler);
-                    testTab.dispatchEvent(testEvent);
-                    testTab.removeEventListener('click', testHandler);
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-md);
+        }
 
-                    if (!clicked) {
-                        console.log('🔧 Main event listeners appear to have failed, setting up backup...');
-                        setupBackupEventListeners();
-                        // Mark that we've added backup listeners
-                        document.querySelectorAll('.tab-btn').forEach(btn => {
-                            btn.setAttribute('data-backup-listener', 'true');
-                        });
-                    }
-                }
-            }, 2000);
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-sm);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+        }
 
-            // Try backup loader after a delay if main loader hasn't worked
-            setTimeout(() => {
-                const selector = document.getElementById('project-selector');
-                if (selector && selector.options.length <= 1) {
-                    console.log('🔧 Main loader appears to have failed, trying backup...');
-                    backupLoadProjects();
-                }
-            }, 3000);
-        });
-    </script>
-    <script src="/static/js/workspace.js?v=<%= Date.now() %>"></script>
-</body>
-</html>
+        .info-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .tool-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-md);
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .tool-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+        }
+
+        .tool-card i {
+            font-size: 24px;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-sm);
+        }
+
+        .tool-card h4 {
+            margin-bottom: var(--space-xs);
+            color: var(--text-primary);
+        }
+
+        .tool-card p {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            margin: 0;
+        }
+
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+
+        .activity-item {
+            display: flex;
+            gap: var(--space-md);
+            align-items: center;
+            padding: var(--space-md);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            transition: var(--transition);
+        }
+
+        .activity-item:hover {
+            background: var(--surface-hover);
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-primary);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: var(--space-xs);
+        }
+
+        .activity-time {
+            color: var(--text-muted);
+            font-size: var(--font-size-sm);
+        }
+
+        .badge {
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-success {
+            background: var(--success);
+            color: white;
+        }
+    </style>
+    `
+}) %>

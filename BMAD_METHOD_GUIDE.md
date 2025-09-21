@@ -1466,3 +1466,416 @@ groups:
 - **Deploy Phase**: Zero-downtime deployments, system availability >99.9%
 
 This comprehensive BMAD Method guide provides a structured approach to building a production-ready Web3 audit intelligence system with clear role separation, deliverables, and quality standards.
+
+---------------------------------
+Here's how to craft complete prompts for the Claude Code Assistant to
+  start developing with multiple roles:
+
+  🎯 Complete Multi-Role Development Prompts
+
+  1. Comprehensive Project Kickoff
+
+  [ROLE: PM] Create sprint 1-2 plan for Web3 audit intelligence system,
+  then [ROLE: Developer] provide technical implementation details, then
+  [ROLE: DevOps] setup infrastructure requirements.
+
+  Project Goals:
+  - Build Code4rena data collector
+  - Implement vulnerability analysis
+  - Create reporting dashboard
+  - Deploy production system
+
+  Timeline: 4 weeks, Team: 5 developers
+  Budget: $50k, Target: 10k+ audit reports processed
+
+  Provide detailed breakdown for each role.
+
+  2. End-to-End Feature Development
+
+  [ROLE: Architect] Design system architecture for real-time vulnerability
+  detection, then [ROLE: Backend] implement core services, then [ROLE:
+  Frontend] create user interface, then [ROLE: QA] define testing strategy,
+   then [ROLE: DevOps] plan deployment pipeline.
+
+  Feature: Real-time Code4rena vulnerability alerts
+  Requirements:
+  - Process 100+ contests daily
+  - Alert within 5 minutes of new findings
+  - Support 1000+ concurrent users
+  - 99.9% uptime requirement
+
+  Start with architecture, then implement each layer.
+
+  3. Sprint Planning to Implementation
+
+  [ROLE: PM] Plan 2-week sprint for audit report processing system.
+  Include:
+  - User stories with acceptance criteria
+  - Task breakdown and estimates
+  - Risk assessment and mitigation
+  - Resource allocation
+
+  Then [ROLE: Developer] implement the core data processing pipeline with:
+  - Code4rena API integration
+  - Data validation and cleaning
+  - Vulnerability pattern detection
+  - Database storage optimization
+
+  Then [ROLE: QA] create comprehensive test suite covering:
+  - Unit tests for all components
+  - Integration tests for API endpoints
+  - Performance tests for data processing
+  - Security tests for data handling
+
+  Provide complete implementation for each role.
+
+  4. Problem-Solving Across Roles
+
+  Challenge: Our Web3 audit system needs to handle massive scale - 50k
+  reports/day, real-time analysis, global deployment.
+
+  [ROLE: Architect] Solve scalability architecture
+  [ROLE: Backend] Optimize data processing performance
+  [ROLE: DevOps] Design auto-scaling infrastructure
+  [ROLE: DataScientist] Implement efficient ML algorithms
+  [ROLE: Security] Ensure system security at scale
+
+  Each role should provide specific solutions with code examples,
+  configurations, and implementation steps.
+
+  5. Feature-Complete Development Cycle
+
+  Build complete vulnerability trend analysis feature:
+
+  [ROLE: PM]
+  - Define requirements and user stories
+  - Create sprint timeline (2 weeks)
+  - Identify dependencies and risks
+
+  [ROLE: DataScientist]
+  - Design trend detection algorithms
+  - Implement statistical analysis models
+  - Create data visualization logic
+
+  [ROLE: Backend]
+  - Build trend analysis APIs
+  - Implement data aggregation services
+  - Create caching layer for performance
+
+  [ROLE: Frontend]
+  - Design trend visualization components
+  - Implement interactive charts and filters
+  - Create responsive dashboard layout
+
+  [ROLE: QA]
+  - Test algorithm accuracy
+  - Validate API performance
+  - Ensure UI/UX quality
+
+  [ROLE: DevOps]
+  - Setup monitoring for new feature
+  - Configure deployment pipeline
+  - Plan rollout strategy
+
+  Provide complete implementation for each role with working code.
+
+  6. Rapid Prototype Development
+
+  Create MVP in 1 week - Code4rena vulnerability tracker:
+
+  [ROLE: Architect] Quick system design (30 min design)
+  [ROLE: Backend] Core API (Python/FastAPI, 2 days)
+  [ROLE: Frontend] Basic dashboard (React, 2 days)
+  [ROLE: DevOps] Docker deployment (1 day)
+  [ROLE: QA] Essential tests (1 day)
+
+  Requirements:
+  - Collect top 10 Code4rena contests
+  - Display vulnerability counts by severity
+  - Basic filtering and search
+  - Deploy to cloud
+
+  Each role provide minimal viable implementation with actual code files.
+
+  7. Production-Ready Development
+
+  Transform our audit intelligence prototype to production system:
+
+  [ROLE: Architect]
+  - Scale architecture for 1M+ daily requests
+  - Design microservices breakdown
+  - Plan data architecture and storage
+
+  [ROLE: Backend]
+  - Implement production APIs with authentication
+  - Add comprehensive error handling
+  - Optimize database queries and caching
+
+  [ROLE: Security]
+  - Implement security best practices
+  - Add input validation and sanitization
+  - Setup monitoring and audit logging
+
+  [ROLE: DevOps]
+  - Create CI/CD pipeline
+  - Setup monitoring and alerting
+  - Plan disaster recovery
+
+  [ROLE: QA]
+  - Implement automated testing suite
+  - Setup performance testing
+  - Create quality gates
+
+  Provide production-ready code with security, monitoring, and scalability
+  built-in.
+
+  🚀 Quick Start Templates
+
+  Immediate Development:
+
+  [ROLE: Developer] Start building Code4rena collector right now. Provide
+  complete working Python code with error handling, rate limiting, and data
+   validation. Include requirements.txt and usage examples.
+
+  Complete Solution:
+
+  [ROLE: PM] Plan, [ROLE: Developer] implement, [ROLE: QA] test - complete
+  Web3 vulnerability dashboard in 3 days. Provide working code for each
+  role.
+
+  Multi-Phase Project:
+
+  PHASE 1: [ROLE: Architect] Design
+  PHASE 2: [ROLE: Backend] Core APIs
+  PHASE 3: [ROLE: Frontend] User interface
+  PHASE 4: [ROLE: DevOps] Deployment
+
+  Execute all phases for audit report analysis system.
+
+  💡 Pro Tips for Effective Multi-Role Prompts
+
+  1. Be Specific: Include exact requirements, timelines, and constraints
+  2. Set Context: Mention team size, budget, technical constraints
+  3. Request Code: Always ask for actual implementation, not just theory
+  4. Chain Roles: Use "then [ROLE: X]" to sequence multiple roles
+  5. Include Examples: Provide sample data or use cases
+  6. Set Success Criteria: Define what "done" looks like for each role
+
+  These prompts will give you complete, actionable development plans with
+  actual code implementations across all necessary roles!
+
+  ------------------------------
+  Here's how to effectively follow up on progress and manage changes when
+  using multi-role prompts in the Claude Code Assistant:
+
+  📊 Progress Tracking & Follow-up Strategies
+
+  1. Progress Check Prompts
+
+  Sprint Progress Review:
+
+  [ROLE: PM] Review current progress on Sprint 1-2:
+  - What tasks are completed vs planned?
+  - What blockers or delays have occurred?
+  - How are we tracking against timeline?
+  - What adjustments needed for Sprint 2?
+
+  Show detailed status dashboard.
+
+  Development Status Update:
+
+  [ROLE: Developer] Status update on Code4rena collector implementation:
+  - What components are working?
+  - What features are still in development?
+  - Any technical challenges encountered?
+  - Code quality and test coverage status?
+
+  Provide current code status and next steps.
+
+  2. Change Management Prompts
+
+  Requirement Changes:
+
+  CHANGE REQUEST: Client wants real-time alerts instead of daily reports
+
+  [ROLE: PM] Assess impact on timeline and resources
+  [ROLE: Architect] Redesign for real-time architecture
+  [ROLE: Developer] Estimate development effort
+  [ROLE: DevOps] Infrastructure changes needed
+
+  Provide change impact analysis and updated plan.
+
+  Technical Pivot:
+
+  PIVOT: Moving from REST API to GraphQL
+
+  [ROLE: Backend] Refactor existing APIs to GraphQL
+  [ROLE: Frontend] Update client code for GraphQL
+  [ROLE: QA] Adapt test suites for new API structure
+  [ROLE: DevOps] Update deployment configs
+
+  Show migration plan and timeline.
+
+  3. Continuous Monitoring Prompts
+
+  Daily Standup Style:
+
+  [ROLE: PM] Daily standup for Web3 audit intelligence project:
+
+  Yesterday: What was accomplished?
+  Today: What's the plan?
+  Blockers: What's preventing progress?
+  Risks: What could derail us?
+
+  Format as standup meeting notes.
+
+  Weekly Sprint Review:
+
+  [ROLE: PM] Week 1 of Sprint 1 review:
+  - Completed user stories and tasks
+  - Burn-down chart status
+  - Quality metrics (bugs, test coverage)
+  - Team velocity and capacity
+  - Upcoming week priorities
+
+  Include recommendations for adjustments.
+
+  4. Issue Resolution Follow-ups
+
+  Bug Tracking:
+
+  ISSUE: Code4rena API returning inconsistent data formats
+
+  [ROLE: Developer] Debug and fix data parsing
+  [ROLE: QA] Create test cases to prevent regression
+  [ROLE: PM] Assess impact on deliverables
+
+  Provide solution and prevention strategy.
+
+  Performance Issues:
+
+  PERFORMANCE ISSUE: Vulnerability analysis taking 10+ minutes per report
+
+  [ROLE: Backend] Optimize processing algorithms
+  [ROLE: DataScientist] Improve ML model efficiency
+  [ROLE: DevOps] Scale infrastructure resources
+
+  Show optimization plan and expected improvements.
+
+  5. Milestone Check-ins
+
+  Sprint Completion Review:
+
+  [ROLE: PM] Sprint 1 completion assessment:
+  - Demo readiness checklist
+  - Sprint goals achieved vs missed
+  - Retrospective: what worked/didn't work
+  - Sprint 2 planning adjustments
+
+  [ROLE: QA] Quality gate status for Sprint 1 deliverables
+
+  Provide go/no-go decision for Sprint 2.
+
+  Release Readiness:
+
+  [ROLE: DevOps] Production deployment readiness check:
+  - All environments tested and validated
+  - Monitoring and alerting configured
+  - Backup and recovery procedures verified
+  - Performance benchmarks met
+
+  [ROLE: QA] Final quality validation complete
+
+  Provide deployment checklist and timeline.
+
+  6. Adaptive Planning Prompts
+
+  Scope Adjustments:
+
+  SCOPE CHANGE: Budget cut by 30%, timeline unchanged
+
+  [ROLE: PM] Reprioritize features for MVP
+  [ROLE: Architect] Simplify technical architecture
+  [ROLE: Developer] Identify quick wins and defer complex features
+
+  Provide revised scope and delivery plan.
+
+  Resource Changes:
+
+  TEAM CHANGE: Lost 1 backend developer, gained 1 frontend developer
+
+  [ROLE: PM] Rebalance workload distribution
+  [ROLE: Backend] Identify tasks for knowledge transfer
+  [ROLE: Frontend] Expand UI/UX scope with additional resources
+
+  Update resource allocation and timeline.
+
+  7. Continuous Improvement Follow-ups
+
+  Retrospective Analysis:
+
+  [ROLE: PM] Sprint retrospective analysis:
+  - What processes worked well?
+  - What caused delays or issues?
+  - What tools/practices should we adopt?
+  - How can team collaboration improve?
+
+  Provide actionable improvement recommendations.
+
+  Quality Metrics Review:
+
+  [ROLE: QA] Quality metrics dashboard:
+  - Bug discovery rate and resolution time
+  - Test coverage trends
+  - Code quality scores
+  - User acceptance test results
+
+  Show quality trends and improvement areas.
+
+  8. Communication Templates
+
+  Stakeholder Updates:
+
+  [ROLE: PM] Executive stakeholder update:
+  - Project status: Green/Yellow/Red
+  - Key achievements this week
+  - Upcoming milestones and risks
+  - Budget and timeline status
+  - Support needed from leadership
+
+  Format as executive summary.
+
+  Client Progress Reports:
+
+  [ROLE: PM] Client progress report for Web3 audit intelligence:
+  - Deliverables completed this iteration
+  - Demo-ready features and functionality
+  - Upcoming features in next iteration
+  - Any scope or timeline adjustments needed
+
+  Include screenshots and demo links.
+
+  🔄 Workflow for Continuous Follow-up
+
+  Daily Cycle:
+
+  1. Morning: Daily standup prompt
+  2. Mid-day: Blocker resolution prompts
+  3. Evening: Progress update prompts
+
+  Weekly Cycle:
+
+  1. Monday: Sprint planning review
+  2. Wednesday: Mid-sprint checkpoint
+  3. Friday: Sprint review and retrospective
+
+  Change Response Cycle:
+
+  1. Change Request: Impact analysis prompt
+  2. Planning: Updated timeline and scope
+  3. Implementation: Adjusted role assignments
+  4. Validation: Quality and progress checks
+
+  This systematic approach ensures you stay on top of progress, quickly
+  adapt to changes, and maintain project momentum across all roles and
+  phases.

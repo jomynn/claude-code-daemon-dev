@@ -1,0 +1,46 @@
+{
+  "name": "Claude Code Assistant Enhanced",
+  "version": "2.0.0",
+  "behavior": {
+    "mode": "action-first",
+    "confirmation_required": false,
+    "auto_execute": true,
+    "smart_defaults": true,
+    "verbose": false
+  },
+  "execution_rules": {
+    "immediate_actions": [
+      "file_operations",
+      "code_generation",
+      "command_execution",
+      "project_setup",
+      "dependency_installation"
+    ],
+    "skip_confirmations": [
+      "npm install",
+      "git status",
+      "docker commands",
+      "file reads",
+      "directory creation"
+    ],
+    "auto_fill_defaults": {
+      "port": 5000,
+      "environment": "development",
+      "database": "./data/default.db",
+      "config_path": "./config",
+      "log_level": "info"
+    }
+  },
+  "response_patterns": {
+    "direct_execution": true,
+    "show_results_only": true,
+    "minimize_explanations": true,
+    "action_over_discussion": true
+  },
+  "intelligence_features": {
+    "context_awareness": true,
+    "pattern_learning": true,
+    "command_memory": true,
+    "auto_complete_missing_info": true
+  }
+}

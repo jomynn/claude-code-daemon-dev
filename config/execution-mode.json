@@ -1,0 +1,68 @@
+{
+  "execution": {
+    "enabled": true,
+    "autoDetect": true,
+    "forceMode": false,
+    "timeoutMs": 300000,
+    "maxConcurrentExecutions": 3,
+    "outputPath": "./generated-projects",
+    "logLevel": "info"
+  },
+  "bmad": {
+    "detectionThreshold": 0.6,
+    "requireExplicitTriggers": false,
+    "preserveOriginalPrompts": true,
+    "enableMetadataExtraction": true,
+    "enableAutoStructure": true
+  },
+  "claude": {
+    "overridePlanningResponses": true,
+    "injectExecutionContext": true,
+    "suppressQuestions": true,
+    "enforceDirectOutput": true,
+    "enableResponseValidation": true,
+    "maxRetries": 2
+  },
+  "responses": {
+    "templates": {
+      "bmadDetected": "🚀 BMAD document detected. Switching to execution mode and building your project immediately.",
+      "executionStarted": "⚡ Execution mode activated. Creating project files and structure now.",
+      "planningOverride": "🔧 Planning response intercepted. Building project instead of providing recommendations.",
+      "executionComplete": "✅ Project build completed successfully. All files and configurations created.",
+      "executionFailed": "❌ Project build encountered errors. Check logs for details."
+    },
+    "blockedPhrases": [
+      "let me help you plan",
+      "project timeline",
+      "development phases",
+      "sprint methodology",
+      "stakeholder requirements",
+      "before we start",
+      "need more information",
+      "clarifying questions",
+      "project management approach",
+      "scrum framework"
+    ]
+  },
+  "validation": {
+    "enableResponseChecking": true,
+    "requireExecutionIndicators": true,
+    "blockPlanningLanguage": true,
+    "enforceFileCreation": false,
+    "validateProjectStructure": true
+  },
+  "logging": {
+    "enableDetectionLogs": true,
+    "enableExecutionLogs": true,
+    "enableOverrideLogs": true,
+    "enableValidationLogs": true,
+    "logPath": "./logs/execution-mode.log"
+  },
+  "notifications": {
+    "enableSlackNotifications": false,
+    "enableEmailNotifications": false,
+    "enableWebhooks": false,
+    "webhookUrl": null,
+    "channels": []
+  }
+}

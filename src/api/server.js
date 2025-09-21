@@ -26,6 +26,7 @@ const nightModeRoutes = require('./routes/night-mode-simple');
 const logsRoutes = require('./routes/logs');
 const slackRoutes = require('./routes/slack');
 const claudeRoutes = require('./routes/claude');
+const bmadExecutionRoutes = require('./routes/bmad-execution');
 const { apiCorsMiddleware } = require('./middleware/cors');
 const { requestLogger } = require('./middleware/logging');
 
@@ -138,6 +139,7 @@ class ApiServer {
         this.app.use('/api/logs', logsRoutes);
         this.app.use('/api/slack', slackRoutes);
         this.app.use('/api', claudeRoutes);
+        this.app.use('/api/bmad-execution', bmadExecutionRoutes);
 
         // Dashboard routes
         this.app.get('/', (req, res) => {

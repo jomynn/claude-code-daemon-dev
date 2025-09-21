@@ -2,30 +2,109 @@ version: '3.8'
 
 services:
   claude-daemon:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: claude-daemon:v2.0
+    container_name: claude-daemon-enhanced
     ports:
-      - "5001:5000"
+      - "5001:5000"  # Main API
+      - "5002:5001"  # Secondary API
+      - "8081:8080"  # Dashboard
+      - "9001:9000"  # BMAD Execution Engine
     env_file:
       - .env
     environment:
       - DATABASE_PATH=/data/claude-daemon.db
+      - BMAD_EXECUTION_ENABLED=true
+      - AUTO_PROJECT_GENERATION=true
+      - CLAUDE_ENHANCED_MODE=true
+      - PROJECT_GENERATION_PATH=/app/generated-projects
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
     volumes:
       - claude_data:/data
+      - generated_projects:/app/generated-projects
+      - bmad_cache:/app/bmad-cache
+      - execution_logs:/app/execution-logs
+      - temp_workspace:/app/temp
     restart: unless-stopped
+    depends_on:
+      - redis
+      - postgres
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/health", "||", "exit", "1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health && curl -f http://localhost:5000/api/bmad-execution/status || exit 1"]
       interval: 30s
-      timeout: 10s
+      timeout: 15s
       retries: 3
+      start_period: 30s
+    networks:
+      - claude-network
 
   redis:
     image: redis:7-alpine
+    container_name: claude-redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - claude-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: claude-postgres
+    environment:
+      - POSTGRES_DB=claude_projects
+      - POSTGRES_USER=claude
+      - POSTGRES_PASSWORD=claude_secure_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - claude-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: claude-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - claude-daemon
+    restart: unless-stopped
+    networks:
+      - claude-network
 
 volumes:
   redis_data:
+    driver: local
   claude_data:
+    driver: local
+  generated_projects:
+    driver: local
+  bmad_cache:
+    driver: local
+  execution_logs:
+    driver: local
+  temp_workspace:
+    driver: local
+  postgres_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  claude-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

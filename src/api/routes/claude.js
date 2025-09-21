@@ -1,12 +1,21 @@
 /**
  * Claude Code API Routes
  * Handles Claude Code session management and command execution
+ * Enhanced with BMAD execution system for automatic project building
  */
 
 const express = require('express');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs').promises;
+
+// BMAD Execution System
+const {
+    bmadExecutionMiddleware,
+    bmadResponseMiddleware,
+    bmadAutoExecuteMiddleware,
+    getGlobalBMADSystem
+} = require('../middleware/bmad-execution-system');
 
 const router = express.Router();
 
@@ -225,8 +234,13 @@ router.post('/projects/:projectId/claude/stop', async (req, res) => {
 
 /**
  * Send command to Claude Code session
+ * Enhanced with BMAD detection and execution capabilities
  */
-router.post('/projects/:projectId/claude/command', async (req, res) => {
+router.post('/projects/:projectId/claude/command',
+    bmadExecutionMiddleware,
+    bmadResponseMiddleware,
+    bmadAutoExecuteMiddleware,
+    async (req, res) => {
     const { projectId } = req.params;
     const { message, sessionId } = req.body;
 
@@ -247,10 +261,16 @@ router.post('/projects/:projectId/claude/command', async (req, res) => {
             });
         }
 
-        // Enhance message with BMAD context if enabled
+        // Enhance message with BMAD context if enabled or execution mode active
         let enhancedMessage = message;
         if (session.bmadEnabled && session.bmadConfig) {
             enhancedMessage = `[BMAD Context: ${session.bmadConfig.workflow} workflow with agents: ${session.bmadConfig.agents?.join(', ') || 'dev, qa, pm'}]\n\n${message}`;
+        }
+
+        // Use execution-modified message if available
+        if (req.executionMode && req.body.executionModeModified) {
+            enhancedMessage = message; // Already modified by BMAD system
+            console.log('[CLAUDE API] Using execution-mode modified message');
         }
 
         // Send message to Claude process
@@ -313,11 +333,30 @@ router.post('/projects/:projectId/claude/command', async (req, res) => {
         try {
             const claudeResponse = await responsePromise;
 
-            res.json({
+            const responseData = {
                 success: true,
                 response: claudeResponse.trim(),
                 sessionId: session.sessionId
-            });
+            };
+
+            // Add BMAD execution information if available
+            if (req.executionMode) {
+                responseData.executionMode = true;
+                responseData.bmadDetected = true;
+                responseData.bmadMetadata = req.bmadMetadata;
+
+                if (req.executionResult) {
+                    responseData.projectBuilt = true;
+                    responseData.projectPath = req.executionResult.projectPath;
+                    responseData.executionSummary = req.executionResult.summary;
+                }
+
+                if (req.executionError) {
+                    responseData.executionError = req.executionError;
+                }
+            }
+
+            res.json(responseData);
 
         } catch (error) {
             clearTimeout(responseTimeout);

@@ -1,7 +1,7 @@
 {
   "name": "claude-code-daemon",
-  "version": "1.0.0",
-  "description": "Advanced monitoring and management system for Claude Code usage",
+  "version": "2.0.0",
+  "description": "Advanced monitoring and management system for Claude Code with BMAD Auto-Execution",
   "main": "src/api/server.js",
   "scripts": {
     "start": "node src/api/server.js",
@@ -13,9 +13,14 @@
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "build": "npm run lint && npm test",
-    "docker:build": "docker build -t claude-daemon .",
+    "docker:build": "docker build -t claude-daemon:v2.0 .",
+    "docker:build:no-cache": "docker build --no-cache -t claude-daemon:v2.0 .",
     "docker:run": "docker-compose up -d",
     "docker:stop": "docker-compose down",
+    "docker:rebuild": "npm run docker:stop && npm run docker:build:no-cache && npm run docker:run",
+    "bmad:execute": "node claude-bmad-executor.js",
+    "bmad:interactive": "node src/claude-interactive-solver.js",
+    "bmad:test": "node test-bmad-system.js",
     "setup": "bash scripts/setup.sh",
     "migrate": "node scripts/migrate.js",
     "seed": "node tools/data-generator.js",
@@ -44,7 +49,15 @@
     "socket.io": "^4.7.4",
     "sqlite3": "^5.1.6",
     "winston": "^3.11.0",
-    "ws": "^8.14.2"
+    "ws": "^8.14.2",
+    "cheerio": "^1.0.0-rc.12",
+    "selenium-webdriver": "^4.15.0",
+    "natural": "^6.10.0",
+    "tar": "^6.2.0",
+    "archiver": "^6.0.1",
+    "multer": "^1.4.5-lts.1",
+    "markdown-it": "^14.0.0",
+    "highlight.js": "^11.9.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.4",

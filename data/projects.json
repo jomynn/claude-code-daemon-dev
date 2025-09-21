@@ -60,22 +60,27 @@
       "enabled": true,
       "model": "claude-3-5-sonnet-20241022",
       "maxTokens": 4000,
-      "temperature": 0.7
+      "temperature": 0.7,
+      "context": ""
     },
     "bmadConfig": {
       "enabled": true,
+      "workflow": "agile",
+      "status": "stopped",
+      "currentPhase": null,
       "agents": [
         "dev",
         "qa",
         "pm"
-      ],
-      "workflow": "standard"
+      ]
     },
     "createdAt": "2025-09-19T15:15:13.612Z",
-    "updatedAt": "2025-09-20T07:17:05.157Z",
+    "updatedAt": "2025-09-21T06:34:39.328Z",
     "status": "initialized",
     "terminalSessions": {},
-    "priority": "high"
+    "priority": "high",
+    "projectStatus": "active",
+    "type": "web"
   },
   {
     "id": "proj-1758295450499-a9kfkrd6g",

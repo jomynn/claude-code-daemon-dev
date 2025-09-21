@@ -11,63 +11,111 @@ const pageDescription = 'Interactive development workspace with terminal access 
     pageTitle,
     pageDescription,
     body: `
+    <!-- Project Selection -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="ti ti-folder"></i>
+                Select Project
+            </h2>
+            <div style="display: flex; gap: var(--space-sm);">
+                <button class="btn btn-primary btn-sm" id="create-workspace">
+                    <i class="ti ti-plus"></i>
+                    Create Workspace
+                </button>
+                <a href="/projects" class="btn btn-secondary btn-sm" style="text-decoration: none;">
+                    <i class="ti ti-list"></i>
+                    Browse Projects
+                </a>
+            </div>
+        </div>
+        <div class="project-selector">
+            <select id="project-selector" class="form-select">
+                <option value="">Select a project to start workspace...</option>
+            </select>
+            <button class="btn btn-primary" id="load-workspace" disabled>
+                <i class="ti ti-play"></i>
+                Start Workspace
+            </button>
+        </div>
+    </div>
+
     <!-- Workspace Actions -->
-    <div class="grid grid-3">
-        <button class="action-card" onclick="window.location.href='/workspace-vscode'">
-            <div class="action-icon icon-vscode">
-                <i class="ti ti-brand-vscode"></i>
-            </div>
-            <div class="action-title">VS Code Interface</div>
-            <div class="action-desc">Full-featured VS Code-like environment</div>
-        </button>
-        <button class="action-card" id="open-terminal">
-            <div class="action-icon icon-terminal">
-                <i class="ti ti-terminal"></i>
-            </div>
-            <div class="action-title">Terminal Access</div>
-            <div class="action-desc">Direct terminal access to your system</div>
-        </button>
-        <button class="action-card" id="claude-assistant">
-            <div class="action-icon icon-claude">
+    <div class="grid grid-4">
+        <button class="action-card" id="start-claude-session">
+            <div class="action-icon" style="background: linear-gradient(135deg, #2196F3, #21CBF3);">
                 <i class="ti ti-robot"></i>
             </div>
-            <div class="action-title">Claude Assistant</div>
-            <div class="action-desc">AI-powered coding assistance</div>
+            <div class="action-title">Start Claude Code</div>
+            <div class="action-desc">Begin AI-assisted development session</div>
+        </button>
+        <button class="action-card" id="open-terminal">
+            <div class="action-icon" style="background: linear-gradient(135deg, #4CAF50, #45A049);">
+                <i class="ti ti-terminal"></i>
+            </div>
+            <div class="action-title">Open Terminal</div>
+            <div class="action-desc">Access project terminal</div>
+        </button>
+        <button class="action-card" id="open-editor">
+            <div class="action-icon" style="background: linear-gradient(135deg, #FF9800, #F57C00);">
+                <i class="ti ti-code"></i>
+            </div>
+            <div class="action-title">Code Editor</div>
+            <div class="action-desc">Edit project files</div>
+        </button>
+        <button class="action-card" id="workspace-settings">
+            <div class="action-icon" style="background: linear-gradient(135deg, #9C27B0, #7B1FA2);">
+                <i class="ti ti-settings"></i>
+            </div>
+            <div class="action-title">Settings</div>
+            <div class="action-desc">Configure workspace</div>
         </button>
     </div>
 
     <!-- Active Workspace -->
-    <div class="card">
+    <div class="card" id="workspace-status">
         <div class="card-header">
             <h2 class="card-title">
                 <i class="ti ti-layout-dashboard"></i>
                 Active Workspace
             </h2>
             <div style="display: flex; gap: var(--space-sm);">
-                <span class="badge badge-success">Running</span>
-                <button class="btn btn-secondary btn-sm">
+                <span class="badge" id="workspace-status-badge">No Active Session</span>
+                <button class="btn btn-secondary btn-sm" id="workspace-configure">
                     <i class="ti ti-settings"></i>
                     Configure
+                </button>
+                <button class="btn btn-danger btn-sm" id="stop-workspace" style="display: none;">
+                    <i class="ti ti-square"></i>
+                    Stop Session
                 </button>
             </div>
         </div>
         <div class="workspace-info">
-            <div class="info-grid">
+            <div class="info-grid" id="workspace-info-grid">
                 <div class="info-item">
                     <span class="info-label">Current Project:</span>
-                    <span class="info-value">My Web Application</span>
+                    <span class="info-value" id="current-project">No project selected</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Working Directory:</span>
-                    <span class="info-value">/home/user/projects/webapp</span>
+                    <span class="info-value" id="working-directory">-</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Git Branch:</span>
-                    <span class="info-value">main</span>
+                    <span class="info-label">Session Status:</span>
+                    <span class="info-value" id="session-status">Idle</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Session Duration:</span>
-                    <span class="info-value">2h 34m</span>
+                    <span class="info-value" id="session-duration">00:00:00</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Claude Code Status:</span>
+                    <span class="info-value" id="claude-status">Not Started</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Active Connections:</span>
+                    <span class="info-value" id="active-connections">0</span>
                 </div>
             </div>
         </div>
@@ -105,6 +153,73 @@ const pageDescription = 'Interactive development workspace with terminal access 
         </div>
     </div>
 
+    <!-- Terminal Interface -->
+    <div class="card" id="terminal-card" style="display: none;">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="ti ti-terminal"></i>
+                Terminal
+            </h2>
+            <div style="display: flex; gap: var(--space-sm);">
+                <button class="btn btn-secondary btn-sm" id="clear-terminal">
+                    <i class="ti ti-trash"></i>
+                    Clear
+                </button>
+                <button class="btn btn-secondary btn-sm" id="close-terminal">
+                    <i class="ti ti-x"></i>
+                    Close
+                </button>
+            </div>
+        </div>
+        <div class="terminal-container">
+            <div class="terminal-output" id="terminal-output">
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span>
+                    <span class="terminal-text">Welcome to Claude Code Workspace Terminal</span>
+                </div>
+            </div>
+            <div class="terminal-input-line">
+                <span class="terminal-prompt">$</span>
+                <input type="text" class="terminal-input" id="terminal-input" placeholder="Type command..." disabled>
+            </div>
+        </div>
+    </div>
+
+    <!-- Claude Code Interface -->
+    <div class="card" id="claude-interface" style="display: none;">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="ti ti-robot"></i>
+                Claude Code Assistant
+            </h2>
+            <div style="display: flex; gap: var(--space-sm);">
+                <span class="badge" id="claude-session-status">Ready</span>
+                <button class="btn btn-secondary btn-sm" id="close-claude">
+                    <i class="ti ti-x"></i>
+                    Close
+                </button>
+            </div>
+        </div>
+        <div class="claude-container">
+            <div class="claude-chat" id="claude-chat">
+                <div class="claude-message system-message">
+                    <div class="message-content">
+                        <strong>Claude Code Assistant is ready!</strong><br>
+                        I can help you with coding tasks, debugging, code reviews, and project development.
+                        What would you like to work on?
+                    </div>
+                </div>
+            </div>
+            <div class="claude-input-area">
+                <textarea class="claude-input" id="claude-input" placeholder="Ask Claude for help with your code..." disabled></textarea>
+                <button class="btn btn-primary" id="send-claude-message" disabled>
+                    <i class="ti ti-send"></i>
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Recent Activity -->
     <div class="card">
         <div class="card-header">
@@ -112,42 +227,19 @@ const pageDescription = 'Interactive development workspace with terminal access 
                 <i class="ti ti-clock"></i>
                 Recent Activity
             </h2>
+            <button class="btn btn-secondary btn-sm" id="refresh-activity">
+                <i class="ti ti-refresh"></i>
+                Refresh
+            </button>
         </div>
-        <div class="activity-list">
+        <div class="activity-list" id="activity-list">
             <div class="activity-item">
-                <div class="activity-icon status-icon-success">
-                    <i class="ti ti-file-plus"></i>
+                <div class="activity-icon" style="background: #9E9E9E;">
+                    <i class="ti ti-clock"></i>
                 </div>
                 <div class="activity-content">
-                    <div class="activity-title">Created new component: UserProfile.jsx</div>
-                    <div class="activity-time">2 minutes ago</div>
-                </div>
-            </div>
-            <div class="activity-item">
-                <div class="activity-icon status-icon-info">
-                    <i class="ti ti-git-commit"></i>
-                </div>
-                <div class="activity-content">
-                    <div class="activity-title">Committed changes: "Add user authentication"</div>
-                    <div class="activity-time">15 minutes ago</div>
-                </div>
-            </div>
-            <div class="activity-item">
-                <div class="activity-icon status-icon-warning">
-                    <i class="ti ti-bug"></i>
-                </div>
-                <div class="activity-content">
-                    <div class="activity-title">Fixed bug in authentication middleware</div>
-                    <div class="activity-time">1 hour ago</div>
-                </div>
-            </div>
-            <div class="activity-item">
-                <div class="activity-icon status-icon-purple">
-                    <i class="ti ti-package"></i>
-                </div>
-                <div class="activity-content">
-                    <div class="activity-title">Installed package: react-router-dom</div>
-                    <div class="activity-time">2 hours ago</div>
+                    <div class="activity-title">No recent activity</div>
+                    <div class="activity-time">Start a workspace session to see activity</div>
                 </div>
             </div>
         </div>
@@ -316,33 +408,664 @@ const pageDescription = 'Interactive development workspace with terminal access 
             background: var(--success);
             color: white;
         }
+
+        /* Project Selector */
+        .project-selector {
+            display: flex;
+            gap: var(--space-md);
+            align-items: center;
+            padding: var(--space-md);
+        }
+
+        .form-select {
+            flex: 1;
+            padding: var(--space-sm) var(--space-md);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+        }
+
+        /* Terminal Interface */
+        .terminal-container {
+            background: #000;
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terminal-output {
+            flex: 1;
+            color: #00ff00;
+            margin-bottom: var(--space-md);
+            overflow-y: auto;
+            max-height: 250px;
+        }
+
+        .terminal-line {
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+        }
+
+        .terminal-prompt {
+            color: #00ff00;
+            margin-right: 8px;
+            font-weight: bold;
+        }
+
+        .terminal-text {
+            color: #ffffff;
+        }
+
+        .terminal-input-line {
+            display: flex;
+            align-items: center;
+            border-top: 1px solid #333;
+            padding-top: var(--space-sm);
+        }
+
+        .terminal-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: inherit;
+            margin-left: 8px;
+            outline: none;
+        }
+
+        .terminal-input:disabled {
+            opacity: 0.5;
+        }
+
+        /* Claude Interface */
+        .claude-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 400px;
+        }
+
+        .claude-chat {
+            flex: 1;
+            background: var(--bg-quaternary);
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+            margin-bottom: var(--space-md);
+            overflow-y: auto;
+            max-height: 300px;
+        }
+
+        .claude-message {
+            margin-bottom: var(--space-md);
+            padding: var(--space-md);
+            border-radius: var(--radius-md);
+        }
+
+        .claude-message.system-message {
+            background: var(--info);
+            color: white;
+        }
+
+        .claude-message.user-message {
+            background: var(--accent-primary);
+            color: white;
+            margin-left: 20%;
+        }
+
+        .claude-message.assistant-message {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            margin-right: 20%;
+        }
+
+        .claude-input-area {
+            display: flex;
+            gap: var(--space-sm);
+            align-items: flex-end;
+        }
+
+        .claude-input {
+            flex: 1;
+            padding: var(--space-sm) var(--space-md);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+            min-height: 60px;
+            resize: vertical;
+        }
+
+        .claude-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+        }
+
+        .claude-input:disabled {
+            opacity: 0.5;
+        }
+
+        /* Badge variations */
+        .badge {
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .badge-danger {
+            background: var(--error);
+            color: white;
+        }
+
+        .badge-info {
+            background: var(--info);
+            color: white;
+        }
+
+        .badge-secondary {
+            background: var(--bg-quaternary);
+            color: var(--text-secondary);
+        }
     </style>
 
     <script>
+        let currentProject = null;
+        let workspaceSession = null;
+        let sessionStartTime = null;
+        let sessionTimer = null;
+
         document.addEventListener('DOMContentLoaded', function() {
             setupWorkspaceHandlers();
+            loadProjects();
         });
 
-        function setupWorkspaceHandlers() {
-            // Open Terminal
-            document.getElementById('open-terminal').addEventListener('click', function() {
-                window.location.href = '/workspace-vscode?tab=terminal';
+        function checkURLParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const projectId = urlParams.get('project');
+            if (projectId) {
+                selectProjectById(projectId);
+            }
+        }
+
+        function loadProjects() {
+            fetch('/api/projects')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        populateProjectSelector(result.data);
+                    } else {
+                        console.error('API returned error:', result);
+                    }
+                })
+                .catch(error => console.error('Error loading projects:', error));
+        }
+
+        function populateProjectSelector(projects) {
+            const selector = document.getElementById('project-selector');
+            selector.innerHTML = '<option value="">Select a project to start workspace...</option>';
+
+            // Filter to show only active projects
+            const availableProjects = projects.filter(project => {
+                const status = project.projectStatus || project.status;
+                return status === 'active';
             });
 
-            // Claude Assistant
-            document.getElementById('claude-assistant').addEventListener('click', function() {
-                window.location.href = '/workspace-vscode?tab=claude';
+            if (availableProjects.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No projects available - Please create a project first';
+                option.disabled = true;
+                selector.appendChild(option);
+                return;
+            }
+
+            availableProjects.forEach(project => {
+                const option = document.createElement('option');
+                option.value = project.id;
+                const statusLabel = project.projectStatus === 'active' ? 'Active' : 'Available';
+                option.textContent = project.name + ' (' + (project.type || 'Web App') + ') - ' + statusLabel;
+                selector.appendChild(option);
+            });
+
+            selector.addEventListener('change', function() {
+                const loadBtn = document.getElementById('load-workspace');
+                loadBtn.disabled = !this.value;
+                if (this.value) {
+                    const selectedProject = availableProjects.find(p => p.id === this.value);
+                    if (selectedProject) {
+                        currentProject = selectedProject;
+                        updateWorkspaceInfo(selectedProject);
+                    }
+                }
+            });
+
+            // Check URL parameters after projects are populated
+            checkURLParams();
+        }
+
+        function selectProjectById(projectId) {
+            const selector = document.getElementById('project-selector');
+
+            // Check if the project exists in the dropdown options
+            const option = Array.from(selector.options).find(opt => opt.value === projectId);
+
+            if (option) {
+                selector.value = projectId;
+                const event = new Event('change');
+                selector.dispatchEvent(event);
+                console.log('Project auto-selected:', projectId);
+            } else {
+                console.warn('Project not found in available projects:', projectId);
+                // Optionally show a message to user that project is not available
+                addActivity('Project ' + projectId + ' not found in available projects', 'warning');
+            }
+        }
+
+        function updateWorkspaceInfo(project) {
+            document.getElementById('current-project').textContent = project.name;
+            document.getElementById('working-directory').textContent = project.targetFolder || project.path || 'Not specified';
+        }
+
+        function setupWorkspaceHandlers() {
+            // Load Workspace
+            document.getElementById('load-workspace').addEventListener('click', function() {
+                if (currentProject) {
+                    startWorkspace(currentProject);
+                }
+            });
+
+            // Create Workspace
+            document.getElementById('create-workspace').addEventListener('click', function() {
+                window.location.href = '/projects/create';
+            });
+
+            // Start Claude Session
+            document.getElementById('start-claude-session').addEventListener('click', function() {
+                if (!currentProject) {
+                    alert('Please select a project first');
+                    return;
+                }
+                startClaudeSession();
+            });
+
+            // Open Terminal
+            document.getElementById('open-terminal').addEventListener('click', function() {
+                if (!currentProject) {
+                    alert('Please select a project first');
+                    return;
+                }
+                openTerminal();
+            });
+
+            // Open Editor
+            document.getElementById('open-editor').addEventListener('click', function() {
+                if (!currentProject) {
+                    alert('Please select a project first');
+                    return;
+                }
+                openCodeEditor();
+            });
+
+            // Workspace Settings
+            document.getElementById('workspace-settings').addEventListener('click', function() {
+                if (currentProject) {
+                    window.location.href = '/projects/' + currentProject.id + '/edit';
+                } else {
+                    alert('Please select a project first');
+                }
+            });
+
+            // Terminal Controls
+            document.getElementById('close-terminal').addEventListener('click', function() {
+                closeTerminal();
+            });
+
+            document.getElementById('clear-terminal').addEventListener('click', function() {
+                clearTerminal();
+            });
+
+            // Claude Controls
+            document.getElementById('close-claude').addEventListener('click', function() {
+                closeClaudeInterface();
+            });
+
+            // Send Claude Message Button
+            document.getElementById('send-claude-message').addEventListener('click', function() {
+                sendClaudeMessage();
+            });
+
+            // Stop Workspace
+            document.getElementById('stop-workspace').addEventListener('click', function() {
+                stopWorkspace();
             });
 
             // Tool cards
             const toolCards = document.querySelectorAll('.tool-card');
             toolCards.forEach((card, index) => {
                 card.addEventListener('click', function() {
+                    if (!currentProject) {
+                        alert('Please select a project first');
+                        return;
+                    }
                     const tools = ['editor', 'git', 'packages', 'debug'];
                     const tool = tools[index];
-                    window.location.href = '/workspace-vscode?tool=' + tool;
+                    openTool(tool);
                 });
             });
+
+            // Refresh Activity
+            document.getElementById('refresh-activity').addEventListener('click', function() {
+                refreshActivity();
+            });
+        }
+
+        function startWorkspace(project) {
+            workspaceSession = {
+                projectId: project.id,
+                projectName: project.name,
+                startTime: new Date()
+            };
+
+            sessionStartTime = Date.now();
+            startSessionTimer();
+
+            updateWorkspaceStatus('active');
+            addActivity('Workspace session started for: ' + project.name, 'success');
+
+            // Enable all workspace functions
+            enableWorkspaceActions();
+        }
+
+        function stopWorkspace() {
+            if (workspaceSession) {
+                clearInterval(sessionTimer);
+                updateWorkspaceStatus('stopped');
+                addActivity('Workspace session stopped', 'warning');
+
+                workspaceSession = null;
+                sessionStartTime = null;
+
+                // Disable workspace functions
+                disableWorkspaceActions();
+                closeTerminal();
+                closeClaudeInterface();
+            }
+        }
+
+        function enableWorkspaceActions() {
+            document.getElementById('stop-workspace').style.display = 'inline-flex';
+        }
+
+        function disableWorkspaceActions() {
+            document.getElementById('stop-workspace').style.display = 'none';
+        }
+
+        function updateWorkspaceStatus(status) {
+            const badge = document.getElementById('workspace-status-badge');
+            const sessionStatus = document.getElementById('session-status');
+
+            switch(status) {
+                case 'active':
+                    badge.textContent = 'Active Session';
+                    badge.className = 'badge badge-success';
+                    sessionStatus.textContent = 'Running';
+                    break;
+                case 'stopped':
+                    badge.textContent = 'Session Stopped';
+                    badge.className = 'badge badge-secondary';
+                    sessionStatus.textContent = 'Idle';
+                    document.getElementById('session-duration').textContent = '00:00:00';
+                    break;
+                default:
+                    badge.textContent = 'No Active Session';
+                    badge.className = 'badge badge-secondary';
+                    sessionStatus.textContent = 'Idle';
+            }
+        }
+
+        function startSessionTimer() {
+            sessionTimer = setInterval(() => {
+                if (sessionStartTime) {
+                    const elapsed = Date.now() - sessionStartTime;
+                    const hours = Math.floor(elapsed / 3600000);
+                    const minutes = Math.floor((elapsed % 3600000) / 60000);
+                    const seconds = Math.floor((elapsed % 60000) / 1000);
+
+                    const timeString = hours.toString().padStart(2, '0') + ':' +
+                                     minutes.toString().padStart(2, '0') + ':' +
+                                     seconds.toString().padStart(2, '0');
+
+                    document.getElementById('session-duration').textContent = timeString;
+                }
+            }, 1000);
+        }
+
+        function startClaudeSession() {
+            document.getElementById('claude-interface').style.display = 'block';
+            document.getElementById('claude-status').textContent = 'Active';
+
+            // Enable Claude input and send button
+            const claudeInput = document.getElementById('claude-input');
+            const sendButton = document.getElementById('send-claude-message');
+
+            claudeInput.disabled = false;
+            sendButton.disabled = false;
+
+            // Setup Claude input handlers
+            setupClaudeInputHandlers();
+
+            addActivity('Claude Code assistant started', 'info');
+
+            // Focus on the input area
+            claudeInput.focus();
+        }
+
+        function openTerminal() {
+            document.getElementById('terminal-card').style.display = 'block';
+            document.getElementById('terminal-input').disabled = false;
+            addActivity('Terminal opened', 'info');
+        }
+
+        function openCodeEditor() {
+            addActivity('Code editor requested', 'info');
+            // In a real implementation, this would open an embedded editor
+            alert('Code editor functionality would be implemented here');
+        }
+
+        function openTool(tool) {
+            addActivity('Opened ' + tool + ' tool', 'info');
+            // Tool-specific functionality would be implemented here
+        }
+
+        function closeTerminal() {
+            document.getElementById('terminal-card').style.display = 'none';
+        }
+
+        function clearTerminal() {
+            document.getElementById('terminal-output').innerHTML =
+                '<div class="terminal-line"><span class="terminal-prompt">$</span><span class="terminal-text">Terminal cleared</span></div>';
+        }
+
+        function closeClaudeInterface() {
+            document.getElementById('claude-interface').style.display = 'none';
+            document.getElementById('claude-status').textContent = 'Not Started';
+
+            // Disable Claude input and send button
+            const claudeInput = document.getElementById('claude-input');
+            const sendButton = document.getElementById('send-claude-message');
+
+            claudeInput.disabled = true;
+            sendButton.disabled = true;
+            claudeInput.value = '';
+        }
+
+        function setupClaudeInputHandlers() {
+            const claudeInput = document.getElementById('claude-input');
+
+            // Handle Enter key (Ctrl+Enter or Shift+Enter to send)
+            claudeInput.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter' && (event.ctrlKey || event.shiftKey)) {
+                    event.preventDefault();
+                    sendClaudeMessage();
+                }
+            });
+
+            // Enable/disable send button based on input content
+            claudeInput.addEventListener('input', function() {
+                const sendButton = document.getElementById('send-claude-message');
+                sendButton.disabled = !this.value.trim();
+            });
+        }
+
+        function sendClaudeMessage() {
+            const claudeInput = document.getElementById('claude-input');
+            const claudeChat = document.getElementById('claude-chat');
+            const message = claudeInput.value.trim();
+
+            if (!message) {
+                return;
+            }
+
+            // Add user message to chat
+            const userMessage = document.createElement('div');
+            userMessage.className = 'claude-message user-message';
+            userMessage.innerHTML = '<div class="message-content"><strong>You:</strong><br>' + escapeHtml(message) + '</div>';
+            claudeChat.appendChild(userMessage);
+
+            // Clear input
+            claudeInput.value = '';
+            document.getElementById('send-claude-message').disabled = true;
+
+            // Show typing indicator
+            const typingIndicator = document.createElement('div');
+            typingIndicator.className = 'claude-message assistant-message typing';
+            typingIndicator.innerHTML = '<div class="message-content"><strong>Claude:</strong><br>Thinking...</div>';
+            claudeChat.appendChild(typingIndicator);
+
+            // Scroll to bottom
+            claudeChat.scrollTop = claudeChat.scrollHeight;
+
+            // Simulate Claude response (in a real implementation, this would call the Claude API)
+            setTimeout(() => {
+                // Remove typing indicator
+                claudeChat.removeChild(typingIndicator);
+
+                // Add Claude response
+                const claudeResponse = document.createElement('div');
+                claudeResponse.className = 'claude-message assistant-message';
+                claudeResponse.innerHTML = '<div class="message-content"><strong>Claude:</strong><br>' + getClaudeResponse(message) + '</div>';
+                claudeChat.appendChild(claudeResponse);
+
+                // Scroll to bottom
+                claudeChat.scrollTop = claudeChat.scrollHeight;
+
+                // Log activity
+                addActivity('Claude Code: Processed query', 'info');
+            }, 1000 + Math.random() * 2000); // Random delay between 1-3 seconds
+
+            // Log activity
+            addActivity('Claude Code: Query sent', 'info');
+        }
+
+        function getClaudeResponse(userMessage) {
+            // Simulate different types of responses based on message content
+            const message = userMessage.toLowerCase();
+
+            if (message.includes('help') || message.includes('what can you do')) {
+                return 'I can help you with:<br>• Code review and debugging<br>• Writing and refactoring code<br>• Explaining code concepts<br>• Project structure suggestions<br>• Best practices and optimization<br><br>What would you like help with today?';
+            }
+
+            if (message.includes('debug') || message.includes('error') || message.includes('bug')) {
+                return "I would be happy to help debug your code! Please share:<br>• The error message you're seeing<br>• The relevant code snippet<br>• What you expected to happen<br>• Your environment details<br><br>This will help me provide the best assistance.";
+            }
+
+            if (message.includes('review') || message.includes('code review')) {
+                return "I can review your code for:<br>• Logic and functionality<br>• Performance optimizations<br>• Security considerations<br>• Code style and best practices<br>• Potential bugs or edge cases<br><br>Please paste the code you'd like me to review!";
+            }
+
+            if (message.includes('project') || message.includes('structure')) {
+                var projectName = currentProject ? currentProject.name : "selected project";
+                return "I can help with project structure! For your current project " + projectName + ", I can suggest:<br>• File organization<br>• Folder structure<br>• Configuration setup<br>• Dependencies management<br><br>What specific aspect would you like help with?";
+            }
+
+            // Default response
+            return "I understand you are asking about: " + userMessage + "<br><br>I am ready to help with your development tasks! Could you provide more details about what you would like assistance with? I can help with coding, debugging, code review, project setup, and much more.";
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function addActivity(message, type) {
+            const activityList = document.getElementById('activity-list');
+            const now = new Date();
+
+            const activityItem = document.createElement('div');
+            activityItem.className = 'activity-item';
+
+            const iconColors = {
+                success: '#4CAF50',
+                info: '#2196F3',
+                warning: '#FF9800',
+                error: '#F44336'
+            };
+
+            const icons = {
+                success: 'ti-check',
+                info: 'ti-info-circle',
+                warning: 'ti-alert-triangle',
+                error: 'ti-x'
+            };
+
+            activityItem.innerHTML =
+                '<div class="activity-icon" style="background: ' + (iconColors[type] || '#9E9E9E') + ';">' +
+                    '<i class="ti ' + (icons[type] || 'ti-clock') + '"></i>' +
+                '</div>' +
+                '<div class="activity-content">' +
+                    '<div class="activity-title">' + message + '</div>' +
+                    '<div class="activity-time">' + now.toLocaleTimeString() + '</div>' +
+                '</div>';
+
+            // Remove "No recent activity" if it exists
+            const noActivity = activityList.querySelector('.activity-item .activity-title');
+            if (noActivity && noActivity.textContent === 'No recent activity') {
+                activityList.innerHTML = '';
+            }
+
+            activityList.insertBefore(activityItem, activityList.firstChild);
+
+            // Keep only last 10 activities
+            while (activityList.children.length > 10) {
+                activityList.removeChild(activityList.lastChild);
+            }
+        }
+
+        function refreshActivity() {
+            addActivity('Activity refreshed', 'info');
         }
     </script>
     `

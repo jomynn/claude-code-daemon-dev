@@ -268,15 +268,12 @@
     },
     "bmadConfig": {
       "enabled": true,
-      "workflow": "agile",
       "status": "running",
-      "currentPhase": null,
+      "workflow": "agile",
       "agents": [
         "dev",
         "qa",
-        "pm",
-        "design",
-        "security"
+        "pm"
       ]
     },
     "settings": {
@@ -285,7 +282,7 @@
       "createGitignore": true
     },
     "createdAt": "2025-09-20T15:24:02.898Z",
-    "updatedAt": "2025-09-21T07:17:55.350Z",
+    "updatedAt": "2025-09-21T08:48:45.883Z",
     "status": "initialized",
     "terminalSessions": {},
     "priority": "medium",

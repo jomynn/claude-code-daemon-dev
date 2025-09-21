@@ -121,6 +121,17 @@ const pageDescription = 'Interactive development workspace with terminal access 
                     <span class="info-value" id="session-duration">00:00:00</span>
                 </div>
                 <div class="info-item">
+                    <span class="info-label">Session Persistence:</span>
+                    <span class="info-value" id="session-persistence">
+                        <span class="status-dot status-online" id="persistence-indicator"></span>
+                        <span id="persistence-text">Active</span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Last Activity:</span>
+                    <span class="info-value" id="last-activity">-</span>
+                </div>
+                <div class="info-item">
                     <span class="info-label">Claude Code Status:</span>
                     <span class="info-value" id="claude-status">Not Started</span>
                 </div>
@@ -693,7 +704,22 @@ const pageDescription = 'Interactive development workspace with terminal access 
         let sessionStartTime = null;
         let sessionTimer = null;
 
+        // Session management
+        let chatHistory = [];
+        let sessionState = {
+            lastProject: null,
+            bmadEnabled: false,
+            bmadStatus: 'stopped',
+            workspaceStatus: 'stopped',
+            chatHistory: [],
+            lastActivity: null,
+            sessionStartTime: null
+        };
+
         document.addEventListener('DOMContentLoaded', function() {
+            // Load previous session
+            loadSession();
+
             setupWorkspaceHandlers();
             loadProjects();
         });
@@ -764,6 +790,31 @@ const pageDescription = 'Interactive development workspace with terminal access 
 
             // Check URL parameters after projects are populated
             checkURLParams();
+
+            // Restore last session if no URL project was provided
+            restoreLastSession(availableProjects);
+        }
+
+        function restoreLastSession(availableProjects) {
+            // If URL already selected a project, don't override
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('project')) {
+                return;
+            }
+
+            // Try to restore last project from session
+            if (sessionState.lastProject) {
+                const lastProject = availableProjects.find(p => p.id === sessionState.lastProject);
+                if (lastProject) {
+                    selectProjectById(sessionState.lastProject);
+                    addActivity('Restored last project: ' + lastProject.name, 'info');
+                }
+            }
+
+            // Restore session state after a short delay to ensure UI is ready
+            setTimeout(() => {
+                restoreSessionState();
+            }, 500);
         }
 
         function selectProjectById(projectId) {
@@ -778,9 +829,24 @@ const pageDescription = 'Interactive development workspace with terminal access 
                 selector.dispatchEvent(event);
                 console.log('Project auto-selected:', projectId);
             } else {
-                console.warn('Project not found in available projects:', projectId);
-                // Optionally show a message to user that project is not available
-                addActivity('Project ' + projectId + ' not found in available projects', 'warning');
+                // Project not found - handle gracefully
+                console.info('Project ID from URL not found in current projects:', projectId);
+
+                // Clear the URL parameter to avoid repeated warnings
+                const url = new URL(window.location);
+                url.searchParams.delete('project');
+                window.history.replaceState({}, '', url);
+
+                // Show user-friendly message
+                addActivity('Project from URL not available. Please select an existing project.', 'info');
+
+                // Auto-select first available project if any exist
+                if (selector.options.length > 1) { // Skip the "Select Project" option
+                    selector.selectedIndex = 1;
+                    const event = new Event('change');
+                    selector.dispatchEvent(event);
+                    addActivity('Auto-selected first available project.', 'info');
+                }
             }
         }
 
@@ -987,6 +1053,11 @@ const pageDescription = 'Interactive development workspace with terminal access 
             // Setup Claude input handlers
             setupClaudeInputHandlers();
 
+            // Restore chat history if available (with small delay to ensure DOM is ready)
+            setTimeout(() => {
+                restoreChatHistory();
+            }, 100);
+
             addActivity('Claude Code assistant started', 'info');
 
             // Focus on the input area
@@ -1030,6 +1101,14 @@ const pageDescription = 'Interactive development workspace with terminal access 
             claudeInput.disabled = true;
             sendButton.disabled = true;
             claudeInput.value = '';
+
+            // Clear chat interface
+            const claudeChat = document.getElementById('claude-chat');
+            claudeChat.innerHTML = '<div class="claude-message assistant-message"><div class="message-content"><strong>Claude Code Assistant is ready!</strong><br>How can I help you with your project today?</div></div>';
+
+            // Clear chat history
+            chatHistory = [];
+            saveSession();
         }
 
         function setupClaudeInputHandlers() {
@@ -1065,6 +1144,12 @@ const pageDescription = 'Interactive development workspace with terminal access 
             userMessage.innerHTML = '<div class="message-content"><strong>You:</strong><br>' + escapeHtml(message) + '</div>';
             claudeChat.appendChild(userMessage);
 
+            // Track user message in history
+            addMessageToHistory('user', message);
+
+            // Save session with updated chat history
+            saveSession();
+
             // Clear input
             claudeInput.value = '';
             document.getElementById('send-claude-message').disabled = true;
@@ -1086,8 +1171,15 @@ const pageDescription = 'Interactive development workspace with terminal access 
                 // Add Claude response
                 const claudeResponse = document.createElement('div');
                 claudeResponse.className = 'claude-message assistant-message';
-                claudeResponse.innerHTML = '<div class="message-content"><strong>Claude:</strong><br>' + getClaudeResponse(message) + '</div>';
+                const responseText = getClaudeResponse(message);
+                claudeResponse.innerHTML = '<div class="message-content"><strong>Claude:</strong><br>' + responseText + '</div>';
                 claudeChat.appendChild(claudeResponse);
+
+                // Track Claude response in history
+                addMessageToHistory('assistant', responseText);
+
+                // Save session with updated chat history
+                saveSession();
 
                 // Scroll to bottom
                 claudeChat.scrollTop = claudeChat.scrollHeight;
@@ -1101,15 +1193,75 @@ const pageDescription = 'Interactive development workspace with terminal access 
         }
 
         function getClaudeResponse(userMessage) {
-            // Simulate different types of responses based on message content
+            // Check if BMAD Method is enabled for current project
+            const isBmadEnabled = currentProject && currentProject.bmadConfig && currentProject.bmadConfig.enabled;
             const message = userMessage.toLowerCase();
 
+            // BMAD Method Responses
+            if (isBmadEnabled) {
+                // Check for brainstorming requests
+                if (message.includes('brainstorm') || message.includes('##brainstorm') || message.includes('ideate') || message.includes('brainstorming')) {
+                    return getBmadBrainstormResponse(userMessage, message);
+                }
+
+                // Check for role-based prompts
+                if (message.includes('[role:') || message.includes('role:') || message.includes('as pm') || message.includes('as qa') || message.includes('as devops')) {
+                    return getBmadRoleResponse(userMessage, message);
+                }
+
+                // Check for BMAD workflow keywords
+                if (message.includes('bmad workflow') || message.includes('bmad process') || message.includes('methodology')) {
+                    return getBmadWorkflowResponse(userMessage);
+                }
+
+                // Check for BMAD keywords
+                if (message.includes('bmad') || message.includes('multi-agent') || message.includes('build-manage-analyze-deploy')) {
+                    return "🎯 **BMAD Method Activated**<br><br>I'm ready to work with you using the Build-Manage-Analyze-Deploy methodology!<br><br>**Available Commands:**<br>• **[ROLE: RoleName]** - Get specialized role perspective<br>• **##brainstorm** - Multi-agent brainstorming session<br>• **bmad workflow** - See methodology guidance<br><br>**Available Roles:**<br>• **[ROLE: Developer]** - Code implementation and technical solutions<br>• **[ROLE: Project Manager]** - Planning, coordination, and roadmaps<br>• **[ROLE: QA Engineer]** - Testing strategies and quality assurance<br>• **[ROLE: DevOps]** - Deployment, infrastructure, and automation<br><br>Start your message with a role declaration or ##brainstorm to get specialized guidance!";
+                }
+
+                // BMAD-enhanced responses for common queries
+                if (message.includes('help') || message.includes('what can you do')) {
+                    return '🎯 **BMAD Method Enabled - Enhanced Assistant**<br><br>' +
+                           '**Multi-Agent Development:**<br>' +
+                           '• **🏗️ Build**: Code implementation with developer expertise<br>' +
+                           '• **📋 Manage**: Project planning and coordination as PM<br>' +
+                           '• **🧪 Analyze**: Quality assurance and testing strategies<br>' +
+                           '• **🚀 Deploy**: Infrastructure and deployment guidance<br><br>' +
+
+                           '**🧠 Advanced Features:**<br>' +
+                           '• **##brainstorm** - Multi-agent brainstorming sessions<br>' +
+                           '• **[ROLE: RoleName]** - Specialized role perspectives<br>' +
+                           '• **bmad workflow** - Methodology guidance<br><br>' +
+
+                           '**💡 Example Commands:**<br>' +
+                           '• "##brainstorm API architecture"<br>' +
+                           '• "[ROLE: PM] Plan user authentication feature"<br>' +
+                           '• "[ROLE: QA] Test database performance"<br>' +
+                           '• "bmad workflow" - See complete methodology<br><br>' +
+
+                           '**🎯 Pro Tip**: Start with ##brainstorm for comprehensive multi-agent analysis!';
+                }
+
+                if (message.includes('debug') || message.includes('error') || message.includes('bug')) {
+                    return getBmadDebugResponse(userMessage, message);
+                }
+
+                if (message.includes('project') || message.includes('structure')) {
+                    var projectName = currentProject ? currentProject.name : "selected project";
+                    return "📋 **BMAD Project Planning**<br><br>For your **" + projectName + "** project, I can provide multi-role guidance:<br><br>**[PM]** Strategic planning and roadmaps<br>**[Developer]** Technical architecture and implementation<br>**[QA]** Testing strategies and quality gates<br>**[DevOps]** Deployment and infrastructure planning<br><br>Which role perspective would be most helpful for your current needs?";
+                }
+
+                // Enhanced default for BMAD projects
+                return "🎯 **BMAD Method Ready**<br><br>I understand you're asking about: &quot;" + userMessage + "&quot;<br><br>With BMAD Method enabled, I can approach this from multiple expert perspectives:<br>• **Developer** for technical implementation<br>• **PM** for planning and coordination<br>• **QA** for testing and quality assurance<br>• **DevOps** for deployment and infrastructure<br><br>Try starting your message with **[ROLE: RoleName]** for specialized guidance!";
+            }
+
+            // Standard responses for non-BMAD projects
             if (message.includes('help') || message.includes('what can you do')) {
-                return 'I can help you with:<br>• Code review and debugging<br>• Writing and refactoring code<br>• Explaining code concepts<br>• Project structure suggestions<br>• Best practices and optimization<br><br>What would you like help with today?';
+                return 'I can help you with:<br>• Code review and debugging<br>• Writing and refactoring code<br>• Explaining code concepts<br>• Project structure suggestions<br>• Best practices and optimization<br><br>💡 **Tip**: Enable BMAD Method in your project settings for multi-agent development assistance!';
             }
 
             if (message.includes('debug') || message.includes('error') || message.includes('bug')) {
-                return "I would be happy to help debug your code! Please share:<br>• The error message you're seeing<br>• The relevant code snippet<br>• What you expected to happen<br>• Your environment details<br><br>This will help me provide the best assistance.";
+                return getStandardDebugResponse(userMessage, message);
             }
 
             if (message.includes('review') || message.includes('code review')) {
@@ -1122,13 +1274,650 @@ const pageDescription = 'Interactive development workspace with terminal access 
             }
 
             // Default response
-            return "I understand you are asking about: " + userMessage + "<br><br>I am ready to help with your development tasks! Could you provide more details about what you would like assistance with? I can help with coding, debugging, code review, project setup, and much more.";
+            return "I understand you are asking about: &quot;" + userMessage + "&quot;<br><br>I am ready to help with your development tasks! Could you provide more details about what you would like assistance with? I can help with coding, debugging, code review, project setup, and much more.";
+        }
+
+        function getBmadRoleResponse(userMessage, message) {
+            // Extract role from message
+            let role = 'Developer'; // default
+            if (message.includes('pm') || message.includes('project manager')) role = 'Project Manager';
+            else if (message.includes('qa') || message.includes('quality')) role = 'QA Engineer';
+            else if (message.includes('devops') || message.includes('deployment')) role = 'DevOps Engineer';
+            else if (message.includes('developer') || message.includes('dev')) role = 'Developer';
+
+            // Check if this is a comprehensive BMAD prompt (contains specific structure)
+            const isComprehensivePrompt = userMessage.includes('Current Status') ||
+                                        userMessage.includes('Action Items') ||
+                                        userMessage.includes('Planning Questions') ||
+                                        userMessage.length > 200;
+
+            if (isComprehensivePrompt) {
+                return getComprehensiveBmadResponse(userMessage, role);
+            }
+
+            const responses = {
+                'Project Manager': "📋 **PM Perspective Activated**<br><br>As your Project Manager, I'm focusing on:<br>• Sprint planning and roadmap development<br>• Resource allocation and timeline management<br>• Risk assessment and mitigation strategies<br>• Team coordination and stakeholder communication<br><br>**Current Analysis**: " + userMessage + "<br><br>Let me break this down into actionable sprints and coordinate our multi-agent approach. What specific planning aspect needs attention?",
+
+                'QA Engineer': "🧪 **QA Engineer Perspective Activated**<br><br>From a Quality Assurance standpoint, I'm analyzing:<br>• Testing strategies and coverage requirements<br>• Quality gates and acceptance criteria<br>• Risk areas and edge case scenarios<br>• Automation opportunities and test frameworks<br><br>**Quality Analysis**: " + userMessage + "<br><br>Let me design comprehensive testing approaches to ensure robust, reliable implementation. What quality concerns should we prioritize?",
+
+                'DevOps Engineer': "⚙️ **DevOps Perspective Activated**<br><br>As your DevOps Engineer, I'm focusing on:<br>• Infrastructure architecture and scalability<br>• Deployment pipelines and automation<br>• Monitoring, logging, and observability<br>• Security and compliance requirements<br><br>**Infrastructure Analysis**: " + userMessage + "<br><br>Let me design deployment strategies and infrastructure solutions. What operational aspects need attention?",
+
+                'Developer': "💻 **Developer Perspective Activated**<br><br>From a technical implementation standpoint:<br>• Code architecture and design patterns<br>• Technology stack and framework selection<br>• Performance optimization and scalability<br>• Best practices and code quality<br><br>**Technical Analysis**: " + userMessage + "<br><br>Let me provide technical solutions and implementation guidance. What specific development challenges can I help solve?"
+            };
+
+            return responses[role] || responses['Developer'];
+        }
+
+        function getComprehensiveBmadResponse(userMessage, role) {
+            var projectName = currentProject ? currentProject.name : "Web3 audit intelligence system";
+
+            const roleResponses = {
+                'Project Manager': generatePMResponse(userMessage, projectName),
+                'QA Engineer': generateQAResponse(userMessage, projectName),
+                'DevOps Engineer': generateDevOpsResponse(userMessage, projectName),
+                'Developer': generateDeveloperResponse(userMessage, projectName)
+            };
+
+            return roleResponses[role] || roleResponses['Project Manager'];
+        }
+
+        function generatePMResponse(userMessage, projectName) {
+            return "📋 **Project Manager - BMAD Method Response**<br><br>" +
+                   "**Strategic Coordination for " + projectName + "**<br><br>" +
+
+                   "**🎯 Sprint Planning Recommendations:**<br>" +
+                   "• **Sprint 1-2**: Sequential implementation (Code4rena → Sherlock → ImmuneFi)<br>" +
+                   "• **Sprint 3**: Parallel optimization and AI pipeline integration<br>" +
+                   "• **Sprint 4**: Testing, deployment, and monitoring setup<br><br>" +
+
+                   "**⚠️ Risk Assessment & Mitigation:**<br>" +
+                   "• **Rate Limiting**: Implement exponential backoff, respect robots.txt<br>" +
+                   "• **Legal Compliance**: Add terms acceptance, rate limiting transparency<br>" +
+                   "• **Data Quality**: Validation pipelines, backup data sources<br>" +
+                   "• **Scalability**: Queue-based processing, horizontal scaling plan<br><br>" +
+
+                   "**🏗️ AI Analysis Pipeline Architecture:**<br>" +
+                   "• **Stage 1**: Raw data ingestion and cleaning<br>" +
+                   "• **Stage 2**: Pattern detection and classification<br>" +
+                   "• **Stage 3**: Quality scoring and spam filtering<br>" +
+                   "• **Stage 4**: Intelligence extraction and reporting<br><br>" +
+
+                   "**👥 Team Coordination Plan:**<br>" +
+                   "• **Dev Team**: Focus on robust error handling and modular collectors<br>" +
+                   "• **QA Team**: Automated testing for data accuracy and scraping reliability<br>" +
+                   "• **DevOps Team**: Containerized deployment with monitoring<br><br>" +
+
+                   "**📅 Recommended Timeline:**<br>" +
+                   "• **Week 1-2**: Core infrastructure and Code4rena collector<br>" +
+                   "• **Week 3-4**: Multi-platform expansion and data validation<br>" +
+                   "• **Week 5-6**: AI pipeline and quality filtering<br>" +
+                   "• **Week 7-8**: Testing, deployment, and optimization<br><br>" +
+
+                   "**🔄 Next Actions:**<br>" +
+                   "1. Schedule daily standups with all teams<br>" +
+                   "2. Set up project tracking and milestone definitions<br>" +
+                   "3. Create risk monitoring dashboard<br>" +
+                   "4. Define success criteria and KPIs";
+        }
+
+        function generateQAResponse(userMessage, projectName) {
+            return "🧪 **QA Engineer - BMAD Method Response**<br><br>" +
+                   "**Comprehensive Testing Strategy for " + projectName + "**<br><br>" +
+
+                   "**🔍 Web Scraping Reliability Testing:**<br>" +
+                   "• **Data Accuracy Tests**: Compare scraped vs manual data samples<br>" +
+                   "• **Rate Limiting Tests**: Verify respectful request patterns<br>" +
+                   "• **Error Handling Tests**: Simulate network failures, timeouts<br>" +
+                   "• **Data Consistency Tests**: Verify data format and completeness<br><br>" +
+
+                   "**🛡️ Quality Assurance Framework:**<br>" +
+                   "• **Unit Tests**: Individual collector modules (80%+ coverage)<br>" +
+                   "• **Integration Tests**: End-to-end data pipeline validation<br>" +
+                   "• **Performance Tests**: Load testing for concurrent scraping<br>" +
+                   "• **Security Tests**: Validate safe data handling practices<br><br>" +
+
+                   "**📊 AI Analysis Testing:**<br>" +
+                   "• **Model Accuracy Tests**: Precision/recall for spam detection<br>" +
+                   "• **Edge Case Tests**: Unusual report formats and edge conditions<br>" +
+                   "• **Regression Tests**: Ensure model improvements don't break existing<br>" +
+                   "• **Bias Tests**: Validate fair treatment across different platforms<br><br>" +
+
+                   "**🔄 Continuous Testing Pipeline:**<br>" +
+                   "• **Pre-commit Hooks**: Code quality and basic unit tests<br>" +
+                   "• **CI/CD Integration**: Automated test suite on every push<br>" +
+                   "• **Staging Environment**: Real-world testing with limited scope<br>" +
+                   "• **Production Monitoring**: Alert on data quality degradation<br><br>" +
+
+                   "**📋 Test Case Categories:**<br>" +
+                   "1. **Functional**: Each platform's scraping accuracy<br>" +
+                   "2. **Performance**: Response times and throughput<br>" +
+                   "3. **Security**: Data sanitization and safe storage<br>" +
+                   "4. **Usability**: API response formats and documentation<br><br>" +
+
+                   "**🎯 Quality Gates:**<br>" +
+                   "• 95%+ data accuracy across all platforms<br>" +
+                   "• <2 second average response time<br>" +
+                   "• Zero security vulnerabilities<br>" +
+                   "• 90%+ test coverage maintained";
+        }
+
+        function generateDevOpsResponse(userMessage, projectName) {
+            return "⚙️ **DevOps Engineer - BMAD Method Response**<br><br>" +
+                   "**Infrastructure Strategy for " + projectName + "**<br><br>" +
+
+                   "**🐳 Containerization & Deployment:**<br>" +
+                   "• **Docker Multi-stage**: Separate build/runtime containers<br>" +
+                   "• **Kubernetes**: Auto-scaling based on queue depth<br>" +
+                   "• **Helm Charts**: Standardized deployment configurations<br>" +
+                   "• **Blue-Green Deployment**: Zero-downtime updates<br><br>" +
+
+                   "**🔄 CI/CD Pipeline Architecture:**<br>" +
+                   "• **Source Control**: Git with feature branch workflow<br>" +
+                   "• **Build Pipeline**: Automated testing + security scanning<br>" +
+                   "• **Staging**: Automated deployment for integration testing<br>" +
+                   "• **Production**: Approval-gated deployment with rollback<br><br>" +
+
+                   "**📊 Monitoring & Observability:**<br>" +
+                   "• **Application Metrics**: Request rates, error rates, latency<br>" +
+                   "• **Business Metrics**: Scraping success rates, data quality<br>" +
+                   "• **Infrastructure Metrics**: CPU, memory, network, storage<br>" +
+                   "• **Alerting**: PagerDuty integration for critical issues<br><br>" +
+
+                   "**🔒 Security & Compliance:**<br>" +
+                   "• **Secrets Management**: Vault or K8s secrets for API keys<br>" +
+                   "• **Network Security**: VPC, security groups, network policies<br>" +
+                   "• **Data Encryption**: At-rest and in-transit encryption<br>" +
+                   "• **Compliance**: GDPR-ready data handling and retention<br><br>" +
+
+                   "**🏗️ Infrastructure Components:**<br>" +
+                   "• **Message Queue**: Redis/RabbitMQ for scraping jobs<br>" +
+                   "• **Database**: PostgreSQL with read replicas<br>" +
+                   "• **Cache Layer**: Redis for frequently accessed data<br>" +
+                   "• **File Storage**: S3-compatible for raw HTML/JSON<br><br>" +
+
+                   "**📈 Scalability Plan:**<br>" +
+                   "• **Horizontal Scaling**: Auto-scaling based on metrics<br>" +
+                   "• **Database Scaling**: Read replicas + connection pooling<br>" +
+                   "• **Queue Scaling**: Multiple worker instances<br>" +
+                   "• **Global CDN**: Fast data access worldwide<br><br>" +
+
+                   "**🚀 Deployment Strategy:**<br>" +
+                   "1. **Phase 1**: Single-region deployment with monitoring<br>" +
+                   "2. **Phase 2**: Multi-AZ setup for high availability<br>" +
+                   "3. **Phase 3**: Multi-region for global performance<br>" +
+                   "4. **Phase 4**: Edge computing for real-time processing";
+        }
+
+        function generateDeveloperResponse(userMessage, projectName) {
+            return "💻 **Developer - BMAD Method Response**<br><br>" +
+                   "**Technical Implementation for " + projectName + "**<br><br>" +
+
+                   "**🏗️ Architecture Recommendations:**<br>" +
+                   "• **Microservices**: Separate services per platform (Code4rena, Sherlock, ImmuneFi)<br>" +
+                   "• **Event-Driven**: Message queues for decoupled processing<br>" +
+                   "• **API Gateway**: Unified interface with rate limiting<br>" +
+                   "• **Database per Service**: Avoid shared database anti-pattern<br><br>" +
+
+                   "**🔧 Technology Stack:**<br>" +
+                   "• **Backend**: Python (FastAPI) for rapid development<br>" +
+                   "• **Scraping**: BeautifulSoup4 + Selenium for dynamic content<br>" +
+                   "• **AI/ML**: scikit-learn + Hugging Face for NLP<br>" +
+                   "• **Database**: PostgreSQL + Redis for caching<br><br>" +
+
+                   "**🛡️ Robust Error Handling:**<br>" +
+                   "• **Retry Logic**: Exponential backoff with jitter<br>" +
+                   "• **Circuit Breaker**: Fail fast when services are down<br>" +
+                   "• **Dead Letter Queue**: Capture failed processing attempts<br>" +
+                   "• **Graceful Degradation**: Continue with partial data<br><br>" +
+
+                   "**⚡ Rate Limiting Strategy:**<br>" +
+                   "• **Token Bucket**: Smooth request distribution<br>" +
+                   "• **Per-Domain Limits**: Respect individual site policies<br>" +
+                   "• **Dynamic Adjustment**: Slow down on 429 responses<br>" +
+                   "• **Monitoring**: Track rate limit usage and adjust<br><br>" +
+
+                   "**🔄 Data Processing Pipeline:**<br>" +
+                   "1. **Collection**: Platform-specific scrapers with validation<br>" +
+                   "2. **Normalization**: Standardize data formats across platforms<br>" +
+                   "3. **Enrichment**: Add metadata, categorization, scoring<br>" +
+                   "4. **Storage**: Efficient storage with proper indexing<br><br>" +
+
+                   "**🤖 AI Analysis Implementation:**<br>" +
+                   "• **Spam Detection**: Binary classifier with feature engineering<br>" +
+                   "• **Quality Scoring**: Multi-factor scoring algorithm<br>" +
+                   "• **Pattern Recognition**: Clustering for trend analysis<br>" +
+                   "• **Real-time Processing**: Stream processing for new reports<br><br>" +
+
+                   "**📁 Code Organization:**<br>" +
+                   "• **collectors/**: Platform-specific scraping modules<br>" +
+                   "• **processors/**: Data cleaning and normalization<br>" +
+                   "• **analyzers/**: AI/ML analysis components<br>" +
+                   "• **api/**: REST API endpoints and documentation<br>" +
+                   "• **tests/**: Comprehensive test suite<br>" +
+                   "• **config/**: Environment-specific configurations";
+        }
+
+        function getBmadDebugResponse(userMessage, message) {
+            var projectName = currentProject ? currentProject.name : "your project";
+
+            // Analyze the user's message for specific issues
+            const analysis = analyzeDebugRequest(userMessage, message);
+
+            return "🛠️ **BMAD Debug Mode - " + analysis.issueType + "**<br><br>" +
+                   "**🔍 Issue Analysis:** " + analysis.analysis + "<br><br>" +
+
+                   "**💻 [Developer Perspective]**<br>" +
+                   analysis.developerAdvice + "<br><br>" +
+
+                   "**🧪 [QA Perspective]**<br>" +
+                   analysis.qaAdvice + "<br><br>" +
+
+                   "**⚙️ [DevOps Perspective]**<br>" +
+                   analysis.devopsAdvice + "<br><br>" +
+
+                   "**🎯 Immediate Actions:**<br>" +
+                   analysis.actions.map((action, index) => (index + 1) + '. ' + action).join('<br>') + "<br><br>" +
+
+                   "**🔄 Next Steps:**<br>" +
+                   "• Use **[ROLE: Developer]** for detailed code analysis<br>" +
+                   "• Use **[ROLE: QA]** for testing strategies<br>" +
+                   "• Use **[ROLE: DevOps]** for infrastructure troubleshooting";
+        }
+
+        function getStandardDebugResponse(userMessage, message) {
+            // Analyze the user's message for specific issues
+            const analysis = analyzeDebugRequest(userMessage, message);
+
+            return "🛠️ **Debug Assistant - " + analysis.issueType + "**<br><br>" +
+                   "**🔍 Analysis:** " + analysis.analysis + "<br><br>" +
+
+                   "**💡 Recommendations:**<br>" +
+                   analysis.actions.map((action, index) => '• ' + action).join('<br>') + "<br><br>" +
+
+                   "**📋 To help me assist you better, please share:**<br>" +
+                   analysis.infoNeeded.map(info => '• ' + info).join('<br>') + "<br><br>" +
+
+                   "💡 **Tip**: Enable BMAD Method for multi-agent debugging with PM, Developer, QA, and DevOps perspectives!";
+        }
+
+        function analyzeDebugRequest(userMessage, message) {
+            var projectName = currentProject ? currentProject.name : "your project";
+            const msg = userMessage.toLowerCase();
+
+            // Technology/framework detection
+            const techs = {
+                python: msg.includes('python') || msg.includes('.py'),
+                javascript: msg.includes('javascript') || msg.includes('js') || msg.includes('node'),
+                react: msg.includes('react') || msg.includes('jsx'),
+                api: msg.includes('api') || msg.includes('endpoint') || msg.includes('request'),
+                database: msg.includes('database') || msg.includes('sql') || msg.includes('db'),
+                docker: msg.includes('docker') || msg.includes('container'),
+                web3: msg.includes('web3') || msg.includes('blockchain') || msg.includes('smart contract'),
+                scraping: msg.includes('scrap') || msg.includes('beautifulsoup') || msg.includes('selenium')
+            };
+
+            // Error type detection
+            const errorTypes = {
+                syntax: msg.includes('syntax') || msg.includes('syntaxerror'),
+                import: msg.includes('import') || msg.includes('module') || msg.includes('modulenotfound'),
+                connection: msg.includes('connection') || msg.includes('timeout') || msg.includes('network'),
+                auth: msg.includes('auth') || msg.includes('permission') || msg.includes('unauthorized'),
+                performance: msg.includes('slow') || msg.includes('performance') || msg.includes('memory'),
+                deployment: msg.includes('deploy') || msg.includes('production') || msg.includes('server')
+            };
+
+            // Generate contextual response based on detected patterns
+            if (errorTypes.syntax) {
+                return {
+                    issueType: "Syntax Error",
+                    analysis: "Detected potential syntax-related issue. This often involves code formatting, missing brackets, or language-specific syntax rules.",
+                    developerAdvice: "• Check bracket matching and indentation<br>• Verify variable names and function calls<br>• Use IDE syntax highlighting and linting",
+                    qaAdvice: "• Implement pre-commit hooks for syntax checking<br>• Add automated linting to CI/CD pipeline<br>• Use static analysis tools",
+                    devopsAdvice: "• Configure development environment with proper linting<br>• Set up IDE extensions for syntax validation<br>• Add code quality gates in deployment",
+                    actions: [
+                        "Run syntax checker/linter on your code",
+                        "Check for missing brackets, quotes, or semicolons",
+                        "Verify indentation consistency",
+                        "Look for typos in variable/function names"
+                    ],
+                    infoNeeded: [
+                        "The exact error message",
+                        "Code snippet around the error line",
+                        "Programming language and version",
+                        "IDE or editor you're using"
+                    ]
+                };
+            }
+
+            if (errorTypes.import || errorTypes.connection) {
+                return {
+                    issueType: errorTypes.import ? "Import/Module Error" : "Connection Error",
+                    analysis: errorTypes.import ?
+                        "Module or import issues often stem from missing dependencies, incorrect paths, or environment configuration." :
+                        "Connection errors typically involve network issues, API endpoints, or service availability.",
+                    developerAdvice: errorTypes.import ?
+                        "• Verify package installation and versions<br>• Check import paths and module structure<br>• Validate virtual environment activation" :
+                        "• Check API endpoint URLs and status<br>• Verify network connectivity<br>• Implement retry logic with backoff",
+                    qaAdvice: errorTypes.import ?
+                        "• Test dependency management across environments<br>• Validate package.json/requirements.txt<br>• Check for version conflicts" :
+                        "• Test network reliability scenarios<br>• Validate timeout configurations<br>• Test retry mechanisms",
+                    devopsAdvice: errorTypes.import ?
+                        "• Ensure consistent package management<br>• Use containerization for dependency isolation<br>• Set up environment variable management" :
+                        "• Configure load balancing and health checks<br>• Set up monitoring for service availability<br>• Implement circuit breaker patterns",
+                    actions: errorTypes.import ? [
+                        "Check if packages are installed correctly",
+                        "Verify virtual environment is activated",
+                        "Validate import paths and file structure",
+                        "Check for version compatibility issues"
+                    ] : [
+                        "Test network connectivity to the service",
+                        "Verify API endpoint URLs and ports",
+                        "Check service status and availability",
+                        "Review timeout and retry configurations"
+                    ],
+                    infoNeeded: errorTypes.import ? [
+                        "Complete error message",
+                        "Package manager used (pip, npm, etc.)",
+                        "Virtual environment details",
+                        "Project directory structure"
+                    ] : [
+                        "Error message and response codes",
+                        "API endpoint or service details",
+                        "Network configuration",
+                        "Timeout and retry settings"
+                    ]
+                };
+            }
+
+            if (techs.web3 || techs.scraping) {
+                const tech = techs.web3 ? "Web3/Blockchain" : "Web Scraping";
+                return {
+                    issueType: tech + " Issue",
+                    analysis: "Detected " + tech.toLowerCase() + " related problem. For " + projectName + ", this likely involves " + (techs.web3 ? 'smart contract interaction, wallet connection, or blockchain network issues' : 'data extraction, rate limiting, or website structure changes') + ".",
+                    developerAdvice: techs.web3 ?
+                        "• Check wallet connection and network settings<br>• Verify smart contract addresses and ABIs<br>• Test with different RPC endpoints" :
+                        "• Implement robust error handling and retries<br>• Add rate limiting and respect robots.txt<br>• Use headless browsers for dynamic content",
+                    qaAdvice: techs.web3 ?
+                        "• Test across different networks (mainnet, testnet)<br>• Validate transaction handling and gas estimation<br>• Test wallet integration scenarios" :
+                        "• Validate data accuracy and completeness<br>• Test scraping reliability across different scenarios<br>• Monitor for website structure changes",
+                    devopsAdvice: techs.web3 ?
+                        "• Set up monitoring for blockchain network health<br>• Configure multiple RPC endpoints for redundancy<br>• Monitor gas prices and transaction costs" :
+                        "• Implement distributed scraping with IP rotation<br>• Set up monitoring for scraping success rates<br>• Configure alerts for rate limiting",
+                    actions: techs.web3 ? [
+                        "Verify blockchain network connectivity",
+                        "Check smart contract address and ABI",
+                        "Test with different wallet providers",
+                        "Monitor gas prices and transaction status"
+                    ] : [
+                        "Check website structure for changes",
+                        "Verify scraping rate limits are respected",
+                        "Test with different user agents",
+                        "Monitor data quality and completeness"
+                    ],
+                    infoNeeded: techs.web3 ? [
+                        "Blockchain network being used",
+                        "Smart contract addresses",
+                        "Wallet provider and connection method",
+                        "Transaction hash if applicable"
+                    ] : [
+                        "Target website URLs",
+                        "Scraping frequency and volume",
+                        "Error messages from requests",
+                        "Changes in website structure"
+                    ]
+                };
+            }
+
+            // Default comprehensive analysis
+            return {
+                issueType: "General Debugging",
+                analysis: "Analyzing issue for " + projectName + ". This appears to be a general debugging request that could involve multiple system components.",
+                developerAdvice: "• Review error logs and stack traces<br>• Use debugging tools and breakpoints<br>• Check data flow and variable states",
+                qaAdvice: "• Reproduce issue in controlled environment<br>• Document steps to reproduce<br>• Test edge cases and boundary conditions",
+                devopsAdvice: "• Check system resources and performance<br>• Review infrastructure logs<br>• Monitor service health and dependencies",
+                actions: [
+                    "Gather complete error details and logs",
+                    "Create minimal reproducible example",
+                    "Check system dependencies and versions",
+                    "Review recent changes that might be related"
+                ],
+                infoNeeded: [
+                    "Complete error message or unexpected behavior",
+                    "Steps to reproduce the issue",
+                    "Environment details (OS, versions, etc.)",
+                    "Recent changes or deployments"
+                ]
+            };
+        }
+
+        function getBmadBrainstormResponse(userMessage, message) {
+            var projectName = currentProject ? currentProject.name : "your project";
+
+            return "🧠 **BMAD Multi-Agent Brainstorming Session**<br><br>" +
+                   "**Topic**: " + userMessage + "<br><br>" +
+
+                   "**💻 Developer Perspective:**<br>" +
+                   "• Technical feasibility and implementation challenges<br>" +
+                   "• Architecture patterns and technology stack considerations<br>" +
+                   "• Performance and scalability requirements<br>" +
+                   "• Code organization and maintainability<br><br>" +
+
+                   "**📋 Project Manager Perspective:**<br>" +
+                   "• Resource allocation and timeline estimation<br>" +
+                   "• Risk assessment and mitigation strategies<br>" +
+                   "• Stakeholder impact and communication plan<br>" +
+                   "• Sprint breakdown and milestone planning<br><br>" +
+
+                   "**🧪 QA Engineer Perspective:**<br>" +
+                   "• Testing strategy and coverage requirements<br>" +
+                   "• Quality gates and acceptance criteria<br>" +
+                   "• Edge cases and failure scenarios<br>" +
+                   "• Automation opportunities and test frameworks<br><br>" +
+
+                   "**⚙️ DevOps Perspective:**<br>" +
+                   "• Infrastructure and deployment considerations<br>" +
+                   "• Monitoring, logging, and observability needs<br>" +
+                   "• Security and compliance requirements<br>" +
+                   "• CI/CD pipeline and automation strategies<br><br>" +
+
+                   "**🎯 Recommended Next Steps:**<br>" +
+                   "1. Use **[ROLE: PM]** to dive deeper into planning<br>" +
+                   "2. Use **[ROLE: Developer]** for technical architecture<br>" +
+                   "3. Use **[ROLE: QA]** for testing strategy details<br>" +
+                   "4. Use **[ROLE: DevOps]** for infrastructure planning<br><br>" +
+
+                   "**💡 Pro Tip**: Follow up with specific role questions like:<br>" +
+                   "• '[ROLE: PM] How should we prioritize these features?'<br>" +
+                   "• '[ROLE: Developer] What's the best architecture for this?'<br>" +
+                   "• '[ROLE: QA] What are the critical test cases?'";
+        }
+
+        function getBmadWorkflowResponse(userMessage) {
+            return "🔄 **BMAD Methodology Workflow**<br><br>" +
+
+                   "**Phase 1: 🏗️ BUILD**<br>" +
+                   "• **[ROLE: Developer]** - Code implementation<br>" +
+                   "• Technical architecture design<br>" +
+                   "• Feature development and integration<br>" +
+                   "• Code reviews and optimization<br><br>" +
+
+                   "**Phase 2: 📋 MANAGE**<br>" +
+                   "• **[ROLE: Project Manager]** - Coordination<br>" +
+                   "• Sprint planning and resource allocation<br>" +
+                   "• Risk management and stakeholder communication<br>" +
+                   "• Timeline tracking and milestone management<br><br>" +
+
+                   "**Phase 3: 🧪 ANALYZE**<br>" +
+                   "• **[ROLE: QA Engineer]** - Quality assurance<br>" +
+                   "• Testing strategy and execution<br>" +
+                   "• Performance analysis and optimization<br>" +
+                   "• Bug tracking and resolution<br><br>" +
+
+                   "**Phase 4: 🚀 DEPLOY**<br>" +
+                   "• **[ROLE: DevOps]** - Infrastructure and deployment<br>" +
+                   "• CI/CD pipeline setup and automation<br>" +
+                   "• Monitoring and observability implementation<br>" +
+                   "• Production deployment and maintenance<br><br>" +
+
+                   "**🔄 Iterative Process:**<br>" +
+                   "1. Start with **##brainstorm** for multi-perspective analysis<br>" +
+                   "2. Use role-specific prompts for detailed guidance<br>" +
+                   "3. Cycle through BUILD → MANAGE → ANALYZE → DEPLOY<br>" +
+                   "4. Repeat for continuous improvement<br><br>" +
+
+                   "**Example Commands:**<br>" +
+                   "• &quot;##brainstorm authentication system&quot;<br>" +
+                   "• &quot;[ROLE: PM] Plan the user authentication feature&quot;<br>" +
+                   "• &quot;[ROLE: Developer] Implement OAuth integration&quot;<br>" +
+                   "• &quot;[ROLE: QA] Test security vulnerabilities&quot;<br>" +
+                   "• &quot;[ROLE: DevOps] Deploy with zero downtime&quot;";
         }
 
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // Session Management Functions
+        function saveSession() {
+            try {
+                sessionState.lastProject = currentProject ? currentProject.id : null;
+
+                // Safely get BMAD toggle state with null check
+                const bmadToggle = document.getElementById('bmad-toggle');
+                sessionState.bmadEnabled = bmadToggle ? bmadToggle.checked : false;
+
+                // Safely get BMAD status with null check
+                const bmadStatusElement = document.getElementById('bmad-status');
+                sessionState.bmadStatus = bmadStatusElement ? bmadStatusElement.textContent.toLowerCase() : 'stopped';
+
+                sessionState.workspaceStatus = workspaceSession ? 'running' : 'stopped';
+                sessionState.chatHistory = chatHistory.slice(-20); // Keep last 20 messages
+                sessionState.lastActivity = new Date().toISOString();
+                sessionState.sessionStartTime = sessionStartTime;
+
+                localStorage.setItem('claudeCodeWorkspaceSession', JSON.stringify(sessionState));
+                console.log('Session saved successfully');
+
+                // Update UI indicators
+                updateSessionUI();
+            } catch (error) {
+                console.error('Failed to save session:', error);
+                updateSessionPersistenceStatus(false, 'Save failed');
+            }
+        }
+
+        function loadSession() {
+            try {
+                const savedSession = localStorage.getItem('claudeCodeWorkspaceSession');
+                if (savedSession) {
+                    const parsed = JSON.parse(savedSession);
+                    sessionState = { ...sessionState, ...parsed };
+
+                    // Restore chat history
+                    chatHistory = sessionState.chatHistory || [];
+
+                    console.log('Session loaded successfully:', sessionState);
+                    return true;
+                }
+            } catch (error) {
+                console.error('Failed to load session:', error);
+            }
+            return false;
+        }
+
+        function restoreSessionState() {
+            try {
+                // Restore BMAD toggle state
+                if (sessionState.bmadEnabled) {
+                    document.getElementById('bmad-toggle').checked = true;
+                    showBmadToggle();
+                }
+
+                // Restore chat history
+                if (chatHistory.length > 0) {
+                    restoreChatHistory();
+                    addActivity('Previous chat session restored (' + chatHistory.length + ' messages)', 'info');
+                }
+
+                // Show session restore message
+                if (sessionState.lastActivity) {
+                    const lastActivity = new Date(sessionState.lastActivity);
+                    const timeDiff = Math.round((new Date() - lastActivity) / 1000 / 60); // minutes
+                    addActivity('Session restored from ' + timeDiff + ' minutes ago', 'success');
+                }
+
+            } catch (error) {
+                console.error('Failed to restore session state:', error);
+            }
+        }
+
+        function restoreChatHistory() {
+            const claudeChat = document.getElementById('claude-chat');
+
+            // Check if the chat container exists and chat history is available
+            if (!claudeChat || !chatHistory || chatHistory.length === 0) {
+                console.log('Chat history restoration skipped - container not found or no history available');
+                return;
+            }
+
+            try {
+                chatHistory.forEach(message => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'claude-message ' + (message.type === 'user' ? 'user-message' : 'assistant-message');
+
+                    const sender = message.type === 'user' ? 'You' : 'Claude';
+                    messageDiv.innerHTML = '<div class="message-content"><strong>' + sender + ':</strong><br>' + escapeHtml(message.content) + '</div>';
+
+                    claudeChat.appendChild(messageDiv);
+                });
+
+                // Scroll to bottom if possible
+                if (claudeChat.scrollHeight) {
+                    claudeChat.scrollTop = claudeChat.scrollHeight;
+                }
+
+                console.log('Chat history restored:', chatHistory.length, 'messages');
+            } catch (error) {
+                console.error('Error restoring chat history:', error);
+            }
+        }
+
+        function clearSession() {
+            try {
+                localStorage.removeItem('claudeCodeWorkspaceSession');
+                sessionState = {
+                    lastProject: null,
+                    bmadEnabled: false,
+                    bmadStatus: 'stopped',
+                    workspaceStatus: 'stopped',
+                    chatHistory: [],
+                    lastActivity: null,
+                    sessionStartTime: null
+                };
+                chatHistory = [];
+                addActivity('Session cleared', 'info');
+            } catch (error) {
+                console.error('Failed to clear session:', error);
+            }
+        }
+
+        function addMessageToHistory(content, type) {
+            const message = {
+                content: content,
+                type: type,
+                timestamp: new Date().toISOString()
+            };
+            chatHistory.push(message);
+
+            // Keep only last 50 messages to prevent storage overflow
+            if (chatHistory.length > 50) {
+                chatHistory = chatHistory.slice(-50);
+            }
+
+            // Save session after each message
+            saveSession();
         }
 
         function addActivity(message, type) {
@@ -1212,6 +2001,7 @@ const pageDescription = 'Interactive development workspace with terminal access 
                 body: JSON.stringify({
                     bmadConfig: {
                         enabled: enabled,
+                        status: enabled ? 'running' : 'stopped',
                         workflow: enabled ? 'agile' : 'standard',
                         agents: enabled ? ['dev', 'qa', 'pm'] : []
                     }
@@ -1242,6 +2032,42 @@ const pageDescription = 'Interactive development workspace with terminal access 
         function refreshActivity() {
             addActivity('Activity refreshed', 'info');
         }
+        // Session Management UI Functions
+        function updateSessionUI() {
+            updateSessionPersistenceStatus(true, 'Active');
+            updateLastActivity();
+        }
+
+        function updateSessionPersistenceStatus(active, statusText) {
+            const indicator = document.getElementById('persistence-indicator');
+            const text = document.getElementById('persistence-text');
+
+            if (indicator && text) {
+                if (active) {
+                    indicator.className = 'status-dot status-online';
+                    text.textContent = statusText || 'Active';
+                } else {
+                    indicator.className = 'status-dot status-offline';
+                    text.textContent = statusText || 'Inactive';
+                }
+            }
+        }
+
+        function updateLastActivity() {
+            const lastActivityElement = document.getElementById('last-activity');
+            if (lastActivityElement && sessionState.lastActivity) {
+                const date = new Date(sessionState.lastActivity);
+                lastActivityElement.textContent = date.toLocaleTimeString();
+            }
+        }
+
+        // Initialize session UI on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                updateSessionUI();
+            }, 1000);
+        });
+
     </script>
     `
 }) %>

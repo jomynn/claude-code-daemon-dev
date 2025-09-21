@@ -24,6 +24,10 @@ const pageDescription = 'Edit project settings, configuration, and management op
                         <i class="ti ti-arrow-left"></i>
                         Back to Projects
                     </a>
+                    <a href="/workspace" class="btn btn-primary" id="open-workspace">
+                        <i class="ti ti-layout-dashboard"></i>
+                        Open Workspace
+                    </a>
                     <button class="btn btn-secondary" id="delete-project">
                         <i class="ti ti-trash"></i>
                         Delete Project
@@ -786,6 +790,13 @@ const pageDescription = 'Edit project settings, configuration, and management op
                 if (repo) {
                     window.open(repo, '_blank');
                 }
+            });
+
+            // Open workspace button
+            document.getElementById('open-workspace').addEventListener('click', function(e) {
+                e.preventDefault();
+                // Redirect to workspace with the current project selected
+                window.location.href = '/workspace?project=' + projectId;
             });
 
             // Load project data on page load

@@ -66,7 +66,7 @@
     "bmadConfig": {
       "enabled": true,
       "workflow": "agile",
-      "status": "stopped",
+      "status": "running",
       "currentPhase": null,
       "agents": [
         "dev",
@@ -75,7 +75,7 @@
       ]
     },
     "createdAt": "2025-09-19T15:15:13.612Z",
-    "updatedAt": "2025-09-21T06:34:39.328Z",
+    "updatedAt": "2025-09-21T07:12:25.413Z",
     "status": "initialized",
     "terminalSessions": {},
     "priority": "high",
@@ -263,19 +263,21 @@
       "enabled": true,
       "model": "claude-3-5-sonnet-20241022",
       "maxTokens": 4000,
-      "temperature": 0.7
+      "temperature": 0.7,
+      "context": ""
     },
     "bmadConfig": {
       "enabled": true,
+      "workflow": "agile",
+      "status": "running",
+      "currentPhase": null,
       "agents": [
         "dev",
         "qa",
         "pm",
-        "po"
-      ],
-      "workflow": "standard",
-      "startedAt": "2025-09-20T16:59:07.429Z",
-      "status": "running"
+        "design",
+        "security"
+      ]
     },
     "settings": {
       "initGit": true,
@@ -283,9 +285,12 @@
       "createGitignore": true
     },
     "createdAt": "2025-09-20T15:24:02.898Z",
-    "updatedAt": "2025-09-20T15:24:02.898Z",
+    "updatedAt": "2025-09-21T07:17:55.350Z",
     "status": "initialized",
-    "terminalSessions": {}
+    "terminalSessions": {},
+    "priority": "medium",
+    "projectStatus": "active",
+    "type": "web"
   },
   {
     "id": "proj-1758428977540-3gi347745",

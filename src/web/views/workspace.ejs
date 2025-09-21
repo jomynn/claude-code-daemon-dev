@@ -33,6 +33,17 @@ const pageDescription = 'Interactive development workspace with terminal access 
             <select id="project-selector" class="form-select">
                 <option value="">Select a project to start workspace...</option>
             </select>
+            <div class="bmad-toggle-container" id="bmad-toggle-container" style="display: none;">
+                <label class="bmad-toggle">
+                    <input type="checkbox" id="bmad-enabled" class="bmad-checkbox">
+                    <span class="bmad-slider"></span>
+                    <span class="bmad-label">BMAD Method</span>
+                </label>
+                <div class="bmad-status" id="bmad-status">
+                    <span class="status-indicator"></span>
+                    <span class="status-text">Stopped</span>
+                </div>
+            </div>
             <button class="btn btn-primary" id="load-workspace" disabled>
                 <i class="ti ti-play"></i>
                 Start Workspace
@@ -415,6 +426,92 @@ const pageDescription = 'Interactive development workspace with terminal access 
             gap: var(--space-md);
             align-items: center;
             padding: var(--space-md);
+            flex-wrap: wrap;
+        }
+
+        /* BMAD Toggle Styles */
+        .bmad-toggle-container {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-sm);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+        }
+
+        .bmad-toggle {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+            cursor: pointer;
+        }
+
+        .bmad-checkbox {
+            display: none;
+        }
+
+        .bmad-slider {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: var(--border);
+            border-radius: 12px;
+            transition: var(--transition);
+        }
+
+        .bmad-slider::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .bmad-checkbox:checked + .bmad-slider {
+            background: var(--primary);
+        }
+
+        .bmad-checkbox:checked + .bmad-slider::before {
+            transform: translateX(20px);
+        }
+
+        .bmad-label {
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .bmad-status {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+            font-size: var(--font-size-xs);
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+
+        .status-indicator.running {
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.stopped {
+            background: var(--text-muted);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
         .form-select {
@@ -657,7 +754,11 @@ const pageDescription = 'Interactive development workspace with terminal access 
                     if (selectedProject) {
                         currentProject = selectedProject;
                         updateWorkspaceInfo(selectedProject);
+                        updateBmadToggle(selectedProject);
                     }
+                } else {
+                    currentProject = null;
+                    hideBmadToggle();
                 }
             });
 
@@ -717,6 +818,16 @@ const pageDescription = 'Interactive development workspace with terminal access 
                     return;
                 }
                 openTerminal();
+            });
+
+            // BMAD Toggle
+            document.getElementById('bmad-enabled').addEventListener('change', function() {
+                if (!currentProject) {
+                    this.checked = false;
+                    alert('Please select a project first');
+                    return;
+                }
+                toggleBmad(currentProject.id, this.checked);
             });
 
             // Open Editor
@@ -1062,6 +1173,70 @@ const pageDescription = 'Interactive development workspace with terminal access 
             while (activityList.children.length > 10) {
                 activityList.removeChild(activityList.lastChild);
             }
+        }
+
+        // BMAD Toggle Functions
+        function updateBmadToggle(project) {
+            const container = document.getElementById('bmad-toggle-container');
+            const checkbox = document.getElementById('bmad-enabled');
+            const statusIndicator = document.querySelector('.status-indicator');
+            const statusText = document.querySelector('.status-text');
+
+            if (project && project.bmadConfig) {
+                container.style.display = 'flex';
+                checkbox.checked = project.bmadConfig.enabled || false;
+
+                // Update status based on BMAD configuration
+                const isRunning = project.bmadConfig.status === 'running';
+                statusIndicator.className = 'status-indicator ' + (isRunning ? 'running' : 'stopped');
+                statusText.textContent = isRunning ? 'Running' : 'Stopped';
+            } else {
+                hideBmadToggle();
+            }
+        }
+
+        function hideBmadToggle() {
+            const container = document.getElementById('bmad-toggle-container');
+            container.style.display = 'none';
+        }
+
+        function toggleBmad(projectId, enabled) {
+            const checkbox = document.getElementById('bmad-enabled');
+            checkbox.disabled = true;
+
+            fetch('/api/projects/' + projectId, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    bmadConfig: {
+                        enabled: enabled,
+                        workflow: enabled ? 'agile' : 'standard',
+                        agents: enabled ? ['dev', 'qa', 'pm'] : []
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    currentProject.bmadConfig = result.data.bmadConfig;
+                    updateBmadToggle(currentProject);
+                    addActivity('BMAD Method ' + (enabled ? 'enabled' : 'disabled'), 'info');
+                } else {
+                    console.error('Failed to update BMAD:', result.error);
+                    checkbox.checked = !enabled; // Revert checkbox
+                    alert('Failed to update BMAD Method: ' + (result.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error updating BMAD:', error);
+                checkbox.checked = !enabled; // Revert checkbox
+                alert('Error updating BMAD Method. Please try again.');
+            })
+            .finally(() => {
+                checkbox.disabled = false;
+            });
         }
 
         function refreshActivity() {

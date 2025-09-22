@@ -29,6 +29,7 @@ const slackRoutes = require('./routes/slack');
 const claudeRoutes = require('./routes/claude');
 const bmadExecutionRoutes = require('./routes/bmad-execution');
 const databaseRoutes = require('./routes/database');
+const screencaptureRoutes = require('./routes/screencapture');
 const { apiCorsMiddleware } = require('./middleware/cors');
 const { requestLogger } = require('./middleware/logging');
 
@@ -151,6 +152,7 @@ class ApiServer {
         this.app.use('/api', claudeRoutes);
         this.app.use('/api/bmad-execution', bmadExecutionRoutes);
         this.app.use('/api/database', databaseRoutes);
+        this.app.use('/api/screencapture', screencaptureRoutes);
 
         // Dashboard routes
         this.app.get('/', (req, res) => {
@@ -241,6 +243,14 @@ class ApiServer {
                 title: 'Settings',
                 env: process.env.NODE_ENV,
                 currentPage: 'settings'
+            });
+        });
+
+        this.app.get('/screencapture', (req, res) => {
+            res.render('screencapture', {
+                title: 'Screen Capture',
+                env: process.env.NODE_ENV,
+                currentPage: 'screencapture'
             });
         });
 

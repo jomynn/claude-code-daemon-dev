@@ -1,0 +1,286 @@
+<%- include('partials/layout', { body: (() => { %>
+<div class="page-header fade-in">
+    <h1 class="page-title">
+        <i class="ti ti-camera"></i>
+        Screen Capture
+    </h1>
+    <p class="page-description">Capture, manage, and view screenshots</p>
+</div>
+
+<div class="capture-controls card fade-in">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="ti ti-camera-plus"></i>
+            Capture Controls
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="capture-options">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Capture Type</label>
+                    <select class="form-select" id="captureType">
+                        <option value="fullscreen">Full Screen</option>
+                        <option value="window">Active Window</option>
+                        <option value="selection">Selection</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Format</label>
+                    <select class="form-select" id="captureFormat">
+                        <option value="png">PNG</option>
+                        <option value="jpg">JPG</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Display</label>
+                    <select class="form-select" id="displayId">
+                        <option value="1">Display 1</option>
+                        <option value="2">Display 2</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Custom Filename</label>
+                    <input type="text" class="form-control" id="customFilename" placeholder="Optional">
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <button class="btn btn-primary btn-lg" id="captureBtn">
+                        <i class="ti ti-camera"></i>
+                        Take Screenshot
+                    </button>
+                    <button class="btn btn-outline-secondary ms-2" id="refreshList">
+                        <i class="ti ti-refresh"></i>
+                        Refresh List
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="capture-status card fade-in">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="ti ti-info-circle"></i>
+            Capture Status
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalScreenshots">-</div>
+                    <div class="stat-label">Total Screenshots</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-value" id="diskUsage">-</div>
+                    <div class="stat-label">Disk Usage</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-value" id="latestCapture">-</div>
+                    <div class="stat-label">Latest Capture</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-value" id="captureDirectory">-</div>
+                    <div class="stat-label">Capture Directory</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="screenshots-list card fade-in">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="ti ti-photo"></i>
+            Recent Screenshots
+        </h5>
+        <div class="view-controls">
+            <button class="btn btn-sm btn-outline-secondary" id="viewGrid" data-view="grid">
+                <i class="ti ti-grid-dots"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary active" id="viewList" data-view="list">
+                <i class="ti ti-list"></i>
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="screenshotsList" class="screenshots-container list-view">
+            <div class="text-center py-4">
+                <i class="ti ti-photo-off text-muted fs-1"></i>
+                <p class="text-muted mt-2">No screenshots yet. Take your first screenshot!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Screenshot Modal -->
+<div class="modal fade" id="screenshotModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="screenshotModalTitle">Screenshot Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="screenshotPreview" class="img-fluid" alt="Screenshot preview">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger" id="deleteScreenshot">
+                    <i class="ti ti-trash"></i>
+                    Delete
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.capture-controls {
+    margin-bottom: 2rem;
+}
+
+.capture-options {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+}
+
+.screenshots-container {
+    min-height: 400px;
+}
+
+.screenshots-container.list-view .screenshot-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.5rem;
+    background: var(--bg-secondary);
+    transition: var(--transition);
+}
+
+.screenshots-container.list-view .screenshot-item:hover {
+    background: var(--bg-hover);
+    transform: translateY(-1px);
+}
+
+.screenshots-container.grid-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.screenshots-container.grid-view .screenshot-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.screenshots-container.grid-view .screenshot-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.screenshot-thumbnail {
+    width: 60px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    margin-right: 1rem;
+    cursor: pointer;
+    border: 2px solid var(--border);
+    transition: var(--transition);
+}
+
+.screenshot-thumbnail:hover {
+    border-color: var(--primary);
+    transform: scale(1.1);
+}
+
+.screenshot-info h6 {
+    margin: 0;
+    font-weight: 500;
+}
+
+.screenshot-info small {
+    color: var(--text-muted);
+}
+
+.screenshot-actions {
+    margin-left: auto;
+}
+
+.stat-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+.view-controls .btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.capture-progress {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    z-index: 1000;
+    box-shadow: var(--shadow-xl);
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .screenshots-container.grid-view {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+
+    .screenshot-thumbnail {
+        width: 40px;
+        height: 30px;
+    }
+}
+</style>
+
+<script src="/static/js/screencapture.js"></script>
+<% return ''; })() }) %>

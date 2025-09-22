@@ -27,6 +27,7 @@ const logsRoutes = require('./routes/logs');
 const slackRoutes = require('./routes/slack');
 const claudeRoutes = require('./routes/claude');
 const bmadExecutionRoutes = require('./routes/bmad-execution');
+const databaseRoutes = require('./routes/database');
 const { apiCorsMiddleware } = require('./middleware/cors');
 const { requestLogger } = require('./middleware/logging');
 
@@ -144,6 +145,7 @@ class ApiServer {
         this.app.use('/api/slack', slackRoutes);
         this.app.use('/api', claudeRoutes);
         this.app.use('/api/bmad-execution', bmadExecutionRoutes);
+        this.app.use('/api/database', databaseRoutes);
 
         // Dashboard routes
         this.app.get('/', (req, res) => {
@@ -178,13 +180,6 @@ class ApiServer {
             });
         });
 
-        this.app.get('/slack-config', (req, res) => {
-            res.render('slack-config', {
-                title: 'Claude Code Daemon - Slack Configuration',
-                env: process.env.NODE_ENV || 'development',
-                currentPage: 'slack-config'
-            });
-        });
 
         this.app.get('/projects', (req, res) => {
             res.render('projects', {
@@ -234,6 +229,23 @@ class ApiServer {
                 env: process.env.NODE_ENV,
                 currentPage: 'workspace'
             });
+        });
+
+        this.app.get('/settings', (req, res) => {
+            res.render('settings', {
+                title: 'Settings',
+                env: process.env.NODE_ENV,
+                currentPage: 'settings'
+            });
+        });
+
+        // Redirect old routes to new unified settings page
+        this.app.get('/database-config', (req, res) => {
+            res.redirect('/settings#database');
+        });
+
+        this.app.get('/slack-config', (req, res) => {
+            res.redirect('/settings#slack');
         });
 
         // Health check endpoint

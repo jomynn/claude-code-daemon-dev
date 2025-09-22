@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Settings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/css/dashboard.css" rel="stylesheet">
+    <style>
+        .settings-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-connected { background-color: #28a745; }
+        .status-disconnected { background-color: #dc3545; }
+        .status-testing { background-color: #ffc107; animation: pulse 1s infinite; }
+        .test-result {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+        }
+        .log-viewer {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .log-level-info { color: #569cd6; }
+        .log-level-warn { color: #dcdcaa; }
+        .log-level-error { color: #f14c4c; }
+        .log-level-success { color: #4ec9b0; }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .connection-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .metric-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .metric-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+        }
+        .nav-tabs .nav-link.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .setup-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .step {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+        .step-number {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .step-content h6 {
+            margin-bottom: 8px;
+            color: #212529;
+        }
+        .step-content p {
+            color: #6c757d;
+            margin: 0;
+            line-height: 1.5;
+        }
+        .step-content code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #007bff;
+        }
+        .step-content a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .step-content a:hover {
+            text-decoration: underline;
+        }
+        .notification-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .notification-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .settings-overview {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .overview-item {
+            text-align: center;
+        }
+        .overview-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .overview-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/navbar') %>
+
+    <div class="container-fluid">
+        <div class="row">
+            <%- include('partials/sidebar') %>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="bi bi-gear me-2"></i>
+                        Settings & Configuration
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-outline-primary" id="refreshAll">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh All
+                            </button>
+                            <button type="button" class="btn btn-outline-success" id="testAllConnections">
+                                <i class="bi bi-check-circle"></i> Test All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Overview -->
+                <div class="settings-overview">
+                    <h4><i class="bi bi-speedometer2 me-2"></i>System Overview</h4>
+                    <div class="overview-grid">
+                        <div class="overview-item">
+                            <div class="overview-value" id="overviewDatabase">-</div>
+                            <div class="overview-label">Database Status</div>
+                        </div>
+                        <div class="overview-item">
+                            <div class="overview-value" id="overviewSlack">-</div>
+                            <div class="overview-label">Slack Integration</div>
+                        </div>
+                        <div class="overview-item">
+                            <div class="overview-value" id="overviewUptime">-</div>
+                            <div class="overview-label">System Uptime</div>
+                        </div>
+                        <div class="overview-item">
+                            <div class="overview-value" id="overviewVersion">v2.0</div>
+                            <div class="overview-label">Version</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Configuration Tabs -->
+                <div class="settings-card">
+                    <div class="card-header">
+                        <ul class="nav nav-tabs card-header-tabs" id="settingsTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="database-tab" data-bs-toggle="tab"
+                                        data-bs-target="#database" type="button" role="tab">
+                                    <i class="bi bi-database"></i> Database
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="slack-tab" data-bs-toggle="tab"
+                                        data-bs-target="#slack" type="button" role="tab">
+                                    <i class="bi bi-slack"></i> Slack Integration
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="notifications-tab" data-bs-toggle="tab"
+                                        data-bs-target="#notifications" type="button" role="tab">
+                                    <i class="bi bi-bell"></i> Notifications
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="system-tab" data-bs-toggle="tab"
+                                        data-bs-target="#system" type="button" role="tab">
+                                    <i class="bi bi-gear"></i> System
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="documentation-tab" data-bs-toggle="tab"
+                                        data-bs-target="#documentation" type="button" role="tab">
+                                    <i class="bi bi-book"></i> Documentation
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content" id="settingsTabContent">
+                            <!-- Database Configuration Tab -->
+                            <div class="tab-pane fade show active" id="database" role="tabpanel">
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="settings-card">
+                                            <div class="card-header bg-primary text-white">
+                                                <h5 class="mb-0">
+                                                    <i class="bi bi-database me-2"></i>
+                                                    Database Connection Status
+                                                </h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="d-flex align-items-center mb-3">
+                                                    <span class="status-indicator" id="dbConnectionStatus"></span>
+                                                    <strong id="dbConnectionStatusText">Checking...</strong>
+                                                </div>
+                                                <div>
+                                                    <strong>Type:</strong> <span id="dbType">-</span><br>
+                                                    <strong>Host:</strong> <span id="dbHost">-</span><br>
+                                                    <strong>Database:</strong> <span id="dbName">-</span><br>
+                                                    <strong>Last Checked:</strong> <span id="dbLastChecked">-</span>
+                                                </div>
+                                                <div class="mt-3">
+                                                    <button class="btn btn-outline-primary btn-sm" id="testDbConnection">
+                                                        <i class="bi bi-plug"></i> Test Connection
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="settings-card">
+                                            <div class="card-header bg-info text-white">
+                                                <h5 class="mb-0">
+                                                    <i class="bi bi-speedometer2 me-2"></i>
+                                                    Database Metrics
+                                                </h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="connection-metrics">
+                                                    <div class="metric-card">
+                                                        <div class="metric-value" id="dbActiveConnections">-</div>
+                                                        <div class="metric-label">Active Connections</div>
+                                                    </div>
+                                                    <div class="metric-card">
+                                                        <div class="metric-value" id="dbResponseTime">-</div>
+                                                        <div class="metric-label">Response Time</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Database Configuration</h6>
+                                        <form id="databaseForm">
+                                            <div class="mb-3">
+                                                <label for="dbTypeSelect" class="form-label">Database Type</label>
+                                                <select class="form-select" id="dbTypeSelect" name="dbType">
+                                                    <option value="postgresql">PostgreSQL</option>
+                                                    <option value="sqlite">SQLite (Fallback)</option>
+                                                </select>
+                                            </div>
+
+                                            <div id="postgresConfig">
+                                                <div class="mb-3">
+                                                    <label for="dbHostInput" class="form-label">Host</label>
+                                                    <input type="text" class="form-control" id="dbHostInput" name="host"
+                                                           placeholder="claude-database-server">
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="dbPortInput" class="form-label">Port</label>
+                                                            <input type="number" class="form-control" id="dbPortInput" name="port"
+                                                                   value="5432">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="dbNameInput" class="form-label">Database Name</label>
+                                                            <input type="text" class="form-control" id="dbNameInput" name="database"
+                                                                   placeholder="claude_daemon">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="dbUserInput" class="form-label">Username</label>
+                                                            <input type="text" class="form-control" id="dbUserInput" name="user"
+                                                                   placeholder="claude_app">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="dbPasswordInput" class="form-label">Password</label>
+                                                            <input type="password" class="form-control" id="dbPasswordInput" name="password">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div id="sqliteConfig" style="display: none;">
+                                                <div class="mb-3">
+                                                    <label for="dbPathInput" class="form-label">Database Path</label>
+                                                    <input type="text" class="form-control" id="dbPathInput" name="path"
+                                                           placeholder="/data/claude-daemon.db">
+                                                </div>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="bi bi-save"></i> Save Database Config
+                                            </button>
+                                        </form>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Quick Actions</h6>
+                                        <div class="d-grid gap-2 mb-3">
+                                            <button class="btn btn-outline-info" id="checkSchema">
+                                                <i class="bi bi-check-square"></i> Check Schema
+                                            </button>
+                                            <button class="btn btn-outline-success" id="applySchema">
+                                                <i class="bi bi-plus-square"></i> Apply Schema
+                                            </button>
+                                            <button class="btn btn-outline-warning" id="migrateSqlite">
+                                                <i class="bi bi-arrow-right"></i> Migrate from SQLite
+                                            </button>
+                                        </div>
+                                        <div id="schemaStatus" class="alert alert-light">
+                                            <em>Click "Check Schema" to see status...</em>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Slack Integration Tab -->
+                            <div class="tab-pane fade" id="slack" role="tabpanel">
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="settings-card">
+                                            <div class="card-header bg-success text-white">
+                                                <h5 class="mb-0">
+                                                    <i class="bi bi-slack me-2"></i>
+                                                    Slack Connection Status
+                                                </h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="d-flex align-items-center mb-3">
+                                                    <span class="status-indicator" id="slackConnectionStatus"></span>
+                                                    <strong id="slackConnectionStatusText">Checking...</strong>
+                                                </div>
+                                                <div id="slackWorkspaceInfo">
+                                                    <em>No workspace connected</em>
+                                                </div>
+                                                <div class="mt-3">
+                                                    <button class="btn btn-outline-success btn-sm" id="testSlackConnection">
+                                                        <i class="bi bi-wifi"></i> Test Connection
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="settings-card">
+                                            <div class="card-header bg-warning text-dark">
+                                                <h5 class="mb-0">
+                                                    <i class="bi bi-info-circle me-2"></i>
+                                                    Quick Setup
+                                                </h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <ol class="mb-0">
+                                                    <li>Create Slack App at <a href="https://api.slack.com/apps" target="_blank">api.slack.com/apps</a></li>
+                                                    <li>Enable Socket Mode</li>
+                                                    <li>Add OAuth scopes: <code>chat:write</code></li>
+                                                    <li>Install to workspace</li>
+                                                    <li>Copy tokens below</li>
+                                                </ol>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h6>Slack Configuration</h6>
+                                        <form id="slackForm">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label for="botToken" class="form-label">Bot Token *</label>
+                                                        <input type="password" class="form-control" id="botToken"
+                                                               placeholder="xoxb-your-bot-token" required>
+                                                        <div class="form-text">OAuth token for your Slack bot</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label for="appToken" class="form-label">App Token *</label>
+                                                        <input type="password" class="form-control" id="appToken"
+                                                               placeholder="xapp-your-app-token" required>
+                                                        <div class="form-text">App-level token for Socket Mode</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label for="signingSecret" class="form-label">Signing Secret</label>
+                                                <input type="password" class="form-control" id="signingSecret"
+                                                       placeholder="Your app's signing secret">
+                                                <div class="form-text">Used to verify requests from Slack</div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label for="defaultChannel" class="form-label">Default Channel</label>
+                                                        <input type="text" class="form-control" id="defaultChannel"
+                                                               placeholder="#general" value="#general">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label for="alertChannel" class="form-label">Alert Channel</label>
+                                                        <input type="text" class="form-control" id="alertChannel"
+                                                               placeholder="#alerts" value="#alerts">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="bi bi-check"></i> Save Slack Config
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary ms-2" id="clearSlackConfig">
+                                                <i class="bi bi-trash"></i> Clear
+                                            </button>
+                                        </form>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6>Required Permissions</h6>
+                                        <div class="alert alert-info">
+                                            <strong>OAuth Scopes needed:</strong>
+                                            <ul class="mb-0 mt-2">
+                                                <li><code>chat:write</code></li>
+                                                <li><code>channels:read</code></li>
+                                                <li><code>groups:read</code></li>
+                                                <li><code>im:read</code></li>
+                                                <li><code>mpim:read</code></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Notifications Tab -->
+                            <div class="tab-pane fade" id="notifications" role="tabpanel">
+                                <h5 class="mb-3">Notification Settings</h5>
+
+                                <div class="notification-grid">
+                                    <div class="notification-item">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="systemAlerts" checked>
+                                            <label class="form-check-label" for="systemAlerts">
+                                                <strong>System Alerts</strong>
+                                            </label>
+                                        </div>
+                                        <p class="text-muted mb-0 mt-1">Send critical system alerts to Slack</p>
+                                    </div>
+
+                                    <div class="notification-item">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="usageNotifications" checked>
+                                            <label class="form-check-label" for="usageNotifications">
+                                                <strong>Usage Notifications</strong>
+                                            </label>
+                                        </div>
+                                        <p class="text-muted mb-0 mt-1">Notify when approaching usage limits</p>
+                                    </div>
+
+                                    <div class="notification-item">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="projectUpdates">
+                                            <label class="form-check-label" for="projectUpdates">
+                                                <strong>Project Updates</strong>
+                                            </label>
+                                        </div>
+                                        <p class="text-muted mb-0 mt-1">Send project status updates</p>
+                                    </div>
+
+                                    <div class="notification-item">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="bmadWorkflow">
+                                            <label class="form-check-label" for="bmadWorkflow">
+                                                <strong>BMAD Workflow Status</strong>
+                                            </label>
+                                        </div>
+                                        <p class="text-muted mb-0 mt-1">Notify about workflow progress</p>
+                                    </div>
+
+                                    <div class="notification-item">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="databaseAlerts" checked>
+                                            <label class="form-check-label" for="databaseAlerts">
+                                                <strong>Database Alerts</strong>
+                                            </label>
+                                        </div>
+                                        <p class="text-muted mb-0 mt-1">Database connection and performance alerts</p>
+                                    </div>
+
+                                    <div class="notification-item">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="securityAlerts" checked>
+                                            <label class="form-check-label" for="securityAlerts">
+                                                <strong>Security Alerts</strong>
+                                            </label>
+                                        </div>
+                                        <p class="text-muted mb-0 mt-1">Security-related notifications and warnings</p>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4">
+                                    <h6>Email Notifications (Coming Soon)</h6>
+                                    <div class="alert alert-secondary">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        Email notification settings will be available in a future update.
+                                    </div>
+                                </div>
+
+                                <button class="btn btn-primary mt-3" id="saveNotificationSettings">
+                                    <i class="bi bi-save"></i> Save Notification Settings
+                                </button>
+                            </div>
+
+                            <!-- System Tab -->
+                            <div class="tab-pane fade" id="system" role="tabpanel">
+                                <h5 class="mb-3">System Configuration</h5>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Application Settings</h6>
+                                        <div class="mb-3">
+                                            <label for="logLevel" class="form-label">Log Level</label>
+                                            <select class="form-select" id="logLevel">
+                                                <option value="debug">Debug</option>
+                                                <option value="info" selected>Info</option>
+                                                <option value="warn">Warning</option>
+                                                <option value="error">Error</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="refreshInterval" class="form-label">Dashboard Refresh Interval (seconds)</label>
+                                            <input type="number" class="form-control" id="refreshInterval" value="30" min="5" max="300">
+                                        </div>
+
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="bmadEnabled" checked>
+                                            <label class="form-check-label" for="bmadEnabled">
+                                                Enable BMAD Auto-Execution
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="autoProjectGeneration" checked>
+                                            <label class="form-check-label" for="autoProjectGeneration">
+                                                Enable Auto Project Generation
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Performance Settings</h6>
+                                        <div class="mb-3">
+                                            <label for="maxConnections" class="form-label">Max Database Connections</label>
+                                            <input type="number" class="form-control" id="maxConnections" value="20" min="1" max="100">
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="requestTimeout" class="form-label">Request Timeout (ms)</label>
+                                            <input type="number" class="form-control" id="requestTimeout" value="30000" min="1000" max="120000">
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="cacheSize" class="form-label">Cache Size (MB)</label>
+                                            <input type="number" class="form-control" id="cacheSize" value="256" min="64" max="2048">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button class="btn btn-primary" id="saveSystemSettings">
+                                    <i class="bi bi-save"></i> Save System Settings
+                                </button>
+                            </div>
+
+                            <!-- Documentation Tab -->
+                            <div class="tab-pane fade" id="documentation" role="tabpanel">
+                                <h5 class="mb-3">Settings Documentation</h5>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6><i class="bi bi-database me-2"></i>Database Configuration</h6>
+                                        <p>Configure your database connection settings for optimal performance and reliability.</p>
+                                        <ul>
+                                            <li><strong>PostgreSQL</strong> - Recommended for production environments</li>
+                                            <li><strong>SQLite</strong> - Suitable for development and testing</li>
+                                            <li><strong>Connection Pooling</strong> - Manages database connections efficiently</li>
+                                        </ul>
+
+                                        <h6 class="mt-4"><i class="bi bi-slack me-2"></i>Slack Integration</h6>
+                                        <p>Connect your Slack workspace to receive real-time notifications and alerts.</p>
+                                        <ul>
+                                            <li><strong>Bot Token</strong> - Required for sending messages</li>
+                                            <li><strong>App Token</strong> - Enables Socket Mode for real-time events</li>
+                                            <li><strong>Channels</strong> - Configure where notifications are sent</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6><i class="bi bi-bell me-2"></i>Notification System</h6>
+                                        <p>Customize which events trigger notifications to stay informed without being overwhelmed.</p>
+                                        <ul>
+                                            <li><strong>System Alerts</strong> - Critical system issues</li>
+                                            <li><strong>Usage Notifications</strong> - Resource usage warnings</li>
+                                            <li><strong>Project Updates</strong> - Build and deployment status</li>
+                                        </ul>
+
+                                        <h6 class="mt-4"><i class="bi bi-gear me-2"></i>System Settings</h6>
+                                        <p>Fine-tune system behavior and performance parameters.</p>
+                                        <ul>
+                                            <li><strong>Log Level</strong> - Control verbosity of system logs</li>
+                                            <li><strong>BMAD Execution</strong> - Enable automated workflows</li>
+                                            <li><strong>Performance Tuning</strong> - Optimize resource usage</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4">
+                                    <h6><i class="bi bi-download me-2"></i>Documentation Downloads</h6>
+                                    <div class="d-grid gap-2 d-md-flex">
+                                        <a href="/api/database/documentation" class="btn btn-outline-primary" target="_blank">
+                                            <i class="bi bi-file-text"></i> Database Guide
+                                        </a>
+                                        <a href="/api/slack/documentation" class="btn btn-outline-success" target="_blank">
+                                            <i class="bi bi-slack"></i> Slack Setup Guide
+                                        </a>
+                                        <button class="btn btn-outline-info" id="generateSettingsReport">
+                                            <i class="bi bi-file-earmark-text"></i> Generate Settings Report
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/settings.js"></script>
+</body>
+</html>

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Database Configuration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/css/dashboard.css" rel="stylesheet">
+    <style>
+        .config-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-connected { background-color: #28a745; }
+        .status-disconnected { background-color: #dc3545; }
+        .status-testing { background-color: #ffc107; animation: pulse 1s infinite; }
+        .test-result {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+        }
+        .log-viewer {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .log-level-info { color: #569cd6; }
+        .log-level-warn { color: #dcdcaa; }
+        .log-level-error { color: #f14c4c; }
+        .log-level-success { color: #4ec9b0; }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .connection-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .metric-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .metric-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+        }
+        .nav-tabs .nav-link.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .documentation-section {
+            padding: 20px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .documentation-section:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/navbar') %>
+
+    <div class="container-fluid">
+        <div class="row">
+            <%- include('partials/sidebar') %>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="bi bi-database-gear me-2"></i>
+                        Database Configuration
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-outline-primary" id="refreshStatus">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
+                            <button type="button" class="btn btn-outline-success" id="testConnection">
+                                <i class="bi bi-plug"></i> Test Connection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Connection Status Overview -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="config-card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-database me-2"></i>
+                                    Current Connection Status
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <span class="status-indicator" id="connectionStatus"></span>
+                                    <strong id="connectionStatusText">Checking...</strong>
+                                </div>
+                                <div>
+                                    <strong>Database Type:</strong> <span id="dbType">-</span><br>
+                                    <strong>Host:</strong> <span id="dbHost">-</span><br>
+                                    <strong>Database:</strong> <span id="dbName">-</span><br>
+                                    <strong>Last Checked:</strong> <span id="lastChecked">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="config-card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-speedometer2 me-2"></i>
+                                    Connection Metrics
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="connection-metrics">
+                                    <div class="metric-card">
+                                        <div class="metric-value" id="activeConnections">-</div>
+                                        <div class="metric-label">Active Connections</div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-value" id="totalConnections">-</div>
+                                        <div class="metric-label">Total Connections</div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-value" id="avgResponseTime">-</div>
+                                        <div class="metric-label">Avg Response (ms)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Configuration Tabs -->
+                <div class="config-card">
+                    <div class="card-header">
+                        <ul class="nav nav-tabs card-header-tabs" id="configTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="connection-tab" data-bs-toggle="tab"
+                                        data-bs-target="#connection" type="button" role="tab">
+                                    <i class="bi bi-plug"></i> Connection Config
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="testing-tab" data-bs-toggle="tab"
+                                        data-bs-target="#testing" type="button" role="tab">
+                                    <i class="bi bi-check-circle"></i> Testing & Debugging
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="schema-tab" data-bs-toggle="tab"
+                                        data-bs-target="#schema" type="button" role="tab">
+                                    <i class="bi bi-diagram-3"></i> Schema Management
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="documentation-tab" data-bs-toggle="tab"
+                                        data-bs-target="#documentation" type="button" role="tab">
+                                    <i class="bi bi-book"></i> Documentation
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content" id="configTabContent">
+                            <!-- Connection Configuration Tab -->
+                            <div class="tab-pane fade show active" id="connection" role="tabpanel">
+                                <h5 class="mb-3">Database Connection Configuration</h5>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <form id="connectionForm">
+                                            <div class="mb-3">
+                                                <label for="dbTypeSelect" class="form-label">Database Type</label>
+                                                <select class="form-select" id="dbTypeSelect" name="dbType">
+                                                    <option value="postgresql">PostgreSQL</option>
+                                                    <option value="sqlite">SQLite (Fallback)</option>
+                                                </select>
+                                            </div>
+
+                                            <div id="postgresConfig">
+                                                <div class="mb-3">
+                                                    <label for="dbHostInput" class="form-label">Host</label>
+                                                    <input type="text" class="form-control" id="dbHostInput" name="host"
+                                                           placeholder="localhost or claude-database-server">
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="dbPortInput" class="form-label">Port</label>
+                                                            <input type="number" class="form-control" id="dbPortInput" name="port"
+                                                                   value="5432" min="1" max="65535">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="dbNameInput" class="form-label">Database Name</label>
+                                                            <input type="text" class="form-control" id="dbNameInput" name="database"
+                                                                   placeholder="claude_daemon">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="dbUserInput" class="form-label">Username</label>
+                                                            <input type="text" class="form-control" id="dbUserInput" name="user"
+                                                                   placeholder="claude_app">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label for="dbPasswordInput" class="form-label">Password</label>
+                                                            <input type="password" class="form-control" id="dbPasswordInput" name="password">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div id="sqliteConfig" style="display: none;">
+                                                <div class="mb-3">
+                                                    <label for="dbPathInput" class="form-label">Database Path</label>
+                                                    <input type="text" class="form-control" id="dbPathInput" name="path"
+                                                           placeholder="/data/claude-daemon.db">
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <button type="submit" class="btn btn-primary">
+                                                    <i class="bi bi-save"></i> Save Configuration
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary ms-2" id="loadCurrentConfig">
+                                                    <i class="bi bi-arrow-clockwise"></i> Load Current
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Connection Pool Settings</h6>
+                                        <div class="mb-3">
+                                            <label for="maxConnections" class="form-label">Max Connections</label>
+                                            <input type="number" class="form-control" id="maxConnections" value="20" min="1" max="100">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="connectionTimeout" class="form-label">Connection Timeout (ms)</label>
+                                            <input type="number" class="form-control" id="connectionTimeout" value="2000" min="1000" max="30000">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="idleTimeout" class="form-label">Idle Timeout (ms)</label>
+                                            <input type="number" class="form-control" id="idleTimeout" value="30000" min="5000" max="300000">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Testing & Debugging Tab -->
+                            <div class="tab-pane fade" id="testing" role="tabpanel">
+                                <h5 class="mb-3">Connection Testing & Debugging</h5>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Quick Tests</h6>
+                                        <div class="d-grid gap-2 mb-3">
+                                            <button class="btn btn-outline-primary" id="testBasicConnection">
+                                                <i class="bi bi-plug"></i> Test Basic Connection
+                                            </button>
+                                            <button class="btn btn-outline-info" id="testQuery">
+                                                <i class="bi bi-search"></i> Test Query Execution
+                                            </button>
+                                            <button class="btn btn-outline-success" id="testInsert">
+                                                <i class="bi bi-plus-circle"></i> Test Insert Operation
+                                            </button>
+                                            <button class="btn btn-outline-warning" id="testPerformance">
+                                                <i class="bi bi-speedometer2"></i> Performance Test
+                                            </button>
+                                        </div>
+
+                                        <h6>Custom Query Test</h6>
+                                        <div class="mb-3">
+                                            <label for="customQuery" class="form-label">SQL Query</label>
+                                            <textarea class="form-control" id="customQuery" rows="4"
+                                                      placeholder="SELECT * FROM usage_data LIMIT 5;"></textarea>
+                                        </div>
+                                        <button class="btn btn-primary" id="executeCustomQuery">
+                                            <i class="bi bi-play"></i> Execute Query
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Test Results</h6>
+                                        <div class="test-result bg-light p-3 rounded" id="testResults" style="min-height: 300px;">
+                                            <em>Run a test to see results...</em>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr class="my-4">
+
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h6>Connection Logs</h6>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div>
+                                                <button class="btn btn-sm btn-outline-primary" id="refreshLogs">
+                                                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary" id="clearLogs">
+                                                    <i class="bi bi-trash"></i> Clear
+                                                </button>
+                                            </div>
+                                            <div>
+                                                <input type="checkbox" class="form-check-input" id="autoRefreshLogs">
+                                                <label class="form-check-label ms-1" for="autoRefreshLogs">Auto-refresh</label>
+                                            </div>
+                                        </div>
+                                        <div class="log-viewer" id="connectionLogs">
+                                            Loading logs...
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Schema Management Tab -->
+                            <div class="tab-pane fade" id="schema" role="tabpanel">
+                                <h5 class="mb-3">Database Schema Management</h5>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Current Schema Status</h6>
+                                        <div class="mb-3">
+                                            <button class="btn btn-outline-primary" id="checkSchema">
+                                                <i class="bi bi-check-square"></i> Check Schema
+                                            </button>
+                                            <button class="btn btn-outline-success" id="applySchema">
+                                                <i class="bi bi-plus-square"></i> Apply Schema
+                                            </button>
+                                        </div>
+
+                                        <div id="schemaStatus" class="mb-3">
+                                            <em>Click "Check Schema" to see current status...</em>
+                                        </div>
+
+                                        <h6>Migration Tools</h6>
+                                        <div class="d-grid gap-2 mb-3">
+                                            <button class="btn btn-outline-warning" id="migrateSqlite">
+                                                <i class="bi bi-arrow-right"></i> Migrate from SQLite
+                                            </button>
+                                            <button class="btn btn-outline-info" id="backupDatabase">
+                                                <i class="bi bi-download"></i> Create Backup
+                                            </button>
+                                            <button class="btn btn-outline-danger" id="resetSchema">
+                                                <i class="bi bi-arrow-clockwise"></i> Reset Schema
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Table Information</h6>
+                                        <div id="tableInfo" class="bg-light p-3 rounded" style="min-height: 300px;">
+                                            <em>Check schema to see table information...</em>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Documentation Tab -->
+                            <div class="tab-pane fade" id="documentation" role="tabpanel">
+                                <h5 class="mb-3">Database Documentation</h5>
+
+                                <div class="documentation-section">
+                                    <h6><i class="bi bi-gear me-2"></i>Quick Setup Guide</h6>
+                                    <p>Follow these steps to configure your database connection:</p>
+                                    <ol>
+                                        <li>Choose your database type (PostgreSQL recommended)</li>
+                                        <li>Enter connection details in the Configuration tab</li>
+                                        <li>Test the connection using the Testing tab</li>
+                                        <li>Apply the schema if needed</li>
+                                    </ol>
+                                </div>
+
+                                <div class="documentation-section">
+                                    <h6><i class="bi bi-database me-2"></i>Connection Configuration</h6>
+                                    <p><strong>PostgreSQL (Recommended):</strong></p>
+                                    <div class="code-block">
+Host: claude-database-server (Docker) or localhost
+Port: 5432
+Database: claude_daemon
+Username: claude_app
+Password: claude_secure_2024!
+                                    </div>
+
+                                    <p><strong>SQLite (Fallback):</strong></p>
+                                    <div class="code-block">
+Path: /data/claude-daemon.db
+                                    </div>
+                                </div>
+
+                                <div class="documentation-section">
+                                    <h6><i class="bi bi-bug me-2"></i>Troubleshooting</h6>
+                                    <p><strong>Common Issues:</strong></p>
+                                    <ul>
+                                        <li><strong>Connection Failed:</strong> Check if database server is running</li>
+                                        <li><strong>Authentication Error:</strong> Verify username and password</li>
+                                        <li><strong>Schema Not Found:</strong> Apply schema using Schema Management tab</li>
+                                        <li><strong>Timeout Errors:</strong> Increase connection timeout values</li>
+                                    </ul>
+                                </div>
+
+                                <div class="documentation-section">
+                                    <h6><i class="bi bi-terminal me-2"></i>Manual Commands</h6>
+                                    <p><strong>Docker Commands:</strong></p>
+                                    <div class="code-block">
+# Check database status
+docker-compose ps
+
+# View database logs
+docker logs claude-database-server
+
+# Connect to database
+docker exec -it claude-database-server psql -U claude_app -d claude_daemon
+
+# Test application connection
+docker exec claude-daemon-enhanced node scripts/test-database.js
+                                    </div>
+                                </div>
+
+                                <div class="documentation-section">
+                                    <h6><i class="bi bi-shield-check me-2"></i>Security Best Practices</h6>
+                                    <ul>
+                                        <li>Use strong passwords for database users</li>
+                                        <li>Limit database user permissions to necessary operations only</li>
+                                        <li>Enable SSL connections in production environments</li>
+                                        <li>Regularly backup your database</li>
+                                        <li>Monitor connection logs for suspicious activity</li>
+                                    </ul>
+                                </div>
+
+                                <div class="documentation-section">
+                                    <h6><i class="bi bi-file-text me-2"></i>Related Documentation</h6>
+                                    <div class="d-grid gap-2">
+                                        <a href="/api/database/schema" class="btn btn-outline-primary" target="_blank">
+                                            <i class="bi bi-download"></i> Download Schema SQL
+                                        </a>
+                                        <a href="/api/database/documentation" class="btn btn-outline-info" target="_blank">
+                                            <i class="bi bi-book"></i> View Full Documentation
+                                        </a>
+                                        <button class="btn btn-outline-success" id="generateReport">
+                                            <i class="bi bi-file-earmark-text"></i> Generate Connection Report
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/database-config.js"></script>
+</body>
+</html>

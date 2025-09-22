@@ -204,30 +204,71 @@ router.post('/config', async (req, res) => {
             }
         }
 
-        // Update .env file with new configuration
-        await updateEnvFile({
-            DB_TYPE: dbType,
-            DB_HOST: host,
-            DB_PORT: port,
-            DB_NAME: database,
-            DB_USER: user,
-            DB_PASSWORD: password,
-            DATABASE_PATH: path,
-            DB_MAX_CONNECTIONS: maxConnections,
-            DB_CONNECTION_TIMEOUT: connectionTimeout,
-            DB_IDLE_TIMEOUT: idleTimeout
-        });
+        // Check if running in Docker/container environment
+        const isContainer = process.env.NODE_ENV === 'production' && !process.env.ALLOW_ENV_WRITE;
 
-        res.json({
-            success: true,
-            message: 'Configuration saved successfully to .env file',
-            data: {
-                note: 'Configuration saved. Restart application to apply changes.',
-                dbType,
-                host: dbType === 'postgresql' ? host : 'N/A',
-                database: dbType === 'postgresql' ? database : path
-            }
-        });
+        if (isContainer) {
+            // In container environment, we can't modify .env file
+            // Instead, update runtime environment variables and provide instructions
+            process.env.DB_TYPE = dbType;
+            process.env.DB_HOST = host;
+            process.env.DB_PORT = port;
+            process.env.DB_NAME = database;
+            process.env.DB_USER = user;
+            process.env.DB_PASSWORD = password;
+            process.env.DATABASE_PATH = path;
+            process.env.DB_MAX_CONNECTIONS = maxConnections;
+            process.env.DB_CONNECTION_TIMEOUT = connectionTimeout;
+            process.env.DB_IDLE_TIMEOUT = idleTimeout;
+
+            res.json({
+                success: true,
+                message: 'Configuration updated for current session',
+                data: {
+                    note: 'Running in container mode. Configuration updated for current session only. To persist changes, update your container environment variables.',
+                    dbType,
+                    host: dbType === 'postgresql' ? host : 'N/A',
+                    database: dbType === 'postgresql' ? database : path,
+                    containerMode: true,
+                    instructions: [
+                        'To persist these changes, update your docker run command or docker-compose.yml with:',
+                        `DB_TYPE=${dbType}`,
+                        dbType === 'postgresql' ? `DB_HOST=${host}` : null,
+                        dbType === 'postgresql' ? `DB_PORT=${port}` : null,
+                        dbType === 'postgresql' ? `DB_NAME=${database}` : null,
+                        dbType === 'postgresql' ? `DB_USER=${user}` : null,
+                        dbType === 'postgresql' ? `DB_PASSWORD=${password}` : null,
+                        dbType === 'sqlite' ? `DATABASE_PATH=${path}` : null
+                    ].filter(Boolean)
+                }
+            });
+        } else {
+            // Update .env file with new configuration (for non-container environments)
+            await updateEnvFile({
+                DB_TYPE: dbType,
+                DB_HOST: host,
+                DB_PORT: port,
+                DB_NAME: database,
+                DB_USER: user,
+                DB_PASSWORD: password,
+                DATABASE_PATH: path,
+                DB_MAX_CONNECTIONS: maxConnections,
+                DB_CONNECTION_TIMEOUT: connectionTimeout,
+                DB_IDLE_TIMEOUT: idleTimeout
+            });
+
+            res.json({
+                success: true,
+                message: 'Configuration saved successfully to .env file',
+                data: {
+                    note: 'Configuration saved. Restart application to apply changes.',
+                    dbType,
+                    host: dbType === 'postgresql' ? host : 'N/A',
+                    database: dbType === 'postgresql' ? database : path,
+                    containerMode: false
+                }
+            });
+        }
     } catch (error) {
         res.status(500).json({
             success: false,

@@ -12,6 +12,7 @@ RUN apk add --no-cache \
     make \
     g++ \
     sqlite \
+    postgresql-client \
     wget \
     curl \
     git \
@@ -82,5 +83,8 @@ EXPOSE 5000 5001 8080 9000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:5000/health || exit 1
 
-# Start application
-CMD ["node", "src/api/server.js"]
+# Set executable permissions for startup script
+RUN chmod +x scripts/start-with-database.js
+
+# Start application with database support
+CMD ["node", "scripts/start-with-database.js"]

@@ -79,9 +79,13 @@ class ApiServer {
                     directives: {
                         defaultSrc: ['\'self\''],
                         styleSrc: ['\'self\'', '\'unsafe-inline\'', 'https:'],
-                        scriptSrc: ['\'self\'', 'https://cdn.jsdelivr.net'],
+                        scriptSrc: ['\'self\'', '\'unsafe-inline\'', 'https://cdn.jsdelivr.net', 'https://cdn.jsdelivr.net/npm/chart.js'],
                         imgSrc: ['\'self\'', 'data:', 'https:'],
-                        connectSrc: ['\'self\'', 'ws:', 'wss:']
+                        connectSrc: ['\'self\'', 'ws:', 'wss:'],
+                        fontSrc: ['\'self\'', 'https://fonts.gstatic.com', 'data:'],
+                        frameSrc: ['\'none\''],
+                        objectSrc: ['\'none\''],
+                        upgradeInsecureRequests: []
                     }
                 }
             }));

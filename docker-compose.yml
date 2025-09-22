@@ -22,6 +22,12 @@ services:
       - PROJECT_GENERATION_PATH=/app/generated-projects
       - REDIS_URL=redis://redis:6379
       - NODE_ENV=production
+      - DB_TYPE=postgresql
+      - DB_HOST=claude-database-server
+      - DB_PORT=5432
+      - DB_NAME=claude_daemon
+      - DB_USER=claude_app
+      - DB_PASSWORD=claude_secure_2024!
     volumes:
       - claude_data:/data
       - generated_projects:/app/generated-projects
@@ -55,17 +61,25 @@ services:
 
   postgres:
     image: postgres:15-alpine
-    container_name: claude-postgres
+    container_name: claude-database-server
     environment:
-      - POSTGRES_DB=claude_projects
-      - POSTGRES_USER=claude
-      - POSTGRES_PASSWORD=claude_secure_pass
+      - POSTGRES_DB=claude_daemon
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=claude_db_2024!
+      - PGDATA=/var/lib/postgresql/data
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./sql:/docker-entrypoint-initdb.d
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/02-schema.sql
+      - database_backups:/var/lib/postgresql/backups
     ports:
       - "5432:5432"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d claude_daemon || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - claude-network
 
@@ -98,6 +112,8 @@ volumes:
   temp_workspace:
     driver: local
   postgres_data:
+    driver: local
+  database_backups:
     driver: local
   nginx_logs:
     driver: local

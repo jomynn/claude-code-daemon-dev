@@ -9,10 +9,101 @@ const fs = require('fs').promises;
 const path = require('path');
 const dbConnection = require('../../database/connection');
 
+// Helper function to update .env file
+async function updateEnvFile(newConfig) {
+    const envPath = path.join(process.cwd(), '.env');
+    console.log('🔄 Updating .env file with config:', Object.keys(newConfig));
+    console.log('📁 .env file path:', envPath);
+
+    try {
+        // Read current .env file
+        let envContent = '';
+        try {
+            envContent = await fs.readFile(envPath, 'utf8');
+        } catch (error) {
+            // Create .env file if it doesn't exist
+            console.log('Creating new .env file');
+        }
+
+        // Parse existing environment variables
+        const envLines = envContent.split('\n');
+        const envVars = new Map();
+
+        // Parse existing variables
+        envLines.forEach(line => {
+            if (line.trim() && !line.trim().startsWith('#')) {
+                const [key, ...valueParts] = line.split('=');
+                if (key && valueParts.length > 0) {
+                    envVars.set(key.trim(), valueParts.join('='));
+                }
+            }
+        });
+
+        // Update with new configuration
+        Object.entries(newConfig).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+                envVars.set(key, value);
+            }
+        });
+
+        // Build new .env content
+        const updatedLines = [];
+
+        // Add comments and sections
+        if (!envContent.includes('# Database Configuration')) {
+            updatedLines.push('');
+            updatedLines.push('# Database Configuration');
+        }
+
+        // Add all environment variables
+        const dbKeys = ['DB_TYPE', 'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DATABASE_PATH', 'DB_MAX_CONNECTIONS', 'DB_CONNECTION_TIMEOUT', 'DB_IDLE_TIMEOUT'];
+        const otherKeys = Array.from(envVars.keys()).filter(key => !dbKeys.includes(key));
+
+        // Add non-database variables first (preserve existing structure)
+        envLines.forEach(line => {
+            if (line.trim().startsWith('#') || line.trim() === '') {
+                updatedLines.push(line);
+            } else if (line.includes('=')) {
+                const [key] = line.split('=');
+                if (!dbKeys.includes(key.trim())) {
+                    updatedLines.push(line);
+                }
+            }
+        });
+
+        // Add database configuration section
+        if (!updatedLines.some(line => line.includes('# Database Configuration'))) {
+            updatedLines.push('');
+            updatedLines.push('# Database Configuration');
+        }
+
+        // Add database variables
+        dbKeys.forEach(key => {
+            if (envVars.has(key)) {
+                updatedLines.push(`${key}=${envVars.get(key)}`);
+            }
+        });
+
+        // Write updated .env file
+        await fs.writeFile(envPath, updatedLines.join('\n') + '\n');
+        console.log('✅ .env file updated successfully');
+
+    } catch (error) {
+        console.error('❌ Failed to update .env file:', error);
+        console.error('❌ Error stack:', error.stack);
+        throw new Error(`Failed to update .env file: ${error.message}`);
+    }
+}
+
 // Get current database status and connection info
 router.get('/status', async (req, res) => {
     try {
         const stats = dbConnection.getStats();
+
+        // Check if database connection is available
+        if (!dbConnection.pgPool && !dbConnection.sqliteDb) {
+            throw new Error('Database connection not initialized');
+        }
 
         // Test connection responsiveness
         const startTime = Date.now();
@@ -113,14 +204,28 @@ router.post('/config', async (req, res) => {
             }
         }
 
-        // Note: In a real implementation, you would update environment variables
-        // or configuration files. For this demo, we'll return success.
+        // Update .env file with new configuration
+        await updateEnvFile({
+            DB_TYPE: dbType,
+            DB_HOST: host,
+            DB_PORT: port,
+            DB_NAME: database,
+            DB_USER: user,
+            DB_PASSWORD: password,
+            DATABASE_PATH: path,
+            DB_MAX_CONNECTIONS: maxConnections,
+            DB_CONNECTION_TIMEOUT: connectionTimeout,
+            DB_IDLE_TIMEOUT: idleTimeout
+        });
 
         res.json({
             success: true,
-            message: 'Configuration saved successfully',
+            message: 'Configuration saved successfully to .env file',
             data: {
-                note: 'Configuration saved. Restart application to apply changes.'
+                note: 'Configuration saved. Restart application to apply changes.',
+                dbType,
+                host: dbType === 'postgresql' ? host : 'N/A',
+                database: dbType === 'postgresql' ? database : path
             }
         });
     } catch (error) {

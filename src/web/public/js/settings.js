@@ -156,47 +156,53 @@ class SettingsManager {
 
     updateOverviewStatus(databaseData, slackData) {
         // Update database overview
-        const dbStatus = document.getElementById('overviewDbStatus');
-        const dbInfo = document.getElementById('overviewDbInfo');
-
-        if (databaseData.success) {
-            dbStatus.innerHTML = '<span class="badge bg-success">Connected</span>';
-            dbInfo.textContent = `${databaseData.data.type} - ${databaseData.data.database}`;
-        } else {
-            dbStatus.innerHTML = '<span class="badge bg-danger">Disconnected</span>';
-            dbInfo.textContent = 'Connection failed';
+        const dbElement = document.getElementById('overviewDatabase');
+        if (dbElement) {
+            if (databaseData.success) {
+                dbElement.innerHTML = '<span class="badge bg-success">Connected</span><br><small>' +
+                    `${databaseData.data.type} - ${databaseData.data.database}</small>`;
+            } else {
+                dbElement.innerHTML = '<span class="badge bg-danger">Disconnected</span><br><small>Connection failed</small>';
+            }
         }
 
         // Update Slack overview
-        const slackStatus = document.getElementById('overviewSlackStatus');
-        const slackInfo = document.getElementById('overviewSlackInfo');
-
-        if (slackData.success && slackData.data.available && slackData.data.initialized) {
-            slackStatus.innerHTML = '<span class="badge bg-success">Connected</span>';
-            const channelCount = Object.keys(slackData.data.channels || {}).length;
-            slackInfo.textContent = `${channelCount} channels configured`;
-        } else {
-            slackStatus.innerHTML = '<span class="badge bg-danger">Disconnected</span>';
-            slackInfo.textContent = 'Not configured';
+        const slackElement = document.getElementById('overviewSlack');
+        if (slackElement) {
+            if (slackData.success && slackData.data.available && slackData.data.initialized) {
+                const channelCount = Object.keys(slackData.data.channels || {}).length;
+                slackElement.innerHTML = '<span class="badge bg-success">Connected</span><br><small>' +
+                    `${channelCount} channels configured</small>`;
+            } else {
+                slackElement.innerHTML = '<span class="badge bg-danger">Disconnected</span><br><small>Not initialized</small>';
+            }
         }
+
+        // Update system uptime - will be updated separately via system API
+        this.updateSystemUptime();
 
         // Update system metrics
         this.updateSystemMetrics(databaseData.data?.metrics);
     }
 
     updateSystemMetrics(metrics) {
-        if (!metrics) return;
+        // This method can be used for future metrics display
+        // Currently not needed as we use the overview cards
+    }
 
-        const elements = {
-            'overviewActiveConnections': metrics.activeConnections || 0,
-            'overviewResponseTime': metrics.avgResponseTime ? `${metrics.avgResponseTime}ms` : 'N/A',
-            'overviewUptime': this.formatUptime(process?.uptime || 0)
-        };
+    async updateSystemUptime() {
+        try {
+            const response = await fetch('/api/system/status');
+            const data = await response.json();
 
-        Object.entries(elements).forEach(([id, value]) => {
-            const element = document.getElementById(id);
-            if (element) element.textContent = value;
-        });
+            const uptimeElement = document.getElementById('overviewUptime');
+            if (uptimeElement && data.success) {
+                const uptime = this.formatUptime(data.data.uptime?.process || 0);
+                uptimeElement.innerHTML = `<span class="text-info">${uptime}</span>`;
+            }
+        } catch (error) {
+            console.error('Failed to update system uptime:', error);
+        }
     }
 
     formatUptime(seconds) {

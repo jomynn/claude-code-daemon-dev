@@ -17,6 +17,7 @@ const path = require('path');
 
 const config = require('../daemon/config');
 const NotificationService = require('../daemon/notification-service');
+const dbConnection = require('../database/connection');
 const usageRoutes = require('./routes/usage');
 const alertsRoutes = require('./routes/alerts');
 const systemRoutes = require('./routes/system');
@@ -65,10 +66,14 @@ class ApiServer {
 
     async initializeServices() {
         try {
+            // Initialize database connection
+            await dbConnection.initialize();
+            this.logger.info('Database connection initialized');
+
             await this.notificationService.initialize();
             this.logger.info('Notification service initialized');
         } catch (error) {
-            this.logger.error('Failed to initialize notification service:', error);
+            this.logger.error('Failed to initialize services:', error);
         }
     }
 
